@@ -40,7 +40,13 @@ class ImageApiGenerator(ImageGeneratorBase):
     def validate_config(self) -> bool:
         """验证配置是否有效"""
         if not self.api_key:
-            raise ValueError("API key 未配置")
+            raise ValueError(
+                "Image API Key 未配置。\n"
+                "解决方案：\n"
+                "1. 在 .env 文件中配置相应的API密钥环境变量\n"
+                "2. 或在 image_providers.yaml 中指定正确的 api_key_env\n"
+                "3. 确认环境变量名与配置文件中的 api_key_env 匹配"
+            )
         return True
 
     def get_supported_sizes(self) -> List[str]:
@@ -143,7 +149,18 @@ class ImageApiGenerator(ImageGeneratorBase):
         )
 
         if response.status_code != 200:
-            raise Exception(f"API 错误 {response.status_code}: {response.text[:500]}")
+            error_detail = response.text[:500]
+            raise Exception(
+                f"Image API 请求失败 (状态码: {response.status_code})\n"
+                f"错误详情: {error_detail}\n"
+                f"请求地址: {self.base_url}/v1/images/generations\n"
+                "可能原因：\n"
+                "1. API密钥无效或已过期\n"
+                "2. 请求参数不符合API要求\n"
+                "3. API服务端错误\n"
+                "4. Base URL配置错误\n"
+                "建议：检查API密钥和base_url配置"
+            )
 
         result = response.json()
 
@@ -164,4 +181,12 @@ class ImageApiGenerator(ImageGeneratorBase):
                 image_data = base64.b64decode(b64_string)
                 return image_data
 
-        raise Exception(f"未找到 b64_json 数据。响应: {str(result)[:500]}")
+        raise Exception(
+            f"图片数据提取失败：未找到 b64_json 数据。\n"
+            f"API响应片段: {str(result)[:500]}\n"
+            "可能原因：\n"
+            "1. API返回格式与预期不符\n"
+            "2. response_format 参数未生效\n"
+            "3. 该模型不支持 b64_json 格式\n"
+            "建议：检查API文档确认返回格式要求"
+        )

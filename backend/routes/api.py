@@ -41,7 +41,7 @@ def generate_outline():
         if not topic:
             return jsonify({
                 "success": False,
-                "error": "topic 参数不能为空"
+                "error": "参数错误：topic 不能为空。\n请提供要生成图文的主题内容。"
             }), 400
 
         # 调用大纲生成服务
@@ -54,9 +54,10 @@ def generate_outline():
             return jsonify(result), 500
 
     except Exception as e:
+        error_msg = str(e)
         return jsonify({
             "success": False,
-            "error": str(e)
+            "error": f"大纲生成异常。\n错误详情: {error_msg}\n建议：检查后端日志获取更多信息"
         }), 500
 
 
@@ -83,7 +84,7 @@ def generate_images():
         if not pages:
             return jsonify({
                 "success": False,
-                "error": "pages 参数不能为空"
+                "error": "参数错误：pages 不能为空。\n请提供要生成的页面列表数据。"
             }), 400
 
         # 获取图片生成服务
@@ -113,9 +114,10 @@ def generate_images():
         )
 
     except Exception as e:
+        error_msg = str(e)
         return jsonify({
             "success": False,
-            "error": str(e)
+            "error": f"图片生成异常。\n错误详情: {error_msg}\n建议：检查图片生成服务配置和后端日志"
         }), 500
 
 
@@ -131,12 +133,13 @@ def get_image(filename):
     except FileNotFoundError:
         return jsonify({
             "success": False,
-            "error": "图片不存在"
+            "error": f"图片不存在：{filename}\n可能原因：\n1. 图片已被删除\n2. 文件路径错误\n3. 图片生成失败"
         }), 404
     except Exception as e:
+        error_msg = str(e)
         return jsonify({
             "success": False,
-            "error": str(e)
+            "error": f"获取图片失败。\n错误详情: {error_msg}"
         }), 500
 
 
@@ -152,7 +155,7 @@ def retry_single_image():
         if not task_id or not page:
             return jsonify({
                 "success": False,
-                "error": "task_id 和 page 参数不能为空"
+                "error": "参数错误：task_id 和 page 不能为空。\n请提供任务ID和页面信息。"
             }), 400
 
         image_service = get_image_service()
@@ -161,9 +164,10 @@ def retry_single_image():
         return jsonify(result), 200 if result["success"] else 500
 
     except Exception as e:
+        error_msg = str(e)
         return jsonify({
             "success": False,
-            "error": str(e)
+            "error": f"重试图片生成失败。\n错误详情: {error_msg}"
         }), 500
 
 
@@ -178,7 +182,7 @@ def retry_failed_images():
         if not task_id or not pages:
             return jsonify({
                 "success": False,
-                "error": "task_id 和 pages 参数不能为空"
+                "error": "参数错误：task_id 和 pages 不能为空。\n请提供任务ID和要重试的页面列表。"
             }), 400
 
         image_service = get_image_service()
@@ -202,9 +206,10 @@ def retry_failed_images():
         )
 
     except Exception as e:
+        error_msg = str(e)
         return jsonify({
             "success": False,
-            "error": str(e)
+            "error": f"批量重试失败。\n错误详情: {error_msg}"
         }), 500
 
 
@@ -220,7 +225,7 @@ def regenerate_image():
         if not task_id or not page:
             return jsonify({
                 "success": False,
-                "error": "task_id 和 page 参数不能为空"
+                "error": "参数错误：task_id 和 page 不能为空。\n请提供任务ID和页面信息。"
             }), 400
 
         image_service = get_image_service()
@@ -229,9 +234,10 @@ def regenerate_image():
         return jsonify(result), 200 if result["success"] else 500
 
     except Exception as e:
+        error_msg = str(e)
         return jsonify({
             "success": False,
-            "error": str(e)
+            "error": f"重新生成图片失败。\n错误详情: {error_msg}"
         }), 500
 
 
@@ -245,7 +251,7 @@ def get_task_state(task_id):
         if state is None:
             return jsonify({
                 "success": False,
-                "error": "任务不存在"
+                "error": f"任务不存在：{task_id}\n可能原因：\n1. 任务ID错误\n2. 任务已过期或被清理\n3. 服务重启导致状态丢失"
             }), 404
 
         # 不返回封面图片数据（太大）
@@ -261,9 +267,10 @@ def get_task_state(task_id):
         }), 200
 
     except Exception as e:
+        error_msg = str(e)
         return jsonify({
             "success": False,
-            "error": str(e)
+            "error": f"获取任务状态失败。\n错误详情: {error_msg}"
         }), 500
 
 
@@ -290,7 +297,7 @@ def create_history():
         if not topic or not outline:
             return jsonify({
                 "success": False,
-                "error": "topic 和 outline 参数不能为空"
+                "error": "参数错误：topic 和 outline 不能为空。\n请提供主题和大纲内容。"
             }), 400
 
         history_service = get_history_service()
@@ -302,9 +309,10 @@ def create_history():
         }), 200
 
     except Exception as e:
+        error_msg = str(e)
         return jsonify({
             "success": False,
-            "error": str(e)
+            "error": f"创建历史记录失败。\n错误详情: {error_msg}"
         }), 500
 
 
@@ -325,9 +333,10 @@ def list_history():
         }), 200
 
     except Exception as e:
+        error_msg = str(e)
         return jsonify({
             "success": False,
-            "error": str(e)
+            "error": f"获取历史记录列表失败。\n错误详情: {error_msg}"
         }), 500
 
 
@@ -341,7 +350,7 @@ def get_history(record_id):
         if not record:
             return jsonify({
                 "success": False,
-                "error": "记录不存在"
+                "error": f"历史记录不存在：{record_id}\n可能原因：记录已被删除或ID错误"
             }), 404
 
         return jsonify({
@@ -350,9 +359,10 @@ def get_history(record_id):
         }), 200
 
     except Exception as e:
+        error_msg = str(e)
         return jsonify({
             "success": False,
-            "error": str(e)
+            "error": f"获取历史记录详情失败。\n错误详情: {error_msg}"
         }), 500
 
 
@@ -378,7 +388,7 @@ def update_history(record_id):
         if not success:
             return jsonify({
                 "success": False,
-                "error": "更新失败或记录不存在"
+                "error": f"更新历史记录失败：{record_id}\n可能原因：记录不存在或数据格式错误"
             }), 404
 
         return jsonify({
@@ -386,9 +396,10 @@ def update_history(record_id):
         }), 200
 
     except Exception as e:
+        error_msg = str(e)
         return jsonify({
             "success": False,
-            "error": str(e)
+            "error": f"更新历史记录失败。\n错误详情: {error_msg}"
         }), 500
 
 
@@ -402,7 +413,7 @@ def delete_history(record_id):
         if not success:
             return jsonify({
                 "success": False,
-                "error": "删除失败或记录不存在"
+                "error": f"删除历史记录失败：{record_id}\n可能原因：记录不存在或ID错误"
             }), 404
 
         return jsonify({
@@ -410,9 +421,10 @@ def delete_history(record_id):
         }), 200
 
     except Exception as e:
+        error_msg = str(e)
         return jsonify({
             "success": False,
-            "error": str(e)
+            "error": f"删除历史记录失败。\n错误详情: {error_msg}"
         }), 500
 
 
@@ -425,7 +437,7 @@ def search_history():
         if not keyword:
             return jsonify({
                 "success": False,
-                "error": "keyword 参数不能为空"
+                "error": "参数错误：keyword 不能为空。\n请提供搜索关键词。"
             }), 400
 
         history_service = get_history_service()
@@ -437,9 +449,10 @@ def search_history():
         }), 200
 
     except Exception as e:
+        error_msg = str(e)
         return jsonify({
             "success": False,
-            "error": str(e)
+            "error": f"搜索历史记录失败。\n错误详情: {error_msg}"
         }), 500
 
 
@@ -456,7 +469,8 @@ def get_history_stats():
         }), 200
 
     except Exception as e:
+        error_msg = str(e)
         return jsonify({
             "success": False,
-            "error": str(e)
+            "error": f"获取历史记录统计失败。\n错误详情: {error_msg}"
         }), 500

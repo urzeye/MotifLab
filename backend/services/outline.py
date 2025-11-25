@@ -82,9 +82,10 @@ class OutlineService:
             }
 
         except Exception as e:
+            error_msg = str(e)
             return {
                 "success": False,
-                "error": f"生成大纲失败: {str(e)}"
+                "error": f"大纲生成失败。\n错误详情: {error_msg}\n可能原因：\n1. Text API配置错误或密钥无效\n2. 网络连接问题\n3. 模型无法访问或不存在\n4. 提示词格式有问题\n建议：检查 TEXT_API_KEY 环境变量配置和网络连接"
             }
 
 

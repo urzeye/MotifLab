@@ -36,7 +36,15 @@ def retry_on_429(max_retries=5, base_delay=3):
                         time.sleep(wait_time)
                         continue
                     raise
-            raise Exception(f"重试 {max_retries} 次后仍失败: {last_error}")
+            raise Exception(
+                f"图片生成失败：重试 {max_retries} 次后仍失败。\n"
+                f"最后错误: {last_error}\n"
+                "可能原因：\n"
+                "1. API配额已用尽或达到速率限制\n"
+                "2. 网络连接不稳定\n"
+                "3. API服务暂时不可用\n"
+                "建议：稍后再试，或检查API配额和网络状态"
+            )
         return wrapper
     return decorator
 
@@ -48,7 +56,14 @@ class GoogleGenAIGenerator(ImageGeneratorBase):
         super().__init__(config)
 
         if not self.api_key:
-            raise ValueError("Google GenAI API Key 未配置")
+            raise ValueError(
+                "Google GenAI API Key 未配置。\n"
+                "解决方案：\n"
+                "1. 在项目根目录创建 .env 文件\n"
+                "2. 添加配置: GOOGLE_CLOUD_API_KEY=你的API密钥\n"
+                "3. 或在 image_providers.yaml 中配置对应的环境变量名\n"
+                "获取API Key: https://aistudio.google.com/app/apikey"
+            )
 
         # 初始化客户端
         self.client = genai.Client(
@@ -155,7 +170,14 @@ class GoogleGenAIGenerator(ImageGeneratorBase):
                         break
 
         if not image_data:
-            raise ValueError("未生成图片数据")
+            raise ValueError(
+                "图片生成失败：API返回为空。\n"
+                "可能原因：\n"
+                "1. 提示词被安全过滤拦截\n"
+                "2. 模型响应异常\n"
+                "3. 网络传输中断\n"
+                "建议：修改提示词内容后重试，或检查网络连接"
+            )
 
         return image_data
 

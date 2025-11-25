@@ -29,7 +29,14 @@ def retry_on_429(max_retries=3, base_delay=2):
                             continue
                     # 非 429 错误或重试次数耗尽，直接抛出
                     raise
-            raise Exception(f"重试 {max_retries} 次后仍失败")
+            raise Exception(
+                f"GenAI API 重试 {max_retries} 次后仍失败。\n"
+                "可能原因：\n"
+                "1. API配额已用尽或达到速率限制\n"
+                "2. 网络连接持续不稳定\n"
+                "3. API服务暂时不可用\n"
+                "建议：稍后再试，或检查API配额和网络状态"
+            )
         return wrapper
     return decorator
 
@@ -40,7 +47,14 @@ class GenAIClient:
     def __init__(self):
         self.api_key = os.getenv("GOOGLE_CLOUD_API_KEY")
         if not self.api_key:
-            raise ValueError("GOOGLE_CLOUD_API_KEY 环境变量未设置")
+            raise ValueError(
+                "Google Cloud API Key 未配置。\n"
+                "解决方案：\n"
+                "1. 在项目根目录创建 .env 文件\n"
+                "2. 添加配置: GOOGLE_CLOUD_API_KEY=你的API密钥\n"
+                "3. 重启应用使环境变量生效\n"
+                "获取API Key: https://aistudio.google.com/app/apikey"
+            )
 
         self.client = genai.Client(
             vertexai=True,
@@ -168,7 +182,14 @@ class GenAIClient:
                         break
 
         if not image_data:
-            raise ValueError("未生成图片数据")
+            raise ValueError(
+                "图片生成失败：API返回为空。\n"
+                "可能原因：\n"
+                "1. 提示词被安全过滤拦截\n"
+                "2. 模型响应异常\n"
+                "3. 网络传输中断\n"
+                "建议：修改提示词内容后重试，或检查网络连接"
+            )
 
         return image_data
 

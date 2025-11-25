@@ -32,7 +32,14 @@ def retry_on_error(max_retries=5, base_delay=3):
                         time.sleep(wait_time)
                         continue
                     raise
-            raise Exception(f"重试 {max_retries} 次后仍失败")
+            raise Exception(
+                f"图片生成失败：重试 {max_retries} 次后仍失败。\n"
+                "可能原因：\n"
+                "1. API持续限流或配额不足\n"
+                "2. 网络连接持续不稳定\n"
+                "3. API服务暂时不可用\n"
+                "建议：稍后再试，或检查API配额和网络状态"
+            )
         return wrapper
     return decorator
 
@@ -44,10 +51,22 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
         super().__init__(config)
 
         if not self.api_key:
-            raise ValueError("API Key 未配置")
+            raise ValueError(
+                "OpenAI 兼容 API Key 未配置。\n"
+                "解决方案：\n"
+                "1. 在 .env 文件中配置相应的API密钥环境变量\n"
+                "2. 在 image_providers.yaml 中指定正确的 api_key_env\n"
+                "3. 确认环境变量名与配置文件中的 api_key_env 匹配"
+            )
 
         if not self.base_url:
-            raise ValueError("Base URL 未配置")
+            raise ValueError(
+                "OpenAI 兼容 API Base URL 未配置。\n"
+                "解决方案：\n"
+                "1. 在 image_providers.yaml 中设置 base_url 字段\n"
+                "2. 或在 .env 文件中设置对应的环境变量\n"
+                "例如: https://api.openai.com 或其他兼容服务的地址"
+            )
 
         # 默认模型
         self.default_model = config.get('model', 'dall-e-3')
@@ -89,7 +108,14 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
         elif self.endpoint_type == 'chat':
             return self._generate_via_chat_api(prompt, size, model)
         else:
-            raise ValueError(f"不支持的端点类型: {self.endpoint_type}")
+            raise ValueError(
+                f"不支持的端点类型: {self.endpoint_type}\n"
+                "支持的类型: images, chat\n"
+                "解决方案：\n"
+                "在 image_providers.yaml 中设置正确的 endpoint_type\n"
+                "- 'images': 使用 /v1/images/generations 端点 (标准)\n"
+                "- 'chat': 使用 /v1/chat/completions 端点 (特殊)"
+            )
 
     def _generate_via_images_api(
         self,
@@ -121,12 +147,33 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
         response = requests.post(url, headers=headers, json=payload, timeout=180)
 
         if response.status_code != 200:
-            raise Exception(f"API请求失败: {response.status_code} - {response.text}")
+            error_detail = response.text[:500]
+            raise Exception(
+                f"OpenAI Images API 请求失败 (状态码: {response.status_code})\n"
+                f"错误详情: {error_detail}\n"
+                f"请求地址: {url}\n"
+                f"模型: {model}\n"
+                "可能原因：\n"
+                "1. API密钥无效或已过期\n"
+                "2. 模型名称不正确或无权访问\n"
+                "3. 请求参数不符合要求\n"
+                "4. API配额已用尽\n"
+                "5. Base URL配置错误\n"
+                "建议：检查API密钥、base_url和模型名称配置"
+            )
 
         result = response.json()
 
         if "data" not in result or len(result["data"]) == 0:
-            raise ValueError("API未返回图片数据")
+            raise ValueError(
+                "OpenAI API 未返回图片数据。\n"
+                f"响应内容: {str(result)[:500]}\n"
+                "可能原因：\n"
+                "1. 提示词被安全过滤拦截\n"
+                "2. 模型不支持图片生成\n"
+                "3. 请求格式不正确\n"
+                "建议：修改提示词或检查模型配置"
+            )
 
         image_data = result["data"][0]
 
@@ -143,7 +190,14 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
                 raise Exception(f"下载图片失败: {img_response.status_code}")
 
         else:
-            raise ValueError("未找到图片数据")
+            raise ValueError(
+                "无法从API响应中提取图片数据。\n"
+                f"响应数据: {str(image_data)[:500]}\n"
+                "可能原因：\n"
+                "1. 响应格式不包含 b64_json 或 url 字段\n"
+                "2. response_format 参数未生效\n"
+                "建议：检查API文档确认图片返回格式"
+            )
 
     def _generate_via_chat_api(
         self,
@@ -177,7 +231,19 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
         response = requests.post(url, headers=headers, json=payload, timeout=180)
 
         if response.status_code != 200:
-            raise Exception(f"API请求失败: {response.status_code} - {response.text}")
+            error_detail = response.text[:500]
+            raise Exception(
+                f"OpenAI Chat API 请求失败 (状态码: {response.status_code})\n"
+                f"错误详情: {error_detail}\n"
+                f"请求地址: {url}\n"
+                f"模型: {model}\n"
+                "可能原因：\n"
+                "1. API密钥无效或已过期\n"
+                "2. 该服务商不支持通过 chat 端点生成图片\n"
+                "3. 请求参数格式错误\n"
+                "4. API配额已用尽\n"
+                "建议：尝试将 endpoint_type 改为 'images' 或检查API密钥"
+            )
 
         result = response.json()
 
@@ -194,7 +260,16 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
                     base64_data = content.split(",")[1]
                     return base64.b64decode(base64_data)
 
-        raise ValueError("无法从chat API响应中提取图片数据")
+        raise ValueError(
+            "无法从 Chat API 响应中提取图片数据。\n"
+            f"响应内容: {str(result)[:500]}\n"
+            "可能原因：\n"
+            "1. 该服务商不支持通过 chat 端点生成图片\n"
+            "2. 响应格式与预期不符\n"
+            "建议：\n"
+            "1. 尝试将 endpoint_type 改为 'images'\n"
+            "2. 或联系API服务提供商确认正确的调用方式"
+        )
 
     def get_supported_sizes(self) -> list:
         """获取支持的图片尺寸"""

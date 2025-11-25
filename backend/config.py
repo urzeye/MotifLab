@@ -56,7 +56,15 @@ class Config:
             provider_name = cls.get_active_image_provider()
 
         if provider_name not in config.get('providers', {}):
-            raise ValueError(f"未找到服务商配置: {provider_name}")
+            available = ', '.join(config.get('providers', {}).keys())
+            raise ValueError(
+                f"未找到图片生成服务商配置: {provider_name}\n"
+                f"可用的服务商: {available}\n"
+                "解决方案：\n"
+                "1. 检查 image_providers.yaml 文件中是否包含该服务商配置\n"
+                "2. 确认 providers 字段下有对应的服务商名称\n"
+                "3. 或修改 active_provider 为可用的服务商名称"
+            )
 
         provider_config = config['providers'][provider_name].copy()
 
