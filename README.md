@@ -10,14 +10,15 @@
 
 > 让传播不再需要门槛，让创作从未如此简单
 
-![](images/index.png)
+![](images/index.gif)
 
 <p align="center">
   <em>红墨首页</em>
 </p>
 
-<img src="images/showcase-grid.png" alt="使用红墨生成的各类小红书封面" width="600"/>
-
+<p align="center">
+  <img src="images/showcase-grid.png" alt="使用红墨生成的各类小红书封面" width="600"/>
+</p>
 
 <p align="center">
   <em>使用红墨生成的各类小红书封面 - AI驱动，风格统一，文字准确</em>
