@@ -54,6 +54,7 @@ history/
 
 # API configurations
 .gemini/
+image_providers.yaml
 
 # Logs
 *.log

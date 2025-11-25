@@ -1,6 +1,4 @@
-<div align="center" style="background-color: #ffffff !important; padding: 20px; border-radius: 8px;">
-  <img src="images/logo.png" alt="红墨 Logo" width="200"/>
-</div>
+![](images/logo.png)
 
 ---
 
@@ -95,9 +93,15 @@ cd RedInk
 ### 2. 配置环境变量
 ```bash
 cp .env.example .env
+cp image_providers.yaml.example image_providers.yaml
 ```
 
-编辑 `.env` 文件,填入你的 API Key
+编辑 `.env` 文件，填入你的 API Key
+
+编辑 `image_providers.yaml` 文件，配置图片生成服务：
+- 修改 `active_provider` 选择要使用的服务商
+- 在对应服务商的 `base_url` 中填入你的 API 端点地址
+- 确保 `.env` 中配置了对应的 API Key
 
 ### 3. 安装后端依赖
 ```bash
@@ -147,7 +151,14 @@ pnpm dev
 
 ### 图片服务商配置
 
-项目支持多个图片生成服务商,配置文件: `image_providers.yaml`
+项目支持多个图片生成服务商，配置文件: `image_providers.yaml`
+
+**首次使用:**
+```bash
+cp image_providers.yaml.example image_providers.yaml
+```
+
+然后编辑 `image_providers.yaml`，配置你的图片服务：
 
 ```yaml
 active_provider: image_api
@@ -156,7 +167,8 @@ providers:
   image_api:
     type: image_api
     api_key_env: IMAGE_API_KEY
-    model: default-model
+    base_url: https://your-image-api-endpoint.com  # 填写你的API端点
+    model: nano-banana-2
     default_aspect_ratio: "3:4"  # 小红书标准比例
 ```
 
@@ -165,7 +177,7 @@ providers:
 - OpenAI DALL-E 3
 - 其他兼容 OpenAI API 的服务
 
-详细配置说明请查看 `image_providers.yaml` 文件
+详细配置说明请查看 `image_providers.yaml.example` 文件
 
 
 
@@ -239,7 +251,7 @@ providers:
 - 📧 Email: histonemax@gmail.com
 - 💬 微信: Histone2024（请注明"商业授权咨询"）
 
-我们会根据你的具体使用场景提供灵活的商业授权方案。
+默子会根据你的具体使用场景提供灵活的商业授权方案。
 
 ---
 
