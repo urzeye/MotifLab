@@ -103,9 +103,21 @@ export function generateImages(
   return eventSource
 }
 
-// 获取图片 URL
-export function getImageUrl(filename: string): string {
-  return `${API_BASE_URL}/images/${filename}`
+// 获取图片 URL（新格式：task_id/filename）
+// thumbnail 参数：true=缩略图（默认），false=原图
+export function getImageUrl(taskId: string, filename: string, thumbnail: boolean = true): string {
+  const thumbParam = thumbnail ? '?thumbnail=true' : '?thumbnail=false'
+  return `${API_BASE_URL}/images/${taskId}/${filename}${thumbParam}`
+}
+
+// 向后兼容：自动解析包含task_id的URL
+export function getImageUrlAuto(urlOrPath: string): string {
+  // 如果已经是完整URL，直接返回
+  if (urlOrPath.startsWith('http') || urlOrPath.startsWith('/api/')) {
+    return urlOrPath
+  }
+  // 否则假定为 task_id/filename 格式
+  return `${API_BASE_URL}/images/${urlOrPath}`
 }
 
 // 重试单张图片
@@ -225,6 +237,7 @@ export interface HistoryRecord {
   status: string
   thumbnail: string | null
   page_count: number
+  task_id: string | null
 }
 
 export interface HistoryDetail {
@@ -430,4 +443,66 @@ export async function generateImagesPost(
   } catch (error) {
     onStreamError(error as Error)
   }
+}
+
+// 扫描单个任务并同步图片列表
+export async function scanTask(taskId: string): Promise<{
+  success: boolean
+  record_id?: string
+  task_id?: string
+  images_count?: number
+  images?: string[]
+  status?: string
+  no_record?: boolean
+  error?: string
+}> {
+  const response = await axios.get(`${API_BASE_URL}/history/scan/${taskId}`)
+  return response.data
+}
+
+// 扫描所有任务并同步图片列表
+export async function scanAllTasks(): Promise<{
+  success: boolean
+  total_tasks?: number
+  synced?: number
+  failed?: number
+  orphan_tasks?: string[]
+  results?: any[]
+  error?: string
+}> {
+  const response = await axios.post(`${API_BASE_URL}/history/scan-all`)
+  return response.data
+}
+
+// ==================== 配置管理 API ====================
+
+export interface Config {
+  text_generation: {
+    active_provider: string
+    providers: Record<string, any>
+  }
+  image_generation: {
+    active_provider: string
+    providers: Record<string, any>
+  }
+}
+
+// 获取配置
+export async function getConfig(): Promise<{
+  success: boolean
+  config?: Config
+  error?: string
+}> {
+  const response = await axios.get(`${API_BASE_URL}/config`)
+  return response.data
+}
+
+// 更新配置
+export async function updateConfig(config: Partial<Config>): Promise<{
+  success: boolean
+  message?: string
+  error?: string
+}> {
+  const response = await axios.post(`${API_BASE_URL}/config`, config)
+  return response.data
 }

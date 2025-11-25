@@ -6,10 +6,22 @@
       <div>
         <h1 class="page-title">我的创作</h1>
       </div>
-      <button class="btn btn-primary" @click="router.push('/')">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        新建图文
-      </button>
+      <div style="display: flex; gap: 10px;">
+        <button
+          class="btn"
+          @click="handleScanAll"
+          :disabled="isScanning"
+          style="border: 1px solid var(--border-color);"
+        >
+          <svg v-if="!isScanning" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+          <div v-else class="spinner-small" style="margin-right: 6px;"></div>
+          {{ isScanning ? '同步中...' : '同步历史' }}
+        </button>
+        <button class="btn btn-primary" @click="router.push('/')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          新建图文
+        </button>
+      </div>
     </div>
 
     <!-- Stats Overview -->
@@ -102,8 +114,8 @@
         <!-- Card Cover -->
         <div class="card-cover" @click="viewImages(record.id)">
           <img
-            v-if="record.thumbnail"
-            :src="record.thumbnail"
+            v-if="record.thumbnail && record.task_id"
+            :src="`/api/images/${record.task_id}/${record.thumbnail}`"
             alt="cover"
             loading="lazy"
             decoding="async"
@@ -175,51 +187,20 @@
                 </button>
               </div>
 
-              <span style="font-size: 12px; color: #999; display: block; margin-top: 8px;">{{ viewingRecord.outline.pages.length }} 张图片 · {{ formatDate(viewingRecord.updated_at) }}</span>
-
-              <!-- 原始输入文本 -->
-              <div class="original-input-section">
-                <div class="original-input-header">
-                  <span style="font-size: 13px; color: #666; font-weight: 600;">原始输入</span>
-                  <div style="display: flex; gap: 8px;">
-                    <button
-                      class="copy-btn-small"
-                      @click="showOutlineModal = true"
-                      title="查看完整大纲"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                      </svg>
-                      查看大纲
-                    </button>
-                    <button
-                      class="copy-btn-small"
-                      @click="copyOriginalInput"
-                      title="复制完整内容"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                      </svg>
-                      复制
-                    </button>
-                  </div>
-                </div>
-                <div
-                  class="original-input-text"
-                  :class="{ 'collapsed': !rawInputExpanded && viewingRecord.outline.raw.length > 150 }"
-                >
-                  {{ viewingRecord.outline.raw }}
-                </div>
+              <div style="font-size: 12px; color: #999; display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+                <span>{{ viewingRecord.outline.pages.length }} 张图片 · {{ formatDate(viewingRecord.updated_at) }}</span>
                 <button
-                  v-if="viewingRecord.outline.raw.length > 150"
-                  class="expand-btn-small"
-                  @click="rawInputExpanded = !rawInputExpanded"
+                  class="view-outline-btn"
+                  @click="showOutlineModal = true"
+                  title="查看完整大纲"
                 >
-                  {{ rawInputExpanded ? '收起' : '展开全部' }}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                  </svg>
+                  查看大纲
                 </button>
               </div>
             </div>
@@ -237,7 +218,7 @@
                 <!-- 图片预览区域 -->
                 <div class="modal-img-preview" v-if="img">
                   <img
-                    :src="`/api/images/${img}`"
+                    :src="`/api/images/${viewingRecord.images.task_id}/${img}`"
                     loading="lazy"
                     decoding="async"
                   />
@@ -292,7 +273,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { getHistoryList, getHistoryStats, searchHistory, deleteHistory, getHistory, type HistoryRecord, regenerateImage as apiRegenerateImage, updateHistory } from '../api'
+import { getHistoryList, getHistoryStats, searchHistory, deleteHistory, getHistory, type HistoryRecord, regenerateImage as apiRegenerateImage, updateHistory, scanAllTasks } from '../api'
 import { useGeneratorStore } from '../stores/generator'
 
 const router = useRouter()
@@ -317,6 +298,8 @@ const titleExpanded = ref(false)
 const rawInputExpanded = ref(false)
 // 大纲模态框显示状态
 const showOutlineModal = ref(false)
+// 扫描状态
+const isScanning = ref(false)
 
 const loadData = async () => {
   loading.value = true
@@ -490,35 +473,96 @@ async function regenerateHistoryImage(index: number) {
   }
 }
 
-// 下载单张图片
+// 下载单张图片（使用原图）
 function downloadImage(filename: string, index: number) {
+  if (!viewingRecord.value) return
   const link = document.createElement('a')
-  link.href = `/api/images/${filename}`
+  link.href = `/api/images/${viewingRecord.value.images.task_id}/${filename}?thumbnail=false`
   link.download = `page_${index + 1}.png`
   link.click()
 }
 
-// 打包下载所有图片
+// 打包下载所有图片为 ZIP
 async function downloadAllImages() {
   if (!viewingRecord.value) return
 
-  // 简单实现：逐个下载
-  viewingRecord.value.images.generated.forEach((img: string, idx: number) => {
-    if (img) {
-      setTimeout(() => {
-        downloadImage(img, idx)
-      }, idx * 300) // 每张图片延迟300ms
-    }
-  })
+  // 调用 ZIP 下载接口
+  const link = document.createElement('a')
+  link.href = `/api/history/${viewingRecord.value.id}/download`
+  link.click()
 }
 
-onMounted(() => {
-  loadData()
-  loadStats()
+// 扫描所有任务并同步图片列表
+async function handleScanAll() {
+  isScanning.value = true
+  try {
+    const result = await scanAllTasks()
+    if (result.success) {
+      console.log('扫描完成:', result)
+
+      // 显示扫描结果
+      let message = `扫描完成！\n`
+      message += `- 总任务数: ${result.total_tasks || 0}\n`
+      message += `- 同步成功: ${result.synced || 0}\n`
+      message += `- 同步失败: ${result.failed || 0}\n`
+
+      if (result.orphan_tasks && result.orphan_tasks.length > 0) {
+        message += `- 孤立任务（无记录）: ${result.orphan_tasks.length} 个\n`
+      }
+
+      alert(message)
+
+      // 刷新列表和统计
+      await loadData()
+      await loadStats()
+    } else {
+      alert('扫描失败: ' + (result.error || '未知错误'))
+    }
+  } catch (e) {
+    console.error('扫描失败:', e)
+    alert('扫描失败: ' + String(e))
+  } finally {
+    isScanning.value = false
+  }
+}
+
+onMounted(async () => {
+  // 先加载数据
+  await loadData()
+  await loadStats()
+
+  // 自动执行一次扫描（静默，不显示结果）
+  try {
+    const result = await scanAllTasks()
+    if (result.success && (result.synced || 0) > 0) {
+      // 如果有更新，刷新列表
+      await loadData()
+      await loadStats()
+    }
+  } catch (e) {
+    console.error('自动扫描失败:', e)
+  }
 })
 </script>
 
 <style scoped>
+/* Small Spinner */
+.spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--primary);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Toolbar */
 .toolbar-wrapper {
   display: flex;
@@ -826,18 +870,21 @@ onMounted(() => {
 
 /* 原始输入区域 */
 .original-input-section {
-  margin-top: 12px;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
+  margin-top: 16px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .original-input-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 .copy-btn-small {
@@ -864,15 +911,41 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.original-input-text {
-  font-size: 13px;
-  line-height: 1.6;
+/* 查看大纲按钮 */
+.view-outline-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
   color: #495057;
+  transition: all 0.2s;
+}
+
+.view-outline-btn:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.view-outline-btn svg {
+  flex-shrink: 0;
+}
+
+.original-input-text {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #374151;
   white-space: pre-wrap;
   word-break: break-word;
   max-height: none;
   overflow: hidden;
   transition: max-height 0.3s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
 
 .original-input-text.collapsed {
@@ -1038,19 +1111,22 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: 20px 24px;
+  background: #f9fafb;
 }
 
 .outline-page-card {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
   margin-bottom: 16px;
-  border: 1px solid #e9ecef;
-  transition: box-shadow 0.2s;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .outline-page-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #d1d5db;
 }
 
 .outline-page-card:last-child {
@@ -1060,10 +1136,10 @@ onMounted(() => {
 .outline-page-card-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #dee2e6;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .page-badge {
@@ -1115,9 +1191,10 @@ onMounted(() => {
 
 .outline-page-card-content {
   font-size: 14px;
-  line-height: 1.7;
-  color: #333;
+  line-height: 1.8;
+  color: #374151;
   white-space: pre-wrap;
   word-break: break-word;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
 </style>

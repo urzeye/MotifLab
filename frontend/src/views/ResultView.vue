@@ -99,20 +99,33 @@ const startOver = () => {
 const downloadOne = (image: any) => {
   if (image.url) {
     const link = document.createElement('a')
-    link.href = image.url
+    // 使用原图
+    link.href = image.url.replace('?thumbnail=true', '?thumbnail=false')
     link.download = `rednote_page_${image.index + 1}.png`
     link.click()
   }
 }
 
 const downloadAll = () => {
-  store.images.forEach((image, index) => {
-    if (image.url) {
-      setTimeout(() => {
-        downloadOne(image)
-      }, index * 300)
-    }
-  })
+  // 如果有历史记录ID，使用ZIP下载
+  if (store.recordId) {
+    const link = document.createElement('a')
+    link.href = `/api/history/${store.recordId}/download`
+    link.click()
+  } else {
+    // 降级方案：逐个下载（带原图参数）
+    store.images.forEach((image, index) => {
+      if (image.url) {
+        setTimeout(() => {
+          const link = document.createElement('a')
+          // 使用原图
+          link.href = image.url.replace('?thumbnail=true', '?thumbnail=false')
+          link.download = `rednote_page_${image.index + 1}.png`
+          link.click()
+        }, index * 300)
+      }
+    })
+  }
 }
 
 const handleRegenerate = async (image: any) => {

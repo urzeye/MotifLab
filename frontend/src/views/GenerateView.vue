@@ -265,8 +265,8 @@ onMounted(async () => {
             status = generatedImages.length > 0 ? 'partial' : 'draft'
           }
 
-          // 获取封面图作为缩略图
-          const coverImage = generatedImages.length > 0 ? getImageUrl(generatedImages[0]) : null
+          // 获取封面图作为缩略图（只保存文件名，不是完整URL）
+          const thumbnail = generatedImages.length > 0 ? generatedImages[0] : null
 
           await updateHistory(store.recordId, {
             images: {
@@ -274,7 +274,7 @@ onMounted(async () => {
               generated: generatedImages
             },
             status: status,
-            thumbnail: coverImage
+            thumbnail: thumbnail
           })
           console.log('历史记录已更新')
         } catch (e) {

@@ -42,24 +42,61 @@ export interface GeneratorState {
   userImages: File[]
 }
 
+const STORAGE_KEY = 'generator-state'
+
+// 从 localStorage 加载状态
+function loadState(): Partial<GeneratorState> {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      return JSON.parse(saved)
+    }
+  } catch (e) {
+    console.error('加载状态失败:', e)
+  }
+  return {}
+}
+
+// 保存状态到 localStorage
+function saveState(state: GeneratorState) {
+  try {
+    // 只保存关键数据，不保存 userImages（文件对象无法序列化）
+    const toSave = {
+      stage: state.stage,
+      topic: state.topic,
+      outline: state.outline,
+      progress: state.progress,
+      images: state.images,
+      taskId: state.taskId,
+      recordId: state.recordId
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
+  } catch (e) {
+    console.error('保存状态失败:', e)
+  }
+}
+
 export const useGeneratorStore = defineStore('generator', {
-  state: (): GeneratorState => ({
-    stage: 'input',
-    topic: '',
-    outline: {
-      raw: '',
-      pages: []
-    },
-    progress: {
-      current: 0,
-      total: 0,
-      status: 'idle'
-    },
-    images: [],
-    taskId: null,
-    recordId: null,
-    userImages: []
-  }),
+  state: (): GeneratorState => {
+    const saved = loadState()
+    return {
+      stage: saved.stage || 'input',
+      topic: saved.topic || '',
+      outline: saved.outline || {
+        raw: '',
+        pages: []
+      },
+      progress: saved.progress || {
+        current: 0,
+        total: 0,
+        status: 'idle'
+      },
+      images: saved.images || [],
+      taskId: saved.taskId || null,
+      recordId: saved.recordId || null,
+      userImages: []  // 不从 localStorage 恢复
+    }
+  },
 
   actions: {
     // 设置主题
@@ -222,6 +259,37 @@ export const useGeneratorStore = defineStore('generator', {
       this.taskId = null
       this.recordId = null
       this.userImages = []
+      // 清除 localStorage
+      localStorage.removeItem(STORAGE_KEY)
+    },
+
+    // 保存当前状态
+    saveToStorage() {
+      saveState(this)
     }
   }
 })
+
+// 监听状态变化并自动保存（使用 watch）
+import { watch } from 'vue'
+
+export function setupAutoSave() {
+  const store = useGeneratorStore()
+
+  // 监听关键字段变化并自动保存
+  watch(
+    () => ({
+      stage: store.stage,
+      topic: store.topic,
+      outline: store.outline,
+      progress: store.progress,
+      images: store.images,
+      taskId: store.taskId,
+      recordId: store.recordId
+    }),
+    () => {
+      store.saveToStorage()
+    },
+    { deep: true }
+  )
+}

@@ -41,12 +41,15 @@ class ImageService:
         # 加载提示词模板
         self.prompt_template = self._load_prompt_template()
 
-        # 输出目录
-        self.output_dir = os.path.join(
+        # 历史记录根目录
+        self.history_root_dir = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            "output"
+            "history"
         )
-        os.makedirs(self.output_dir, exist_ok=True)
+        os.makedirs(self.history_root_dir, exist_ok=True)
+
+        # 当前任务的输出目录（每个任务一个子文件夹）
+        self.current_task_dir = None
 
         # 存储任务状态（用于重试）
         self._task_states: Dict[str, Dict] = {}
@@ -61,20 +64,36 @@ class ImageService:
         with open(prompt_path, "r", encoding="utf-8") as f:
             return f.read()
 
-    def _save_image(self, image_data: bytes, filename: str) -> str:
+    def _save_image(self, image_data: bytes, filename: str, task_dir: str = None) -> str:
         """
-        保存图片到本地
+        保存图片到本地，同时生成缩略图
 
         Args:
             image_data: 图片二进制数据
             filename: 文件名
+            task_dir: 任务目录（如果为None则使用当前任务目录）
 
         Returns:
             保存的文件路径
         """
-        filepath = os.path.join(self.output_dir, filename)
+        if task_dir is None:
+            task_dir = self.current_task_dir
+
+        if task_dir is None:
+            raise ValueError("任务目录未设置")
+
+        # 保存原图
+        filepath = os.path.join(task_dir, filename)
         with open(filepath, "wb") as f:
             f.write(image_data)
+
+        # 生成缩略图（50KB左右）
+        thumbnail_data = compress_image(image_data, max_size_kb=50)
+        thumbnail_filename = f"thumb_{filename}"
+        thumbnail_path = os.path.join(task_dir, thumbnail_filename)
+        with open(thumbnail_path, "wb") as f:
+            f.write(thumbnail_data)
+
         return filepath
 
     def _generate_single_image(
@@ -151,9 +170,9 @@ class ImageService:
                         quality=self.provider_config.get('quality', 'standard'),
                     )
 
-                # 保存图片
-                filename = f"{task_id}_{index}.png"
-                self._save_image(image_data, filename)
+                # 保存图片（使用当前任务目录）
+                filename = f"{index}.png"
+                self._save_image(image_data, filename, self.current_task_dir)
 
                 return (index, True, filename, None)
 
@@ -194,6 +213,10 @@ class ImageService:
         """
         if task_id is None:
             task_id = f"task_{uuid.uuid4().hex[:8]}"
+
+        # 创建任务专属目录
+        self.current_task_dir = os.path.join(self.history_root_dir, task_id)
+        os.makedirs(self.current_task_dir, exist_ok=True)
 
         total = len(pages)
         generated_images = []
@@ -255,7 +278,7 @@ class ImageService:
                 self._task_states[task_id]["generated"][index] = filename
 
                 # 读取封面图片作为参考，并立即压缩到200KB以内
-                cover_path = os.path.join(self.output_dir, filename)
+                cover_path = os.path.join(self.current_task_dir, filename)
                 with open(cover_path, "rb") as f:
                     cover_image_data = f.read()
 
@@ -268,7 +291,7 @@ class ImageService:
                     "data": {
                         "index": index,
                         "status": "done",
-                        "image_url": f"/api/images/{filename}",
+                        "image_url": f"/api/images/{task_id}/{filename}",
                         "phase": "cover"
                     }
                 }
@@ -287,38 +310,118 @@ class ImageService:
                     }
                 }
 
-        # ==================== 第二阶段：并发生成其他页面 ====================
+        # ==================== 第二阶段：生成其他页面 ====================
         if other_pages:
-            yield {
-                "event": "progress",
-                "data": {
-                    "status": "batch_start",
-                    "message": f"开始并发生成 {len(other_pages)} 页内容...",
-                    "current": len(generated_images),
-                    "total": total,
-                    "phase": "content"
-                }
-            }
+            # 检查是否启用高并发模式
+            high_concurrency = self.provider_config.get('high_concurrency', False)
 
-            # 使用线程池并发生成
-            with ThreadPoolExecutor(max_workers=self.MAX_CONCURRENT) as executor:
-                # 提交所有任务
-                future_to_page = {
-                    executor.submit(
-                        self._generate_single_image,
-                        page,
-                        task_id,
-                        cover_image_data,  # 使用封面作为参考
-                        0,  # retry_count
-                        full_outline,  # 传入完整大纲
-                        compressed_user_images,  # 用户上传的参考图片（已压缩）
-                        user_topic  # 用户原始输入
-                    ): page
-                    for page in other_pages
+            if high_concurrency:
+                # 高并发模式：并行生成
+                yield {
+                    "event": "progress",
+                    "data": {
+                        "status": "batch_start",
+                        "message": f"开始并发生成 {len(other_pages)} 页内容...",
+                        "current": len(generated_images),
+                        "total": total,
+                        "phase": "content"
+                    }
                 }
 
-                # 发送每个页面的进度
+                # 使用线程池并发生成
+                with ThreadPoolExecutor(max_workers=self.MAX_CONCURRENT) as executor:
+                    # 提交所有任务
+                    future_to_page = {
+                        executor.submit(
+                            self._generate_single_image,
+                            page,
+                            task_id,
+                            cover_image_data,  # 使用封面作为参考
+                            0,  # retry_count
+                            full_outline,  # 传入完整大纲
+                            compressed_user_images,  # 用户上传的参考图片（已压缩）
+                            user_topic  # 用户原始输入
+                        ): page
+                        for page in other_pages
+                    }
+
+                    # 发送每个页面的进度
+                    for page in other_pages:
+                        yield {
+                            "event": "progress",
+                            "data": {
+                                "index": page["index"],
+                                "status": "generating",
+                                "current": len(generated_images) + 1,
+                                "total": total,
+                                "phase": "content"
+                            }
+                        }
+
+                    # 收集结果
+                    for future in as_completed(future_to_page):
+                        page = future_to_page[future]
+                        try:
+                            index, success, filename, error = future.result()
+
+                            if success:
+                                generated_images.append(filename)
+                                self._task_states[task_id]["generated"][index] = filename
+
+                                yield {
+                                    "event": "complete",
+                                    "data": {
+                                        "index": index,
+                                        "status": "done",
+                                        "image_url": f"/api/images/{task_id}/{filename}",
+                                        "phase": "content"
+                                    }
+                                }
+                            else:
+                                failed_pages.append(page)
+                                self._task_states[task_id]["failed"][index] = error
+
+                                yield {
+                                    "event": "error",
+                                    "data": {
+                                        "index": index,
+                                        "status": "error",
+                                        "message": error,
+                                        "retryable": True,
+                                        "phase": "content"
+                                    }
+                                }
+
+                        except Exception as e:
+                            failed_pages.append(page)
+                            error_msg = str(e)
+                            self._task_states[task_id]["failed"][page["index"]] = error_msg
+
+                            yield {
+                                "event": "error",
+                                "data": {
+                                    "index": page["index"],
+                                    "status": "error",
+                                    "message": error_msg,
+                                    "retryable": True,
+                                    "phase": "content"
+                                }
+                            }
+            else:
+                # 顺序模式：逐个生成
+                yield {
+                    "event": "progress",
+                    "data": {
+                        "status": "batch_start",
+                        "message": f"开始顺序生成 {len(other_pages)} 页内容...",
+                        "current": len(generated_images),
+                        "total": total,
+                        "phase": "content"
+                    }
+                }
+
                 for page in other_pages:
+                    # 发送生成进度
                     yield {
                         "event": "progress",
                         "data": {
@@ -330,51 +433,40 @@ class ImageService:
                         }
                     }
 
-                # 收集结果
-                for future in as_completed(future_to_page):
-                    page = future_to_page[future]
-                    try:
-                        index, success, filename, error = future.result()
+                    # 生成单张图片
+                    index, success, filename, error = self._generate_single_image(
+                        page,
+                        task_id,
+                        cover_image_data,
+                        0,
+                        full_outline,
+                        compressed_user_images,
+                        user_topic
+                    )
 
-                        if success:
-                            generated_images.append(filename)
-                            self._task_states[task_id]["generated"][index] = filename
+                    if success:
+                        generated_images.append(filename)
+                        self._task_states[task_id]["generated"][index] = filename
 
-                            yield {
-                                "event": "complete",
-                                "data": {
-                                    "index": index,
-                                    "status": "done",
-                                    "image_url": f"/api/images/{filename}",
-                                    "phase": "content"
-                                }
+                        yield {
+                            "event": "complete",
+                            "data": {
+                                "index": index,
+                                "status": "done",
+                                "image_url": f"/api/images/{task_id}/{filename}",
+                                "phase": "content"
                             }
-                        else:
-                            failed_pages.append(page)
-                            self._task_states[task_id]["failed"][index] = error
-
-                            yield {
-                                "event": "error",
-                                "data": {
-                                    "index": index,
-                                    "status": "error",
-                                    "message": error,
-                                    "retryable": True,
-                                    "phase": "content"
-                                }
-                            }
-
-                    except Exception as e:
+                        }
+                    else:
                         failed_pages.append(page)
-                        error_msg = str(e)
-                        self._task_states[task_id]["failed"][page["index"]] = error_msg
+                        self._task_states[task_id]["failed"][index] = error
 
                         yield {
                             "event": "error",
                             "data": {
-                                "index": page["index"],
+                                "index": index,
                                 "status": "error",
-                                "message": error_msg,
+                                "message": error,
                                 "retryable": True,
                                 "phase": "content"
                             }
@@ -411,6 +503,10 @@ class ImageService:
         Returns:
             生成结果
         """
+        # 设置当前任务目录
+        self.current_task_dir = os.path.join(self.history_root_dir, task_id)
+        os.makedirs(self.current_task_dir, exist_ok=True)
+
         # 获取参考图
         reference_image = None
         if use_reference and task_id in self._task_states:
@@ -431,7 +527,7 @@ class ImageService:
             return {
                 "success": True,
                 "index": index,
-                "image_url": f"/api/images/{filename}"
+                "image_url": f"/api/images/{task_id}/{filename}"
             }
         else:
             return {
@@ -509,7 +605,7 @@ class ImageService:
                             "data": {
                                 "index": index,
                                 "status": "done",
-                                "image_url": f"/api/images/{filename}"
+                                "image_url": f"/api/images/{task_id}/{filename}"
                             }
                         }
                     else:
@@ -565,17 +661,19 @@ class ImageService:
         """
         return self.retry_single_image(task_id, page, use_reference)
 
-    def get_image_path(self, filename: str) -> str:
+    def get_image_path(self, task_id: str, filename: str) -> str:
         """
         获取图片完整路径
 
         Args:
+            task_id: 任务ID
             filename: 文件名
 
         Returns:
             完整路径
         """
-        return os.path.join(self.output_dir, filename)
+        task_dir = os.path.join(self.history_root_dir, task_id)
+        return os.path.join(task_dir, filename)
 
     def get_task_state(self, task_id: str) -> Optional[Dict]:
         """获取任务状态"""
@@ -596,3 +694,8 @@ def get_image_service() -> ImageService:
     if _service_instance is None:
         _service_instance = ImageService()
     return _service_instance
+
+def reset_image_service():
+    """重置全局服务实例（配置更新后调用）"""
+    global _service_instance
+    _service_instance = None

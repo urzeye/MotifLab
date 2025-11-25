@@ -58,11 +58,8 @@ class GoogleGenAIGenerator(ImageGeneratorBase):
         if not self.api_key:
             raise ValueError(
                 "Google GenAI API Key 未配置。\n"
-                "解决方案：\n"
-                "1. 在项目根目录创建 .env 文件\n"
-                "2. 添加配置: GOOGLE_CLOUD_API_KEY=你的API密钥\n"
-                "3. 或在 image_providers.yaml 中配置对应的环境变量名\n"
-                "获取API Key: https://aistudio.google.com/app/apikey"
+                "解决方案：在系统设置页面编辑该服务商，填写 API Key\n"
+                "获取 API Key: https://aistudio.google.com/app/apikey"
             )
 
         # 初始化客户端

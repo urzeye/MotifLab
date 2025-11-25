@@ -1,15 +1,11 @@
 """Text API 客户端封装"""
-import os
 import time
 import random
 import base64
 import requests
 from functools import wraps
 from typing import List, Optional, Union
-from dotenv import load_dotenv
 from .image_compressor import compress_image
-
-load_dotenv()
 
 
 def retry_on_429(max_retries=3, base_delay=2):
@@ -45,19 +41,14 @@ class TextChatClient:
     """Text API 客户端封装类"""
 
     def __init__(self, api_key: str = None, base_url: str = None):
-        self.api_key = api_key or os.getenv("TEXT_API_KEY") or os.getenv("BLTCY_API_KEY")
+        self.api_key = api_key
         if not self.api_key:
             raise ValueError(
                 "Text API Key 未配置。\n"
-                "解决方案：\n"
-                "1. 在项目根目录的 .env 文件中添加:\n"
-                "   TEXT_API_KEY=你的API密钥\n"
-                "   或 BLTCY_API_KEY=你的API密钥\n"
-                "2. 或在代码中通过参数传入 api_key\n"
-                "3. 重启应用使环境变量生效"
+                "解决方案：在系统设置页面编辑文本生成服务商，填写 API Key"
             )
 
-        self.base_url = base_url or os.getenv("TEXT_API_BASE_URL", "https://api.example.com")
+        self.base_url = base_url or "https://api.openai.com"
         self.chat_endpoint = f"{self.base_url}/v1/chat/completions"
 
     def _encode_image_to_base64(self, image_data: bytes) -> str:
@@ -197,19 +188,13 @@ class TextChatClient:
             )
 
 
-# 全局客户端实例
-_client_instance = None
+def get_text_chat_client(provider_config: dict) -> TextChatClient:
+    """
+    获取 Text Chat 客户端实例
 
-
-def get_text_chat_client() -> TextChatClient:
-    """获取全局 Text Chat 客户端实例"""
-    global _client_instance
-    if _client_instance is None:
-        _client_instance = TextChatClient()
-    return _client_instance
-
-
-# 保留向后兼容的别名
-def get_bltcy_chat_client() -> TextChatClient:
-    """向后兼容的别名"""
-    return get_text_chat_client()
+    Args:
+        provider_config: 服务商配置字典，必须包含 api_key, 可选 base_url
+    """
+    api_key = provider_config.get('api_key')
+    base_url = provider_config.get('base_url')
+    return TextChatClient(api_key=api_key, base_url=base_url)

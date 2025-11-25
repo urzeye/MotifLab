@@ -1,13 +1,9 @@
 """Google GenAI 客户端封装"""
-import os
 import time
 import random
 from functools import wraps
 from google import genai
 from google.genai import types
-from dotenv import load_dotenv
-
-load_dotenv()
 
 
 def retry_on_429(max_retries=3, base_delay=2):
@@ -42,18 +38,14 @@ def retry_on_429(max_retries=3, base_delay=2):
 
 
 class GenAIClient:
-    """GenAI 客户端封装类"""
+    """GenAI 客户端封装类（已弃用，请使用 GoogleGenAIGenerator）"""
 
-    def __init__(self):
-        self.api_key = os.getenv("GOOGLE_CLOUD_API_KEY")
+    def __init__(self, api_key: str = None):
+        self.api_key = api_key
         if not self.api_key:
             raise ValueError(
                 "Google Cloud API Key 未配置。\n"
-                "解决方案：\n"
-                "1. 在项目根目录创建 .env 文件\n"
-                "2. 添加配置: GOOGLE_CLOUD_API_KEY=你的API密钥\n"
-                "3. 重启应用使环境变量生效\n"
-                "获取API Key: https://aistudio.google.com/app/apikey"
+                "解决方案：在系统设置页面编辑该服务商，填写 API Key"
             )
 
         self.client = genai.Client(

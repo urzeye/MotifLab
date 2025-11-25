@@ -1,5 +1,8 @@
 """API 路由"""
 import json
+import os
+import zipfile
+import io
 from flask import Blueprint, request, jsonify, Response, send_file
 from backend.services.outline import get_outline_service
 from backend.services.image import get_image_service
@@ -121,25 +124,44 @@ def generate_images():
         }), 500
 
 
-@api_bp.route('/images/<filename>', methods=['GET'])
-def get_image(filename):
-    """获取图片"""
+@api_bp.route('/images/<task_id>/<filename>', methods=['GET'])
+def get_image(task_id, filename):
+    """获取图片（支持缩略图）"""
     try:
-        image_service = get_image_service()
-        filepath = image_service.get_image_path(filename)
+        # 检查是否请求缩略图
+        thumbnail = request.args.get('thumbnail', 'true').lower() == 'true'
+
+        # 直接构建路径，不需要初始化 ImageService
+        history_root = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            "history"
+        )
+
+        if thumbnail:
+            # 尝试返回缩略图
+            thumb_filename = f"thumb_{filename}"
+            thumb_filepath = os.path.join(history_root, task_id, thumb_filename)
+
+            # 如果缩略图存在，返回缩略图
+            if os.path.exists(thumb_filepath):
+                return send_file(thumb_filepath, mimetype='image/png')
+
+        # 返回原图
+        filepath = os.path.join(history_root, task_id, filename)
+
+        if not os.path.exists(filepath):
+            return jsonify({
+                "success": False,
+                "error": f"图片不存在：{task_id}/{filename}"
+            }), 404
 
         return send_file(filepath, mimetype='image/png')
 
-    except FileNotFoundError:
-        return jsonify({
-            "success": False,
-            "error": f"图片不存在：{filename}\n可能原因：\n1. 图片已被删除\n2. 文件路径错误\n3. 图片生成失败"
-        }), 404
     except Exception as e:
         error_msg = str(e)
         return jsonify({
             "success": False,
-            "error": f"获取图片失败。\n错误详情: {error_msg}"
+            "error": f"获取图片失败: {error_msg}"
         }), 500
 
 
@@ -473,4 +495,298 @@ def get_history_stats():
         return jsonify({
             "success": False,
             "error": f"获取历史记录统计失败。\n错误详情: {error_msg}"
+        }), 500
+
+
+@api_bp.route('/history/scan/<task_id>', methods=['GET'])
+def scan_task(task_id):
+    """扫描单个任务并同步图片列表"""
+    try:
+        history_service = get_history_service()
+        result = history_service.scan_and_sync_task_images(task_id)
+
+        if not result.get("success"):
+            return jsonify(result), 404
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        error_msg = str(e)
+        return jsonify({
+            "success": False,
+            "error": f"扫描任务失败。\n错误详情: {error_msg}"
+        }), 500
+
+
+@api_bp.route('/history/scan-all', methods=['POST'])
+def scan_all_tasks():
+    """扫描所有任务并同步图片列表"""
+    try:
+        history_service = get_history_service()
+        result = history_service.scan_all_tasks()
+
+        if not result.get("success"):
+            return jsonify(result), 500
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        error_msg = str(e)
+        return jsonify({
+            "success": False,
+            "error": f"扫描所有任务失败。\n错误详情: {error_msg}"
+        }), 500
+
+
+@api_bp.route('/history/<record_id>/download', methods=['GET'])
+def download_history_zip(record_id):
+    """下载历史记录的所有图片为 ZIP 文件"""
+    try:
+        history_service = get_history_service()
+        record = history_service.get_record(record_id)
+
+        if not record:
+            return jsonify({
+                "success": False,
+                "error": f"历史记录不存在：{record_id}"
+            }), 404
+
+        task_id = record.get('images', {}).get('task_id')
+        if not task_id:
+            return jsonify({
+                "success": False,
+                "error": "该记录没有关联的任务图片"
+            }), 404
+
+        # 获取任务目录
+        task_dir = os.path.join(history_service.history_dir, task_id)
+        if not os.path.exists(task_dir):
+            return jsonify({
+                "success": False,
+                "error": f"任务目录不存在：{task_id}"
+            }), 404
+
+        # 创建内存中的 ZIP 文件
+        memory_file = io.BytesIO()
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+            # 遍历任务目录中的所有图片（排除缩略图）
+            for filename in os.listdir(task_dir):
+                # 跳过缩略图文件
+                if filename.startswith('thumb_'):
+                    continue
+                if filename.endswith(('.png', '.jpg', '.jpeg')):
+                    file_path = os.path.join(task_dir, filename)
+                    # 添加文件到 ZIP，使用 page_N.png 命名
+                    try:
+                        index = int(filename.split('.')[0])
+                        archive_name = f"page_{index + 1}.png"
+                    except:
+                        archive_name = filename
+
+                    zf.write(file_path, archive_name)
+
+        # 将指针移到开始位置
+        memory_file.seek(0)
+
+        # 生成下载文件名（使用记录标题）
+        title = record.get('title', 'images')
+        # 清理文件名中的非法字符
+        safe_title = "".join(c for c in title if c.isalnum() or c in (' ', '-', '_')).strip()
+        if not safe_title:
+            safe_title = 'images'
+
+        filename = f"{safe_title}.zip"
+
+        return send_file(
+            memory_file,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=filename
+        )
+
+    except Exception as e:
+        error_msg = str(e)
+        return jsonify({
+            "success": False,
+            "error": f"下载失败。\n错误详情: {error_msg}"
+        }), 500
+
+
+# ==================== 配置管理 API ====================
+
+def _mask_api_key(key: str) -> str:
+    """遮盖 API Key，只显示前4位和后4位"""
+    if not key:
+        return ''
+    if len(key) <= 8:
+        return '*' * len(key)
+    return key[:4] + '*' * (len(key) - 8) + key[-4:]
+
+
+def _prepare_providers_for_response(providers: dict) -> dict:
+    """准备返回给前端的 providers，返回脱敏的 api_key"""
+    result = {}
+    for name, config in providers.items():
+        provider_copy = config.copy()
+        # 返回脱敏的 api_key
+        if 'api_key' in provider_copy and provider_copy['api_key']:
+            provider_copy['api_key_masked'] = _mask_api_key(provider_copy['api_key'])
+            provider_copy['api_key'] = ''  # 不返回实际值，前端用空字符串表示"不修改"
+        else:
+            provider_copy['api_key_masked'] = ''
+            provider_copy['api_key'] = ''
+        result[name] = provider_copy
+    return result
+
+
+@api_bp.route('/config', methods=['GET'])
+def get_config():
+    """获取当前配置"""
+    try:
+        from pathlib import Path
+        import yaml
+
+        # 读取图片生成配置
+        image_config_path = Path(__file__).parent.parent.parent / 'image_providers.yaml'
+        if image_config_path.exists():
+            with open(image_config_path, 'r', encoding='utf-8') as f:
+                image_config = yaml.safe_load(f) or {}
+        else:
+            image_config = {
+                'active_provider': 'google_genai',
+                'providers': {}
+            }
+
+        # 读取文本生成配置
+        text_config_path = Path(__file__).parent.parent.parent / 'text_providers.yaml'
+        if text_config_path.exists():
+            with open(text_config_path, 'r', encoding='utf-8') as f:
+                text_config = yaml.safe_load(f) or {}
+        else:
+            text_config = {
+                'active_provider': 'google_gemini',
+                'providers': {}
+            }
+
+        return jsonify({
+            "success": True,
+            "config": {
+                "text_generation": {
+                    "active_provider": text_config.get('active_provider', ''),
+                    "providers": _prepare_providers_for_response(text_config.get('providers', {}))
+                },
+                "image_generation": {
+                    "active_provider": image_config.get('active_provider', ''),
+                    "providers": _prepare_providers_for_response(image_config.get('providers', {}))
+                }
+            }
+        })
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"获取配置失败: {str(e)}"
+        }), 500
+
+
+@api_bp.route('/config', methods=['POST'])
+def update_config():
+    """更新配置"""
+    try:
+        from pathlib import Path
+        import yaml
+
+        data = request.get_json()
+
+        # 更新图片生成配置
+        if 'image_generation' in data:
+            image_config_path = Path(__file__).parent.parent.parent / 'image_providers.yaml'
+
+            # 读取现有配置
+            if image_config_path.exists():
+                with open(image_config_path, 'r', encoding='utf-8') as f:
+                    image_config = yaml.safe_load(f) or {}
+            else:
+                image_config = {'providers': {}}
+
+            image_gen_data = data['image_generation']
+            if 'active_provider' in image_gen_data:
+                image_config['active_provider'] = image_gen_data['active_provider']
+
+            if 'providers' in image_gen_data:
+                # 合并 providers，保留未更新的 api_key
+                existing_providers = image_config.get('providers', {})
+                new_providers = image_gen_data['providers']
+
+                for name, new_config in new_providers.items():
+                    # 如果新配置的 api_key 是 True 或空，保留原有的
+                    if new_config.get('api_key') in [True, False, '', None]:
+                        if name in existing_providers and existing_providers[name].get('api_key'):
+                            new_config['api_key'] = existing_providers[name]['api_key']
+                        else:
+                            new_config.pop('api_key', None)
+                    # 移除不需要保存的字段
+                    new_config.pop('api_key_env', None)
+                    new_config.pop('api_key_masked', None)
+
+                image_config['providers'] = new_providers
+
+            # 保存配置
+            with open(image_config_path, 'w', encoding='utf-8') as f:
+                yaml.dump(image_config, f, allow_unicode=True, default_flow_style=False)
+
+        # 更新文本生成配置
+        if 'text_generation' in data:
+            text_gen_data = data['text_generation']
+            text_config_path = Path(__file__).parent.parent.parent / 'text_providers.yaml'
+
+            # 读取现有配置
+            if text_config_path.exists():
+                with open(text_config_path, 'r', encoding='utf-8') as f:
+                    text_config = yaml.safe_load(f) or {}
+            else:
+                text_config = {'providers': {}}
+
+            if 'active_provider' in text_gen_data:
+                text_config['active_provider'] = text_gen_data['active_provider']
+
+            if 'providers' in text_gen_data:
+                # 合并 providers，保留未更新的 api_key
+                existing_providers = text_config.get('providers', {})
+                new_providers = text_gen_data['providers']
+
+                for name, new_config in new_providers.items():
+                    # 如果新配置的 api_key 是 True 或空，保留原有的
+                    if new_config.get('api_key') in [True, False, '', None]:
+                        if name in existing_providers and existing_providers[name].get('api_key'):
+                            new_config['api_key'] = existing_providers[name]['api_key']
+                        else:
+                            new_config.pop('api_key', None)
+                    # 移除不需要保存的字段
+                    new_config.pop('api_key_env', None)
+                    new_config.pop('api_key_masked', None)
+
+                text_config['providers'] = new_providers
+
+            # 保存配置
+            with open(text_config_path, 'w', encoding='utf-8') as f:
+                yaml.dump(text_config, f, allow_unicode=True, default_flow_style=False)
+
+        # 清除配置缓存，确保下次使用时读取新配置
+        from backend.config import Config
+        Config._image_providers_config = None
+
+        # 清除 ImageService 缓存，确保使用新配置
+        from backend.services.image import reset_image_service
+        reset_image_service()
+
+        return jsonify({
+            "success": True,
+            "message": "配置已保存"
+        })
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"更新配置失败: {str(e)}"
         }), 500

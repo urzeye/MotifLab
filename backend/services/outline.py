@@ -1,14 +1,43 @@
 import os
 import re
 import base64
+import yaml
+from pathlib import Path
 from typing import Dict, List, Any, Optional
 from backend.utils.text_client import get_text_chat_client
 
 
 class OutlineService:
     def __init__(self):
-        self.client = get_text_chat_client()
+        self.text_config = self._load_text_config()
+        self.client = self._get_client()
         self.prompt_template = self._load_prompt_template()
+
+    def _load_text_config(self) -> dict:
+        """加载文本生成配置"""
+        config_path = Path(__file__).parent.parent.parent / 'text_providers.yaml'
+        if config_path.exists():
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return yaml.safe_load(f) or {}
+        # 默认配置
+        return {
+            'active_provider': 'google_gemini',
+            'providers': {
+                'google_gemini': {
+                    'type': 'google_gemini',
+                    'model': 'gemini-2.0-flash-exp',
+                    'temperature': 1.0,
+                    'max_output_tokens': 65535
+                }
+            }
+        }
+
+    def _get_client(self):
+        """根据配置获取客户端"""
+        active_provider = self.text_config.get('active_provider', 'google_gemini')
+        providers = self.text_config.get('providers', {})
+        provider_config = providers.get(active_provider, {})
+        return get_text_chat_client(provider_config)
 
     def _load_prompt_template(self) -> str:
         prompt_path = os.path.join(
@@ -64,11 +93,20 @@ class OutlineService:
             if images and len(images) > 0:
                 prompt += f"\n\n注意：用户提供了 {len(images)} 张参考图片，请在生成大纲时考虑这些图片的内容和风格。这些图片可能是产品图、个人照片或场景图，请根据图片内容来优化大纲，使生成的内容与图片相关联。"
 
+            # 从配置中获取模型参数
+            active_provider = self.text_config.get('active_provider', 'google_gemini')
+            providers = self.text_config.get('providers', {})
+            provider_config = providers.get(active_provider, {})
+
+            model = provider_config.get('model', 'gemini-2.0-flash-exp')
+            temperature = provider_config.get('temperature', 1.0)
+            max_output_tokens = provider_config.get('max_output_tokens', 65535)
+
             outline_text = self.client.generate_text(
                 prompt=prompt,
-                model="gemini-3-pro-preview",
-                temperature=1.0,
-                max_output_tokens=65535,
+                model=model,
+                temperature=temperature,
+                max_output_tokens=max_output_tokens,
                 images=images
             )
 
@@ -85,14 +123,13 @@ class OutlineService:
             error_msg = str(e)
             return {
                 "success": False,
-                "error": f"大纲生成失败。\n错误详情: {error_msg}\n可能原因：\n1. Text API配置错误或密钥无效\n2. 网络连接问题\n3. 模型无法访问或不存在\n4. 提示词格式有问题\n建议：检查 TEXT_API_KEY 环境变量配置和网络连接"
+                "error": f"大纲生成失败。\n错误详情: {error_msg}\n可能原因：\n1. Text API配置错误或密钥无效\n2. 网络连接问题\n3. 模型无法访问或不存在\n4. 提示词格式有问题\n建议：检查配置文件 text_providers.yaml 和环境变量"
             }
 
 
-_service_instance = None
-
 def get_outline_service() -> OutlineService:
-    global _service_instance
-    if _service_instance is None:
-        _service_instance = OutlineService()
-    return _service_instance
+    """
+    获取大纲生成服务实例
+    每次调用都创建新实例以确保配置是最新的
+    """
+    return OutlineService()

@@ -91,18 +91,15 @@ git clone https://github.com/HisMax/RedInk.git
 cd RedInk
 ```
 
-### 2. 配置环境变量
+### 2. 配置 API 服务
+
+复制配置模板文件：
 ```bash
-cp .env.example .env
+cp text_providers.yaml.example text_providers.yaml
 cp image_providers.yaml.example image_providers.yaml
 ```
 
-编辑 `.env` 文件，填入你的 API Key
-
-编辑 `image_providers.yaml` 文件，配置图片生成服务：
-- 修改 `active_provider` 选择要使用的服务商
-- 在对应服务商的 `base_url` 中填入你的 API 端点地址
-- 确保 `.env` 中配置了对应的 API Key
+编辑配置文件，填入你的 API Key 和服务配置。也可以启动后在 Web 界面的**设置页面**进行配置。
 
 ### 3. 安装后端依赖
 ```bash
@@ -150,43 +147,75 @@ pnpm dev
 
 ## 🔧 配置说明
 
-### 图片服务商配置
+### 配置方式
 
-项目支持多个图片生成服务商，配置文件: `image_providers.yaml`
+项目支持两种配置方式：
 
-**首次使用:**
-```bash
-cp image_providers.yaml.example image_providers.yaml
-```
+1. **Web 界面配置（推荐）**：启动服务后，在设置页面可视化配置
+2. **YAML 文件配置**：直接编辑配置文件
 
-然后编辑 `image_providers.yaml`，配置你的图片服务：
+### 文本生成配置
+
+配置文件: `text_providers.yaml`
 
 ```yaml
-active_provider: image_api
+# 当前激活的服务商
+active_provider: openai
 
 providers:
-  image_api:
-    type: image_api
-    api_key_env: IMAGE_API_KEY
-    base_url: https://your-image-api-endpoint.com  # 填写你的API端点
-    model: nano-banana-2
-    default_aspect_ratio: "3:4"  # 小红书标准比例
+  # OpenAI 官方或兼容接口
+  openai:
+    type: openai_compatible
+    api_key: sk-xxxxxxxxxxxxxxxxxxxx
+    base_url: https://api.openai.com/v1
+    model: gpt-4o
+
+  # Google Gemini（原生接口）
+  gemini:
+    type: google_gemini
+    api_key: AIzaxxxxxxxxxxxxxxxxxxxxxxxxx
+    model: gemini-2.0-flash
 ```
 
-也支持:
-- Google GenAI (官方)
-- OpenAI DALL-E 3
-- 其他兼容 OpenAI API 的服务
+### 图片生成配置
 
-详细配置说明请查看 `image_providers.yaml.example` 文件
+配置文件: `image_providers.yaml`
 
+```yaml
+# 当前激活的服务商
+active_provider: gemini
 
+providers:
+  # Google Gemini 图片生成
+  gemini:
+    type: google_genai
+    api_key: AIzaxxxxxxxxxxxxxxxxxxxxxxxxx
+    model: gemini-3-pro-image-preview
+    high_concurrency: false  # 高并发模式
+
+  # OpenAI 兼容接口
+  openai_image:
+    type: image_api
+    api_key: sk-xxxxxxxxxxxxxxxxxxxx
+    base_url: https://your-api-endpoint.com
+    model: dall-e-3
+    high_concurrency: false
+```
+
+### 高并发模式说明
+
+- **关闭（默认）**：图片逐张生成，适合 GCP 300$ 试用账号或有速率限制的 API
+- **开启**：图片并行生成（最多15张同时），速度更快，但需要 API 支持高并发
+
+⚠️ **GCP 300$ 试用账号不建议启用高并发**，可能会触发速率限制导致生成失败。
+
+---
 
 ## ⚠️ 注意事项
 
 1. **API 配额限制**:
-   - 注意 Gemini 和 Nano banana Pro 的调用配额
-   - 建议使用支持高并发的 API 中转平台
+   - 注意 Gemini 和图片生成 API 的调用配额
+   - GCP 试用账号建议关闭高并发模式
 
 2. **生成时间**:
    - 图片生成需要时间,请耐心等待（不要离开页面）
@@ -203,6 +232,19 @@ providers:
 - [ ] 支持更多图片格式，例如一句话生成一套PPT什么的
 - [ ] 历史记录管理优化
 - [ ] 导出为各种格式(PDF、长图等)
+
+---
+
+## 更新日志
+
+### v1.1.0 (2024-11)
+- ✨ 新增 Web 界面配置功能，可视化管理 API 服务商
+- ✨ 新增高并发模式开关，适配不同 API 配额
+- ✨ API Key 脱敏显示，保护密钥安全
+- ✨ 配置自动保存，修改即时生效
+- 🔧 简化配置文件结构，移除冗余参数
+- 🔧 优化历史记录图片显示，使用缩略图节省带宽
+- 🐛 修复图片加载 500 错误问题
 
 ---
 

@@ -53,19 +53,13 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
         if not self.api_key:
             raise ValueError(
                 "OpenAI 兼容 API Key 未配置。\n"
-                "解决方案：\n"
-                "1. 在 .env 文件中配置相应的API密钥环境变量\n"
-                "2. 在 image_providers.yaml 中指定正确的 api_key_env\n"
-                "3. 确认环境变量名与配置文件中的 api_key_env 匹配"
+                "解决方案：在系统设置页面编辑该服务商，填写 API Key"
             )
 
         if not self.base_url:
             raise ValueError(
                 "OpenAI 兼容 API Base URL 未配置。\n"
-                "解决方案：\n"
-                "1. 在 image_providers.yaml 中设置 base_url 字段\n"
-                "2. 或在 .env 文件中设置对应的环境变量\n"
-                "例如: https://api.openai.com 或其他兼容服务的地址"
+                "解决方案：在系统设置页面编辑该服务商，填写 Base URL"
             )
 
         # 默认模型
