@@ -1,4 +1,4 @@
-<div align="center" style="background-color: #f5f5f5; padding: 20px; border-radius: 8px;">
+<div align="center" style="background-color: #ffffff !important; padding: 20px; border-radius: 8px;">
   <img src="images/logo.png" alt="红墨 Logo" width="200"/>
 </div>
 
