@@ -219,6 +219,10 @@ providers:
 
 <img src="images/coffee.jpg" alt="赞赏码" width="300"/>
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=HisMax/RedInk&type=Date)](https://star-history.com/#HisMax/RedInk&Date)
+
 ---
 
 ---
