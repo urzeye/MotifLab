@@ -16,7 +16,7 @@
   <em>红墨首页</em>
 </p>
 
-![](images/showcase-grid.png)
+<img src="images/showcase-grid.png" alt="使用红墨生成的各类小红书封面" width="600"/>
 
 
 <p align="center">
@@ -217,7 +217,7 @@ providers:
 
 ### 用爱发电，如果可以，请默子喝一杯☕️咖啡吧
 
-![](images/coffee.jpg)
+<img src="images/coffee.jpg" alt="赞赏码" width="300"/>
 
 ---
 
