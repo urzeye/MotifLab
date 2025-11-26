@@ -1,6 +1,7 @@
 import logging
 import sys
-from flask import Flask
+from pathlib import Path
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 from backend.config import Config
 from backend.routes.api import api_bp
@@ -39,7 +40,19 @@ def create_app():
     logger = setup_logging()
     logger.info("🚀 正在启动 红墨 AI图文生成器...")
 
-    app = Flask(__name__)
+    # 检查是否存在前端构建产物（Docker 环境）
+    frontend_dist = Path(__file__).parent.parent / 'frontend' / 'dist'
+    if frontend_dist.exists():
+        logger.info("📦 检测到前端构建产物，启用静态文件托管模式")
+        app = Flask(
+            __name__,
+            static_folder=str(frontend_dist),
+            static_url_path=''
+        )
+    else:
+        logger.info("🔧 开发模式，前端请单独启动")
+        app = Flask(__name__)
+
     app.config.from_object(Config)
 
     CORS(app, resources={
@@ -55,18 +68,29 @@ def create_app():
     # 启动时验证配置
     _validate_config_on_startup(logger)
 
-    @app.route('/')
-    def index():
-        return {
-            "message": "红墨 AI图文生成器 API",
-            "version": "0.1.0",
-            "endpoints": {
-                "health": "/api/health",
-                "outline": "POST /api/outline",
-                "generate": "POST /api/generate",
-                "images": "GET /api/images/<filename>"
+    # 根据是否有前端构建产物决定根路由行为
+    if frontend_dist.exists():
+        @app.route('/')
+        def serve_index():
+            return send_from_directory(app.static_folder, 'index.html')
+
+        # 处理 Vue Router 的 HTML5 History 模式
+        @app.errorhandler(404)
+        def fallback(e):
+            return send_from_directory(app.static_folder, 'index.html')
+    else:
+        @app.route('/')
+        def index():
+            return {
+                "message": "红墨 AI图文生成器 API",
+                "version": "0.1.0",
+                "endpoints": {
+                    "health": "/api/health",
+                    "outline": "POST /api/outline",
+                    "generate": "POST /api/generate",
+                    "images": "GET /api/images/<filename>"
+                }
             }
-        }
 
     return app
 

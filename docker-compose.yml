@@ -1,0 +1,13 @@
+services:
+  redink:
+    image: hismax/redink:latest
+    container_name: redink
+    ports:
+      - "12398:12398"
+    volumes:
+      # 持久化输出目录
+      - ./output:/app/output
+      # 可选：挂载自定义配置文件
+      # - ./text_providers.yaml:/app/text_providers.yaml
+      # - ./image_providers.yaml:/app/image_providers.yaml
+    restart: unless-stopped
