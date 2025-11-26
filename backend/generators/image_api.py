@@ -1,4 +1,5 @@
 """Image API 图片生成器"""
+import logging
 import time
 import random
 import base64
@@ -6,6 +7,8 @@ import requests
 from typing import Dict, Any, Optional, List
 from .base import ImageGeneratorBase
 from ..utils.image_compressor import compress_image
+
+logger = logging.getLogger(__name__)
 
 
 def retry_on_error(max_retries: int = 3, base_delay: float = 2):
@@ -20,7 +23,7 @@ def retry_on_error(max_retries: int = 3, base_delay: float = 2):
                     last_error = e
                     if attempt < max_retries - 1:
                         delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
-                        print(f"[重试] 请求失败，{delay:.1f}秒后重试 (尝试 {attempt + 2}/{max_retries})")
+                        logger.warning(f"请求失败，{delay:.1f}秒后重试 (尝试 {attempt + 2}/{max_retries}): {str(e)[:100]}")
                         time.sleep(delay)
             raise last_error
         return wrapper
@@ -32,14 +35,17 @@ class ImageApiGenerator(ImageGeneratorBase):
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
+        logger.debug("初始化 ImageApiGenerator...")
         self.base_url = config.get('base_url', 'https://api.example.com')
         self.model = config.get('model', 'default-model')
         self.default_aspect_ratio = config.get('default_aspect_ratio', '3:4')
         self.image_size = config.get('image_size', '4K')
+        logger.info(f"ImageApiGenerator 初始化完成: base_url={self.base_url}, model={self.model}")
 
     def validate_config(self) -> bool:
         """验证配置是否有效"""
         if not self.api_key:
+            logger.error("Image API Key 未配置")
             raise ValueError(
                 "Image API Key 未配置。\n"
                 "解决方案：在系统设置页面编辑该服务商，填写 API Key"
@@ -87,6 +93,8 @@ class ImageApiGenerator(ImageGeneratorBase):
         if model is None:
             model = self.model
 
+        logger.info(f"Image API 生成图片: model={model}, aspect_ratio={aspect_ratio}")
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
@@ -114,10 +122,12 @@ class ImageApiGenerator(ImageGeneratorBase):
 
         # 如果有参考图片，添加到 image 数组（Data URI 格式）
         if all_reference_images:
+            logger.debug(f"  添加 {len(all_reference_images)} 张参考图片")
             image_uris = []
-            for img_data in all_reference_images:
+            for idx, img_data in enumerate(all_reference_images):
                 # 压缩图片到 200KB 以内
                 compressed_img = compress_image(img_data, max_size_kb=200)
+                logger.debug(f"  参考图 {idx}: {len(img_data)} -> {len(compressed_img)} bytes")
                 base64_image = base64.b64encode(compressed_img).decode('utf-8')
                 data_uri = f"data:image/png;base64,{base64_image}"
                 image_uris.append(data_uri)
@@ -138,8 +148,10 @@ class ImageApiGenerator(ImageGeneratorBase):
             payload["prompt"] = enhanced_prompt
 
         # 发送请求
+        api_url = f"{self.base_url}/v1/images/generations"
+        logger.debug(f"  发送请求到: {api_url}")
         response = requests.post(
-            f"{self.base_url}/v1/images/generations",
+            api_url,
             headers=headers,
             json=payload,
             timeout=300
@@ -147,10 +159,11 @@ class ImageApiGenerator(ImageGeneratorBase):
 
         if response.status_code != 200:
             error_detail = response.text[:500]
+            logger.error(f"Image API 请求失败: status={response.status_code}, error={error_detail}")
             raise Exception(
                 f"Image API 请求失败 (状态码: {response.status_code})\n"
                 f"错误详情: {error_detail}\n"
-                f"请求地址: {self.base_url}/v1/images/generations\n"
+                f"请求地址: {api_url}\n"
                 "可能原因：\n"
                 "1. API密钥无效或已过期\n"
                 "2. 请求参数不符合API要求\n"
@@ -160,6 +173,7 @@ class ImageApiGenerator(ImageGeneratorBase):
             )
 
         result = response.json()
+        logger.debug(f"  API 响应: data 长度={len(result.get('data', []))}")
 
         # 提取 b64_json 数据
         if "data" in result and len(result["data"]) > 0:
@@ -176,8 +190,10 @@ class ImageApiGenerator(ImageGeneratorBase):
 
                 # 解码 base64
                 image_data = base64.b64decode(b64_string)
+                logger.info(f"✅ Image API 图片生成成功: {len(image_data)} bytes")
                 return image_data
 
+        logger.error(f"无法从响应中提取图片数据: {str(result)[:200]}")
         raise Exception(
             f"图片数据提取失败：未找到 b64_json 数据。\n"
             f"API响应片段: {str(result)[:500]}\n"

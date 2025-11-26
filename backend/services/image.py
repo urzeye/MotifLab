@@ -1,4 +1,5 @@
 """图片生成服务"""
+import logging
 import os
 import uuid
 import time
@@ -8,6 +9,8 @@ from typing import Dict, Any, Generator, List, Optional, Tuple
 from backend.config import Config
 from backend.generators.factory import ImageGeneratorFactory
 from backend.utils.image_compressor import compress_image
+
+logger = logging.getLogger(__name__)
 
 
 class ImageService:
@@ -24,14 +27,18 @@ class ImageService:
         Args:
             provider_name: 服务商名称，如果为None则使用配置文件中的激活服务商
         """
+        logger.debug("初始化 ImageService...")
+
         # 获取服务商配置
         if provider_name is None:
             provider_name = Config.get_active_image_provider()
 
+        logger.info(f"使用图片服务商: {provider_name}")
         provider_config = Config.get_image_provider_config(provider_name)
 
         # 创建生成器实例
         provider_type = provider_config.get('type', provider_name)
+        logger.debug(f"创建生成器: type={provider_type}")
         self.generator = ImageGeneratorFactory.create(provider_type, provider_config)
 
         # 保存配置信息
@@ -53,6 +60,8 @@ class ImageService:
 
         # 存储任务状态（用于重试）
         self._task_states: Dict[str, Dict] = {}
+
+        logger.info(f"ImageService 初始化完成: provider={provider_name}, type={provider_type}")
 
     def _load_prompt_template(self) -> str:
         """加载 Prompt 模板"""
@@ -129,6 +138,8 @@ class ImageService:
 
         for attempt in range(max_retries):
             try:
+                logger.debug(f"生成图片 [{index}]: type={page_type}, attempt={attempt + 1}/{max_retries}")
+
                 # 构造图片生成 Prompt（包含完整大纲上下文和用户原始需求）
                 prompt = self.prompt_template.format(
                     page_content=page_content,
@@ -139,6 +150,7 @@ class ImageService:
 
                 # 调用生成器生成图片
                 if self.provider_config.get('type') == 'google_genai':
+                    logger.debug(f"  使用 Google GenAI 生成器")
                     image_data = self.generator.generate_image(
                         prompt=prompt,
                         aspect_ratio=self.provider_config.get('default_aspect_ratio', '3:4'),
@@ -147,6 +159,7 @@ class ImageService:
                         reference_image=reference_image,
                     )
                 elif self.provider_config.get('type') == 'image_api':
+                    logger.debug(f"  使用 Image API 生成器")
                     # Image API 支持多张参考图片
                     # 组合参考图片：用户上传的图片 + 封面图
                     reference_images = []
@@ -163,6 +176,7 @@ class ImageService:
                         reference_images=reference_images if reference_images else None,
                     )
                 else:
+                    logger.debug(f"  使用 OpenAI 兼容生成器")
                     image_data = self.generator.generate_image(
                         prompt=prompt,
                         size=self.provider_config.get('default_size', '1024x1024'),
@@ -173,18 +187,22 @@ class ImageService:
                 # 保存图片（使用当前任务目录）
                 filename = f"{index}.png"
                 self._save_image(image_data, filename, self.current_task_dir)
+                logger.info(f"✅ 图片 [{index}] 生成成功: {filename}")
 
                 return (index, True, filename, None)
 
             except Exception as e:
                 error_msg = str(e)
-                print(f"[生成失败] 第 {index + 1} 页, 尝试 {attempt + 1}/{max_retries}: {error_msg[:100]}")
+                logger.warning(f"图片 [{index}] 生成失败 (尝试 {attempt + 1}/{max_retries}): {error_msg[:200]}")
 
                 if attempt < max_retries - 1:
                     # 等待后重试
-                    time.sleep(2 ** attempt)
+                    wait_time = 2 ** attempt
+                    logger.debug(f"  等待 {wait_time} 秒后重试...")
+                    time.sleep(wait_time)
                     continue
 
+                logger.error(f"❌ 图片 [{index}] 生成失败，已达最大重试次数")
                 return (index, False, None, error_msg)
 
         return (index, False, None, "超过最大重试次数")
@@ -214,9 +232,12 @@ class ImageService:
         if task_id is None:
             task_id = f"task_{uuid.uuid4().hex[:8]}"
 
+        logger.info(f"开始图片生成任务: task_id={task_id}, pages={len(pages)}")
+
         # 创建任务专属目录
         self.current_task_dir = os.path.join(self.history_root_dir, task_id)
         os.makedirs(self.current_task_dir, exist_ok=True)
+        logger.debug(f"任务目录: {self.current_task_dir}")
 
         total = len(pages)
         generated_images = []

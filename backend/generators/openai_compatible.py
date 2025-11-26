@@ -1,4 +1,5 @@
 """OpenAI 兼容接口图片生成器"""
+import logging
 import time
 import random
 import base64
@@ -6,6 +7,8 @@ from functools import wraps
 from typing import Dict, Any
 import requests
 from .base import ImageGeneratorBase
+
+logger = logging.getLogger(__name__)
 
 
 def retry_on_error(max_retries=5, base_delay=3):
@@ -22,16 +25,17 @@ def retry_on_error(max_retries=5, base_delay=3):
                     if "429" in error_str or "rate" in error_str.lower():
                         if attempt < max_retries - 1:
                             wait_time = (base_delay ** attempt) + random.uniform(0, 1)
-                            print(f"[重试] 遇到速率限制，{wait_time:.1f}秒后重试 (尝试 {attempt + 2}/{max_retries})")
+                            logger.warning(f"遇到速率限制，{wait_time:.1f}秒后重试 (尝试 {attempt + 2}/{max_retries})")
                             time.sleep(wait_time)
                             continue
                     # 其他错误或重试耗尽
                     if attempt < max_retries - 1:
                         wait_time = 2 ** attempt
-                        print(f"[重试] 请求失败: {error_str[:100]}，{wait_time}秒后重试")
+                        logger.warning(f"请求失败: {error_str[:100]}，{wait_time}秒后重试")
                         time.sleep(wait_time)
                         continue
                     raise
+            logger.error(f"图片生成失败: 重试 {max_retries} 次后仍失败")
             raise Exception(
                 f"图片生成失败：重试 {max_retries} 次后仍失败。\n"
                 "可能原因：\n"
@@ -49,14 +53,17 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
+        logger.debug("初始化 OpenAICompatibleGenerator...")
 
         if not self.api_key:
+            logger.error("OpenAI 兼容 API Key 未配置")
             raise ValueError(
                 "OpenAI 兼容 API Key 未配置。\n"
                 "解决方案：在系统设置页面编辑该服务商，填写 API Key"
             )
 
         if not self.base_url:
+            logger.error("OpenAI 兼容 API Base URL 未配置")
             raise ValueError(
                 "OpenAI 兼容 API Base URL 未配置。\n"
                 "解决方案：在系统设置页面编辑该服务商，填写 Base URL"
@@ -67,6 +74,8 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
 
         # API 端点类型: 'images' 或 'chat'
         self.endpoint_type = config.get('endpoint_type', 'images')
+
+        logger.info(f"OpenAICompatibleGenerator 初始化完成: base_url={self.base_url}, model={self.default_model}, endpoint={self.endpoint_type}")
 
     def validate_config(self) -> bool:
         """验证配置"""
@@ -97,11 +106,14 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
         if model is None:
             model = self.default_model
 
+        logger.info(f"OpenAI 兼容 API 生成图片: model={model}, size={size}, endpoint={self.endpoint_type}")
+
         if self.endpoint_type == 'images':
             return self._generate_via_images_api(prompt, size, model, quality)
         elif self.endpoint_type == 'chat':
             return self._generate_via_chat_api(prompt, size, model)
         else:
+            logger.error(f"不支持的端点类型: {self.endpoint_type}")
             raise ValueError(
                 f"不支持的端点类型: {self.endpoint_type}\n"
                 "支持的类型: images, chat\n"
@@ -120,6 +132,7 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
     ) -> bytes:
         """通过 /v1/images/generations 端点生成"""
         url = f"{self.base_url.rstrip('/')}/v1/images/generations"
+        logger.debug(f"  发送请求到: {url}")
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -142,6 +155,7 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
 
         if response.status_code != 200:
             error_detail = response.text[:500]
+            logger.error(f"OpenAI Images API 请求失败: status={response.status_code}, error={error_detail}")
             raise Exception(
                 f"OpenAI Images API 请求失败 (状态码: {response.status_code})\n"
                 f"错误详情: {error_detail}\n"
@@ -157,8 +171,10 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
             )
 
         result = response.json()
+        logger.debug(f"  API 响应: data 长度={len(result.get('data', []))}")
 
         if "data" not in result or len(result["data"]) == 0:
+            logger.error(f"API 未返回图片数据: {str(result)[:200]}")
             raise ValueError(
                 "OpenAI API 未返回图片数据。\n"
                 f"响应内容: {str(result)[:500]}\n"
@@ -173,17 +189,23 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
 
         # 处理base64格式
         if "b64_json" in image_data:
-            return base64.b64decode(image_data["b64_json"])
+            img_bytes = base64.b64decode(image_data["b64_json"])
+            logger.info(f"✅ OpenAI Images API 图片生成成功: {len(img_bytes)} bytes")
+            return img_bytes
 
         # 处理URL格式
         elif "url" in image_data:
+            logger.debug(f"  下载图片 URL...")
             img_response = requests.get(image_data["url"], timeout=60)
             if img_response.status_code == 200:
+                logger.info(f"✅ OpenAI Images API 图片生成成功: {len(img_response.content)} bytes")
                 return img_response.content
             else:
+                logger.error(f"下载图片失败: {img_response.status_code}")
                 raise Exception(f"下载图片失败: {img_response.status_code}")
 
         else:
+            logger.error(f"无法从响应中提取图片数据: {str(image_data)[:200]}")
             raise ValueError(
                 "无法从API响应中提取图片数据。\n"
                 f"响应数据: {str(image_data)[:500]}\n"

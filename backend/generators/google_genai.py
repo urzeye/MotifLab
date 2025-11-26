@@ -1,4 +1,5 @@
 """Google GenAI 图片生成器"""
+import logging
 import time
 import random
 import base64
@@ -8,6 +9,8 @@ from google import genai
 from google.genai import types
 from .base import ImageGeneratorBase
 from ..utils.image_compressor import compress_image
+
+logger = logging.getLogger(__name__)
 
 
 def retry_on_429(max_retries=5, base_delay=3):
@@ -26,16 +29,17 @@ def retry_on_429(max_retries=5, base_delay=3):
                         if attempt < max_retries - 1:
                             # 指数退避 + 随机抖动
                             wait_time = (base_delay ** attempt) + random.uniform(0, 1)
-                            print(f"[重试] 遇到资源限制，{wait_time:.1f}秒后重试 (尝试 {attempt + 2}/{max_retries})")
+                            logger.warning(f"遇到资源限制 (429)，{wait_time:.1f}秒后重试 (尝试 {attempt + 2}/{max_retries})")
                             time.sleep(wait_time)
                             continue
                     # 其他错误也进行重试
                     elif attempt < max_retries - 1:
                         wait_time = min(2 ** attempt, 10) + random.uniform(0, 1)
-                        print(f"[重试] 请求失败: {error_str[:100]}，{wait_time:.1f}秒后重试 (尝试 {attempt + 2}/{max_retries})")
+                        logger.warning(f"请求失败: {error_str[:100]}，{wait_time:.1f}秒后重试 (尝试 {attempt + 2}/{max_retries})")
                         time.sleep(wait_time)
                         continue
                     raise
+            logger.error(f"图片生成失败: 重试 {max_retries} 次后仍失败")
             raise Exception(
                 f"图片生成失败：重试 {max_retries} 次后仍失败。\n"
                 f"最后错误: {last_error}\n"
@@ -54,8 +58,10 @@ class GoogleGenAIGenerator(ImageGeneratorBase):
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
+        logger.debug("初始化 GoogleGenAIGenerator...")
 
         if not self.api_key:
+            logger.error("Google GenAI API Key 未配置")
             raise ValueError(
                 "Google GenAI API Key 未配置。\n"
                 "解决方案：在系统设置页面编辑该服务商，填写 API Key\n"
@@ -63,6 +69,7 @@ class GoogleGenAIGenerator(ImageGeneratorBase):
             )
 
         # 初始化客户端
+        logger.debug("初始化 Google GenAI 客户端...")
         self.client = genai.Client(
             vertexai=True,
             api_key=self.api_key,
@@ -75,6 +82,7 @@ class GoogleGenAIGenerator(ImageGeneratorBase):
             types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"),
             types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="OFF"),
         ]
+        logger.info("GoogleGenAIGenerator 初始化完成")
 
     def validate_config(self) -> bool:
         """验证配置"""
@@ -104,13 +112,18 @@ class GoogleGenAIGenerator(ImageGeneratorBase):
         Returns:
             图片二进制数据
         """
+        logger.info(f"Google GenAI 生成图片: model={model}, aspect_ratio={aspect_ratio}")
+        logger.debug(f"  prompt 长度: {len(prompt)} 字符, 有参考图: {reference_image is not None}")
+
         # 构建 parts 列表
         parts = []
 
         # 如果有参考图，先添加参考图和说明
         if reference_image:
+            logger.debug(f"  添加参考图片 ({len(reference_image)} bytes)")
             # 压缩参考图到 200KB 以内
             compressed_ref = compress_image(reference_image, max_size_kb=200)
+            logger.debug(f"  参考图压缩后: {len(compressed_ref)} bytes")
             # 添加参考图
             parts.append(types.Part(
                 inline_data=types.Blob(
@@ -154,6 +167,7 @@ class GoogleGenAIGenerator(ImageGeneratorBase):
         )
 
         image_data = None
+        logger.debug(f"  开始调用 API: model={model}")
         for chunk in self.client.models.generate_content_stream(
             model=model,
             contents=contents,
@@ -164,9 +178,11 @@ class GoogleGenAIGenerator(ImageGeneratorBase):
                     # 检查是否有图片数据
                     if hasattr(part, 'inline_data') and part.inline_data:
                         image_data = part.inline_data.data
+                        logger.debug(f"  收到图片数据: {len(image_data)} bytes")
                         break
 
         if not image_data:
+            logger.error("API 返回为空，未生成图片")
             raise ValueError(
                 "图片生成失败：API返回为空。\n"
                 "可能原因：\n"
@@ -176,6 +192,7 @@ class GoogleGenAIGenerator(ImageGeneratorBase):
                 "建议：修改提示词内容后重试，或检查网络连接"
             )
 
+        logger.info(f"✅ Google GenAI 图片生成成功: {len(image_data)} bytes")
         return image_data
 
     def get_supported_aspect_ratios(self) -> list:

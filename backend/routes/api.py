@@ -1,6 +1,9 @@
 """API 路由"""
 import json
+import logging
 import os
+import time
+import traceback
 import zipfile
 import io
 from flask import Blueprint, request, jsonify, Response, send_file
@@ -8,12 +11,36 @@ from backend.services.outline import get_outline_service
 from backend.services.image import get_image_service
 from backend.services.history import get_history_service
 
+logger = logging.getLogger(__name__)
+
 api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+
+def _log_request(endpoint: str, data: dict = None):
+    """记录请求日志"""
+    logger.info(f"📥 收到请求: {endpoint}")
+    if data:
+        # 过滤敏感信息和大数据
+        safe_data = {k: v for k, v in data.items() if k not in ['images', 'user_images'] and not isinstance(v, bytes)}
+        if 'images' in data:
+            safe_data['images'] = f"[{len(data['images'])} 张图片]"
+        if 'user_images' in data:
+            safe_data['user_images'] = f"[{len(data['user_images'])} 张图片]"
+        logger.debug(f"  请求数据: {safe_data}")
+
+
+def _log_error(endpoint: str, error: Exception):
+    """记录错误日志"""
+    logger.error(f"❌ 请求失败: {endpoint}")
+    logger.error(f"  错误类型: {type(error).__name__}")
+    logger.error(f"  错误信息: {str(error)}")
+    logger.debug(f"  堆栈跟踪:\n{traceback.format_exc()}")
 
 
 @api_bp.route('/outline', methods=['POST'])
 def generate_outline():
     """生成大纲（支持图片上传）"""
+    start_time = time.time()
     try:
         # 检查是否是 multipart/form-data（带图片）
         if request.content_type and 'multipart/form-data' in request.content_type:
@@ -26,6 +53,7 @@ def generate_outline():
                     if file and file.filename:
                         image_data = file.read()
                         images.append(image_data)
+            _log_request('/outline', {'topic': topic, 'images': images})
         else:
             # JSON 请求（无图片或 base64 图片）
             data = request.get_json()
@@ -40,23 +68,30 @@ def generate_outline():
                     if ',' in img_b64:
                         img_b64 = img_b64.split(',')[1]
                     images.append(base64.b64decode(img_b64))
+            _log_request('/outline', {'topic': topic, 'images': images})
 
         if not topic:
+            logger.warning("大纲生成请求缺少 topic 参数")
             return jsonify({
                 "success": False,
                 "error": "参数错误：topic 不能为空。\n请提供要生成图文的主题内容。"
             }), 400
 
         # 调用大纲生成服务
+        logger.info(f"🔄 开始生成大纲，主题: {topic[:50]}...")
         outline_service = get_outline_service()
         result = outline_service.generate_outline(topic, images if images else None)
 
+        elapsed = time.time() - start_time
         if result["success"]:
+            logger.info(f"✅ 大纲生成成功，耗时 {elapsed:.2f}s，共 {len(result.get('pages', []))} 页")
             return jsonify(result), 200
         else:
+            logger.error(f"❌ 大纲生成失败: {result.get('error', '未知错误')}")
             return jsonify(result), 500
 
     except Exception as e:
+        _log_error('/outline', e)
         error_msg = str(e)
         return jsonify({
             "success": False,
@@ -84,13 +119,22 @@ def generate_images():
                     img_b64 = img_b64.split(',')[1]
                 user_images.append(base64.b64decode(img_b64))
 
+        _log_request('/generate', {
+            'pages_count': len(pages) if pages else 0,
+            'task_id': task_id,
+            'user_topic': user_topic[:50] if user_topic else None,
+            'user_images': user_images
+        })
+
         if not pages:
+            logger.warning("图片生成请求缺少 pages 参数")
             return jsonify({
                 "success": False,
                 "error": "参数错误：pages 不能为空。\n请提供要生成的页面列表数据。"
             }), 400
 
         # 获取图片生成服务
+        logger.info(f"🖼️  开始图片生成任务: {task_id}, 共 {len(pages)} 页")
         image_service = get_image_service()
 
         def generate():
@@ -117,6 +161,7 @@ def generate_images():
         )
 
     except Exception as e:
+        _log_error('/generate', e)
         error_msg = str(e)
         return jsonify({
             "success": False,
@@ -128,6 +173,7 @@ def generate_images():
 def get_image(task_id, filename):
     """获取图片（支持缩略图）"""
     try:
+        logger.debug(f"获取图片: {task_id}/{filename}")
         # 检查是否请求缩略图
         thumbnail = request.args.get('thumbnail', 'true').lower() == 'true'
 
@@ -158,6 +204,7 @@ def get_image(task_id, filename):
         return send_file(filepath, mimetype='image/png')
 
     except Exception as e:
+        _log_error('/images', e)
         error_msg = str(e)
         return jsonify({
             "success": False,
@@ -174,18 +221,28 @@ def retry_single_image():
         page = data.get('page')
         use_reference = data.get('use_reference', True)
 
+        _log_request('/retry', {'task_id': task_id, 'page_index': page.get('index') if page else None})
+
         if not task_id or not page:
+            logger.warning("重试请求缺少必要参数")
             return jsonify({
                 "success": False,
                 "error": "参数错误：task_id 和 page 不能为空。\n请提供任务ID和页面信息。"
             }), 400
 
+        logger.info(f"🔄 重试生成图片: task={task_id}, page={page.get('index')}")
         image_service = get_image_service()
         result = image_service.retry_single_image(task_id, page, use_reference)
+
+        if result["success"]:
+            logger.info(f"✅ 图片重试成功: {result.get('image_url')}")
+        else:
+            logger.error(f"❌ 图片重试失败: {result.get('error')}")
 
         return jsonify(result), 200 if result["success"] else 500
 
     except Exception as e:
+        _log_error('/retry', e)
         error_msg = str(e)
         return jsonify({
             "success": False,
@@ -201,12 +258,16 @@ def retry_failed_images():
         task_id = data.get('task_id')
         pages = data.get('pages')
 
+        _log_request('/retry-failed', {'task_id': task_id, 'pages_count': len(pages) if pages else 0})
+
         if not task_id or not pages:
+            logger.warning("批量重试请求缺少必要参数")
             return jsonify({
                 "success": False,
                 "error": "参数错误：task_id 和 pages 不能为空。\n请提供任务ID和要重试的页面列表。"
             }), 400
 
+        logger.info(f"🔄 批量重试失败图片: task={task_id}, 共 {len(pages)} 页")
         image_service = get_image_service()
 
         def generate():
@@ -228,6 +289,7 @@ def retry_failed_images():
         )
 
     except Exception as e:
+        _log_error('/retry-failed', e)
         error_msg = str(e)
         return jsonify({
             "success": False,
@@ -246,12 +308,16 @@ def regenerate_image():
         full_outline = data.get('full_outline', '')
         user_topic = data.get('user_topic', '')
 
+        _log_request('/regenerate', {'task_id': task_id, 'page_index': page.get('index') if page else None})
+
         if not task_id or not page:
+            logger.warning("重新生成请求缺少必要参数")
             return jsonify({
                 "success": False,
                 "error": "参数错误：task_id 和 page 不能为空。\n请提供任务ID和页面信息。"
             }), 400
 
+        logger.info(f"🔄 重新生成图片: task={task_id}, page={page.get('index')}")
         image_service = get_image_service()
         result = image_service.regenerate_image(
             task_id, page, use_reference,
@@ -259,9 +325,15 @@ def regenerate_image():
             user_topic=user_topic
         )
 
+        if result["success"]:
+            logger.info(f"✅ 图片重新生成成功: {result.get('image_url')}")
+        else:
+            logger.error(f"❌ 图片重新生成失败: {result.get('error')}")
+
         return jsonify(result), 200 if result["success"] else 500
 
     except Exception as e:
+        _log_error('/regenerate', e)
         error_msg = str(e)
         return jsonify({
             "success": False,
