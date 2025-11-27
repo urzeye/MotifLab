@@ -56,8 +56,8 @@ history/*
 
 # API configurations (contain API keys)
 .gemini/
-image_providers.yaml
-text_providers.yaml
+/image_providers.yaml
+/text_providers.yaml
 
 # Logs
 *.log
