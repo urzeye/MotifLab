@@ -35,6 +35,11 @@ const router = createRouter({
       component: HistoryView
     },
     {
+      path: '/history/:id',
+      name: 'history-detail',
+      component: HistoryView
+    },
+    {
       path: '/settings',
       name: 'settings',
       component: SettingsView

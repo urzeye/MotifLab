@@ -57,6 +57,32 @@
   filter: grayscale(20%);
 }
 
+.btn-secondary {
+  background: white;
+  color: var(--text-main);
+  border: 1px solid #d1d5db;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-secondary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 /* 通用输入框 (旧版保留，以防万一) */
 .input {
   width: 100%;
@@ -218,6 +244,24 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 24px;
+}
+
+/* 图片卡片统一样式 - 用于生成页面和结果页面 */
+.image-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #f0f0f0;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  /* 确保卡片有最小高度,防止未加载时塌陷 */
+  min-height: 320px;
+}
+
+.image-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
 }
 
 /* 全屏模态框 */

@@ -272,11 +272,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { getHistoryList, getHistoryStats, searchHistory, deleteHistory, getHistory, type HistoryRecord, regenerateImage as apiRegenerateImage, updateHistory, scanAllTasks } from '../api'
 import { useGeneratorStore } from '../stores/generator'
 
 const router = useRouter()
+const route = useRoute()
 const store = useGeneratorStore()
 
 const records = ref<HistoryRecord[]>([])
@@ -541,6 +542,11 @@ onMounted(async () => {
   // 先加载数据
   await loadData()
   await loadStats()
+
+  // 检查路由参数，如果有 ID 则自动打开图片查看器
+  if (route.params.id) {
+    await viewImages(route.params.id as string)
+  }
 
   // 自动执行一次扫描（静默，不显示结果）
   try {

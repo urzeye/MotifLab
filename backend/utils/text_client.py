@@ -40,7 +40,7 @@ def retry_on_429(max_retries=3, base_delay=2):
 class TextChatClient:
     """Text API 客户端封装类"""
 
-    def __init__(self, api_key: str = None, base_url: str = None):
+    def __init__(self, api_key: str = None, base_url: str = None, endpoint_type: str = None):
         self.api_key = api_key
         if not self.api_key:
             raise ValueError(
@@ -48,8 +48,14 @@ class TextChatClient:
                 "解决方案：在系统设置页面编辑文本生成服务商，填写 API Key"
             )
 
-        self.base_url = base_url or "https://api.openai.com"
-        self.chat_endpoint = f"{self.base_url}/v1/chat/completions"
+        self.base_url = (base_url or "https://api.openai.com").rstrip('/').rstrip('/v1')
+
+        # 支持自定义端点路径
+        endpoint = endpoint_type or '/v1/chat/completions'
+        # 确保端点以 / 开头
+        if not endpoint.startswith('/'):
+            endpoint = '/' + endpoint
+        self.chat_endpoint = f"{self.base_url}{endpoint}"
 
     def _encode_image_to_base64(self, image_data: bytes) -> str:
         """将图片数据编码为 base64"""
@@ -157,19 +163,74 @@ class TextChatClient:
 
         if response.status_code != 200:
             error_detail = response.text[:500]
-            raise Exception(
-                f"Text API 请求失败 (状态码: {response.status_code})\n"
-                f"错误详情: {error_detail}\n"
-                f"请求地址: {self.chat_endpoint}\n"
-                f"模型: {model}\n"
-                "可能原因：\n"
-                "1. API密钥无效或已过期\n"
-                "2. 模型名称不正确或无权访问\n"
-                "3. 请求超时或网络问题\n"
-                "4. API配额已用尽\n"
-                "5. Base URL配置错误\n"
-                "建议：检查 TEXT_API_KEY 和 TEXT_API_BASE_URL 配置"
-            )
+            status_code = response.status_code
+
+            # 根据状态码给出更详细的错误信息
+            if status_code == 401:
+                raise Exception(
+                    "❌ API Key 认证失败\n\n"
+                    "【可能原因】\n"
+                    "1. API Key 无效或已过期\n"
+                    "2. API Key 格式错误（复制时可能包含空格）\n"
+                    "3. API Key 被禁用或删除\n\n"
+                    "【解决方案】\n"
+                    "1. 在系统设置页面检查 API Key 是否正确\n"
+                    "2. 重新获取 API Key\n"
+                    f"\n【请求地址】{self.chat_endpoint}"
+                )
+            elif status_code == 403:
+                raise Exception(
+                    "❌ 权限被拒绝\n\n"
+                    "【可能原因】\n"
+                    "1. API Key 没有访问该模型的权限\n"
+                    "2. 账户配额已用尽\n"
+                    "3. 区域限制\n\n"
+                    "【解决方案】\n"
+                    "1. 检查 API 权限配置\n"
+                    "2. 尝试使用其他模型\n"
+                    f"\n【原始错误】{error_detail[:200]}"
+                )
+            elif status_code == 404:
+                raise Exception(
+                    "❌ 模型不存在或 API 端点错误\n\n"
+                    "【可能原因】\n"
+                    f"1. 模型 '{model}' 不存在或已下线\n"
+                    "2. Base URL 配置错误\n\n"
+                    "【解决方案】\n"
+                    "1. 检查模型名称是否正确\n"
+                    "2. 检查 Base URL 配置\n"
+                    f"\n【请求地址】{self.chat_endpoint}"
+                )
+            elif status_code == 429:
+                raise Exception(
+                    "⏳ API 配额或速率限制\n\n"
+                    "【说明】\n"
+                    "请求频率过高或配额已用尽。\n\n"
+                    "【解决方案】\n"
+                    "1. 稍后再试（等待 1-2 分钟）\n"
+                    "2. 检查 API 配额使用情况\n"
+                    "3. 考虑升级计划获取更多配额"
+                )
+            elif status_code >= 500:
+                raise Exception(
+                    f"⚠️ API 服务器错误 ({status_code})\n\n"
+                    "【说明】\n"
+                    "这是服务端的临时故障，与您的配置无关。\n\n"
+                    "【解决方案】\n"
+                    "1. 稍等几分钟后重试\n"
+                    "2. 如果持续出现，检查服务商状态页"
+                )
+            else:
+                raise Exception(
+                    f"❌ API 请求失败 (状态码: {status_code})\n\n"
+                    f"【原始错误】\n{error_detail}\n\n"
+                    f"【请求地址】{self.chat_endpoint}\n"
+                    f"【模型】{model}\n\n"
+                    "【通用解决方案】\n"
+                    "1. 检查 API Key 是否正确\n"
+                    "2. 检查 Base URL 配置\n"
+                    "3. 检查模型名称是否正确"
+                )
 
         result = response.json()
 
@@ -196,17 +257,19 @@ def get_text_chat_client(provider_config: dict):
         provider_config: 服务商配置字典
             - type: 'google_gemini' 或 'openai_compatible'
             - api_key: API密钥
-            - base_url: API基础URL（仅 openai_compatible 需要）
+            - base_url: API基础URL（可选）
+            - endpoint_type: 自定义端点路径（可选）
 
     Returns:
         GenAIClient 或 TextChatClient
     """
     provider_type = provider_config.get('type', 'openai_compatible')
     api_key = provider_config.get('api_key')
+    base_url = provider_config.get('base_url')
+    endpoint_type = provider_config.get('endpoint_type')
 
     if provider_type == 'google_gemini':
         from .genai_client import GenAIClient
-        return GenAIClient(api_key=api_key)
+        return GenAIClient(api_key=api_key, base_url=base_url)
     else:
-        base_url = provider_config.get('base_url')
-        return TextChatClient(api_key=api_key, base_url=base_url)
+        return TextChatClient(api_key=api_key, base_url=base_url, endpoint_type=endpoint_type)

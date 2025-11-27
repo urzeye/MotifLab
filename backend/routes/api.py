@@ -868,3 +868,195 @@ def update_config():
             "success": False,
             "error": f"更新配置失败: {str(e)}"
         }), 500
+
+
+@api_bp.route('/config/test', methods=['POST'])
+def test_connection():
+    """测试服务商连接"""
+    try:
+        from pathlib import Path
+        import yaml
+
+        data = request.get_json()
+        provider_type = data.get('type')
+        provider_name = data.get('provider_name')  # 服务商名称（用于从配置文件读取 API Key）
+        config = {
+            'api_key': data.get('api_key'),
+            'base_url': data.get('base_url'),
+            'model': data.get('model')
+        }
+
+        # 如果没有提供 api_key 或 api_key 为空，从配置文件读取
+        if not config['api_key'] and provider_name:
+            # 根据类型读取对应的配置文件
+            if provider_type in ['google_genai', 'google_gemini']:
+                config_path = Path(__file__).parent.parent.parent / 'image_providers.yaml'
+                if provider_type in ['google_gemini', 'openai_compatible']:
+                    config_path = Path(__file__).parent.parent.parent / 'text_providers.yaml'
+
+                if config_path.exists():
+                    with open(config_path, 'r', encoding='utf-8') as f:
+                        yaml_config = yaml.safe_load(f) or {}
+                        providers = yaml_config.get('providers', {})
+                        if provider_name in providers:
+                            config['api_key'] = providers[provider_name].get('api_key')
+                            # 如果配置文件中有其他参数，也读取
+                            if not config['base_url']:
+                                config['base_url'] = providers[provider_name].get('base_url')
+                            if not config['model']:
+                                config['model'] = providers[provider_name].get('model')
+            else:
+                # openai_compatible 和 image_api 类型
+                if provider_type in ['openai_compatible']:
+                    config_path = Path(__file__).parent.parent.parent / 'text_providers.yaml'
+                else:
+                    config_path = Path(__file__).parent.parent.parent / 'image_providers.yaml'
+
+                if config_path.exists():
+                    with open(config_path, 'r', encoding='utf-8') as f:
+                        yaml_config = yaml.safe_load(f) or {}
+                        providers = yaml_config.get('providers', {})
+                        if provider_name in providers:
+                            config['api_key'] = providers[provider_name].get('api_key')
+                            if not config['base_url']:
+                                config['base_url'] = providers[provider_name].get('base_url')
+                            if not config['model']:
+                                config['model'] = providers[provider_name].get('model')
+
+        if not config['api_key']:
+            return jsonify({"success": False, "error": "API Key 未配置"}), 400
+
+        # 统一的测试提示词（仅用于文本生成服务商）
+        test_prompt = "请回复'你好，红墨'"
+
+        if provider_type == 'google_genai':
+            from google import genai
+            from google.genai import types
+            # 图片生成服务商：仅测试连接，不实际生成
+            if config.get('base_url'):
+                # 有自定义 base_url，可以测试连接
+                client = genai.Client(
+                    api_key=config['api_key'],
+                    http_options={
+                        'base_url': config['base_url'],
+                        'api_version': 'v1beta'
+                    },
+                    vertexai=False
+                )
+                # 简单测试：列出可用模型
+                try:
+                    models = list(client.models.list())
+                    return jsonify({
+                        "success": True,
+                        "message": "连接成功！仅代表连接稳定，不确定是否可以稳定支持图片生成"
+                    })
+                except Exception as e:
+                    raise Exception(f"连接测试失败: {str(e)}")
+            else:
+                # 使用标准 Vertex AI，无法用 API Key 测试
+                # 直接返回提示，说明需要在实际使用时验证
+                return jsonify({
+                    "success": True,
+                    "message": "Vertex AI 无法通过 API Key 测试连接（需要 OAuth2 认证）。请在实际生成图片时验证配置是否正确。"
+                })
+
+        elif provider_type in ['openai_compatible', 'image_api']:
+            import requests
+            base_url = config['base_url'].rstrip('/').rstrip('/v1') if config.get('base_url') else 'https://api.openai.com'
+
+            # 对于 image_api 类型，只测试连接不实际生成
+            if provider_type == 'image_api':
+                url = f"{base_url}/v1/models"
+                response = requests.get(
+                    url,
+                    headers={'Authorization': f"Bearer {config['api_key']}"},
+                    timeout=30
+                )
+
+                if response.status_code == 200:
+                    return jsonify({
+                        "success": True,
+                        "message": "连接成功！仅代表连接稳定，不确定是否可以稳定支持图片生成"
+                    })
+                else:
+                    raise Exception(f"HTTP {response.status_code}: {response.text[:200]}")
+
+            # openai_compatible 类型：实际调用文本生成测试
+            url = f"{base_url}/v1/chat/completions"
+
+            payload = {
+                "model": config.get('model') or 'gpt-3.5-turbo',
+                "messages": [{"role": "user", "content": test_prompt}],
+                "max_tokens": 50
+            }
+
+            response = requests.post(
+                url,
+                headers={'Authorization': f"Bearer {config['api_key']}", 'Content-Type': 'application/json'},
+                json=payload,
+                timeout=30
+            )
+
+            if response.status_code != 200:
+                raise Exception(f"HTTP {response.status_code}: {response.text[:200]}")
+
+            result = response.json()
+            result_text = result['choices'][0]['message']['content']
+
+            # 检查响应是否包含关键词
+            if "你好" in result_text and "红墨" in result_text:
+                return jsonify({
+                    "success": True,
+                    "message": f"连接成功！响应: {result_text[:100]}"
+                })
+            else:
+                return jsonify({
+                    "success": True,
+                    "message": f"连接成功，但响应内容不符合预期: {result_text[:100]}"
+                })
+
+        elif provider_type == 'google_gemini':
+            from google import genai
+            from google.genai import types
+            # 文本生成服务商：实际测试生成
+            if config.get('base_url'):
+                client = genai.Client(
+                    api_key=config['api_key'],
+                    http_options={
+                        'base_url': config['base_url'],
+                        'api_version': 'v1beta'
+                    },
+                    vertexai=False
+                )
+            else:
+                # 使用标准 Vertex AI 模式
+                client = genai.Client(
+                    api_key=config['api_key'],
+                    vertexai=True
+                )
+
+            # 测试生成内容
+            model = config.get('model') or 'gemini-2.0-flash-exp'
+            response = client.models.generate_content(
+                model=model,
+                contents=test_prompt
+            )
+            result_text = response.text if hasattr(response, 'text') else str(response)
+
+            # 检查响应是否包含关键词
+            if "你好" in result_text and "红墨" in result_text:
+                return jsonify({
+                    "success": True,
+                    "message": f"连接成功！响应: {result_text[:100]}"
+                })
+            else:
+                return jsonify({
+                    "success": True,
+                    "message": f"连接成功，但响应内容不符合预期: {result_text[:100]}"
+                })
+
+        else:
+            raise ValueError(f"不支持的类型: {provider_type}")
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400

@@ -1,6 +1,6 @@
 services:
   redink:
-    image: hismax/redink:latest
+    image: histonemax/redink:latest
     container_name: redink
     ports:
       - "12398:12398"

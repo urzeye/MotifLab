@@ -116,9 +116,17 @@
         </div>
 
         <div v-if="recentRecords.length > 0" class="recent-list">
-          <div v-for="record in recentRecords" :key="record.id" class="recent-item" @click="loadRecord(record)">
-            <div class="recent-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" color="#666"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          <div v-for="record in recentRecords" :key="record.id" class="recent-item" @click="viewRecord(record)">
+            <div class="recent-thumbnail">
+              <img
+                v-if="record.thumbnail"
+                :src="getThumbnailUrl(record)"
+                :alt="record.title"
+                @error="handleThumbnailError"
+              />
+              <div v-else class="thumbnail-placeholder">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+              </div>
             </div>
             <div class="recent-info">
               <div class="recent-title">{{ record.title }}</div>
@@ -320,19 +328,23 @@ const formatDate = (str: string) => {
   return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`
 }
 
-const loadRecord = async (record: any) => {
-   // Simple load for edit
-   try {
-     const res = await getHistory(record.id)
-     if (res.success && res.record) {
-        store.setTopic(res.record.title)
-        store.setOutline(res.record.outline.raw, res.record.outline.pages)
-        store.recordId = res.record.id
-        router.push('/outline')
-     }
-   } catch(e) {
-     console.error(e)
-   }
+const viewRecord = (record: any) => {
+  // 跳转到历史详情页面，直接查看图片
+  router.push(`/history/${record.id}`)
+}
+
+const getThumbnailUrl = (record: any) => {
+  // 如果有缩略图，显示缩略图
+  if (record.thumbnail) {
+    return `/api/images/${record.task_id || record.images?.task_id}/${record.thumbnail}?thumbnail=true`
+  }
+  return ''
+}
+
+const handleThumbnailError = (event: Event) => {
+  // 缩略图加载失败时隐藏图片，显示占位符
+  const img = event.target as HTMLImageElement
+  img.style.display = 'none'
 }
 
 const handleGenerate = async () => {
@@ -767,16 +779,33 @@ onUnmounted(() => {
   transform: translateX(2px);
 }
 
-.recent-icon {
-  width: 32px;
-  height: 32px;
-  background: white;
-  border-radius: 8px;
+.recent-thumbnail {
+  width: 36px;
+  height: 48px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f5f5f5;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.recent-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ccc;
+  background: white;
 }
 
 .recent-info {

@@ -43,18 +43,13 @@
             :class="{ active: textConfig.active_provider === name }"
           >
             <div class="col-status">
-              <span
-                v-if="textConfig.active_provider === name"
-                class="status-badge active"
-              >
-                已激活
-              </span>
               <button
-                v-else
                 class="btn-activate"
+                :class="{ active: textConfig.active_provider === name }"
                 @click="activateTextProvider(name as string)"
+                :disabled="textConfig.active_provider === name"
               >
-                激活
+                {{ textConfig.active_provider === name ? '已激活' : '激活' }}
               </button>
             </div>
             <div class="col-name">
@@ -69,6 +64,11 @@
               </span>
             </div>
             <div class="col-actions">
+              <button class="btn-icon" @click="testTextProviderInList(name as string, provider)" title="测试连接">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+              </button>
               <button class="btn-icon" @click="openEditTextProviderModal(name as string, provider)" title="编辑">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -123,18 +123,13 @@
             :class="{ active: imageConfig.active_provider === name }"
           >
             <div class="col-status">
-              <span
-                v-if="imageConfig.active_provider === name"
-                class="status-badge active"
-              >
-                已激活
-              </span>
               <button
-                v-else
                 class="btn-activate"
+                :class="{ active: imageConfig.active_provider === name }"
                 @click="activateImageProvider(name as string)"
+                :disabled="imageConfig.active_provider === name"
               >
-                激活
+                {{ imageConfig.active_provider === name ? '已激活' : '激活' }}
               </button>
             </div>
             <div class="col-name">
@@ -149,6 +144,11 @@
               </span>
             </div>
             <div class="col-actions">
+              <button class="btn-icon" @click="testImageProviderInList(name as string, provider)" title="测试连接">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+              </button>
               <button class="btn-icon" @click="openEditImageProviderModal(name as string, provider)" title="编辑">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -201,21 +201,27 @@
           <div class="form-group">
             <label>API Key</label>
             <input
-              type="password"
+              type="text"
               class="form-input"
               v-model="textProviderForm.api_key"
-              :placeholder="editingTextProvider ? '留空则保持原有 Key 不变' : '输入 API Key'"
+              :placeholder="editingTextProvider && textProviderForm._has_api_key ? textProviderForm.api_key_masked : '输入 API Key'"
             />
             <span class="form-hint" v-if="editingTextProvider && hasExistingApiKey(textProviderForm)">已配置 API Key，留空表示不修改</span>
           </div>
-          <div class="form-group" v-if="textProviderForm.type === 'openai_compatible'">
+          <div class="form-group" v-if="['openai_compatible', 'google_gemini'].includes(textProviderForm.type)">
             <label>Base URL</label>
             <input
               type="text"
               class="form-input"
               v-model="textProviderForm.base_url"
-              placeholder="例如: https://api.openai.com"
+              :placeholder="textProviderForm.type === 'google_gemini' ? '例如: https://generativelanguage.googleapis.com' : '例如: https://api.openai.com'"
             />
+            <span class="form-hint" v-if="textProviderForm.base_url && textProviderForm.type === 'openai_compatible'">
+              预览: {{ textProviderForm.base_url.replace(/\/$/, '').replace(/\/v1$/, '') }}/v1/chat/completions
+            </span>
+            <span class="form-hint" v-if="textProviderForm.base_url && textProviderForm.type === 'google_gemini'">
+              预览: {{ textProviderForm.base_url.replace(/\/$/, '') }}/v1beta/models/{{ textProviderForm.model || '{model}' }}:generateContent
+            </span>
           </div>
           <div class="form-group">
             <label>模型</label>
@@ -226,9 +232,30 @@
               placeholder="例如: gpt-4o"
             />
           </div>
+          <!-- 端点路径（仅 OpenAI 兼容接口时显示） -->
+          <div class="form-group" v-if="textProviderForm.type === 'openai_compatible'">
+            <label>API 端点路径</label>
+            <input
+              type="text"
+              class="form-input"
+              v-model="textProviderForm.endpoint_type"
+              placeholder="例如: /v1/chat/completions"
+            />
+            <span class="form-hint">
+              默认端点：/v1/chat/completions（大多数 OpenAI 兼容 API 使用此端点）
+            </span>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn" @click="closeTextProviderModal">取消</button>
+          <button
+            class="btn btn-secondary"
+            @click="testTextConnection"
+            :disabled="testingText || (!textProviderForm.api_key && !editingTextProvider)"
+          >
+            <span v-if="testingText" class="spinner-small"></span>
+            {{ testingText ? '测试中...' : '测试连接' }}
+          </button>
           <button class="btn btn-primary" @click="saveTextProvider">
             {{ editingTextProvider ? '保存' : '添加' }}
           </button>
@@ -264,21 +291,30 @@
           <div class="form-group">
             <label>API Key</label>
             <input
-              type="password"
+              type="text"
               class="form-input"
               v-model="imageProviderForm.api_key"
-              :placeholder="editingImageProvider ? '留空则保持原有 Key 不变' : '输入 API Key'"
+              :placeholder="editingImageProvider && imageProviderForm._has_api_key ? imageProviderForm.api_key_masked : '输入 API Key'"
             />
             <span class="form-hint" v-if="editingImageProvider && hasExistingApiKey(imageProviderForm)">已配置 API Key，留空表示不修改</span>
           </div>
-          <div class="form-group" v-if="imageProviderForm.type === 'image_api'">
+          <div class="form-group" v-if="['image_api', 'google_genai'].includes(imageProviderForm.type)">
             <label>Base URL</label>
             <input
               type="text"
               class="form-input"
               v-model="imageProviderForm.base_url"
-              placeholder="例如: https://api.openai.com"
+              placeholder="例如: https://generativelanguage.googleapis.com"
             />
+            <span class="form-hint" v-if="imageProviderForm.base_url && imageProviderForm.type === 'image_api' && imageProviderForm.endpoint_type === 'images'">
+              预览: {{ imageProviderForm.base_url.replace(/\/$/, '').replace(/\/v1$/, '') }}/v1/images/generations
+            </span>
+            <span class="form-hint" v-if="imageProviderForm.base_url && imageProviderForm.type === 'image_api' && imageProviderForm.endpoint_type === 'chat'">
+              预览: {{ imageProviderForm.base_url.replace(/\/$/, '').replace(/\/v1$/, '') }}/v1/chat/completions
+            </span>
+            <span class="form-hint" v-if="imageProviderForm.base_url && imageProviderForm.type === 'google_genai'">
+              预览: {{ imageProviderForm.base_url.replace(/\/$/, '') }}/v1beta/models/{{ imageProviderForm.model || '{model}' }}:generateImages
+            </span>
           </div>
           <div class="form-group">
             <label>模型</label>
@@ -289,6 +325,19 @@
               placeholder="例如: gemini-3-pro-image-preview"
             />
           </div>
+          <!-- 端点类型选择（仅 OpenAI 兼容接口时显示） -->
+          <div class="form-group" v-if="imageProviderForm.type === 'image_api'">
+            <label>API 端点路径</label>
+            <input
+              type="text"
+              class="form-input"
+              v-model="imageProviderForm.endpoint_type"
+              placeholder="例如: /v1/images/generations 或 /v1/chat/completions"
+            />
+            <span class="form-hint">
+              常用端点：/v1/images/generations（标准图片生成）、/v1/chat/completions（即梦等返回链接的 API）
+            </span>
+          </div>
           <div class="form-group">
             <label class="toggle-label">
               <span>高并发模式</span>
@@ -298,9 +347,26 @@
             </label>
             <span class="form-hint">启用后将并行生成图片，速度更快但对 API 质量要求较高。GCP 300$ 试用账号不建议启用。</span>
           </div>
+          <div class="form-group">
+            <label class="toggle-label">
+              <span>短 Prompt 模式</span>
+              <div class="toggle-switch" :class="{ active: imageProviderForm.short_prompt }" @click="imageProviderForm.short_prompt = !imageProviderForm.short_prompt">
+                <div class="toggle-slider"></div>
+              </div>
+            </label>
+            <span class="form-hint">启用后使用精简版提示词，适合有字符限制的 API（如即梦 1600 字符限制）。</span>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn" @click="closeImageProviderModal">取消</button>
+          <button
+            class="btn btn-secondary"
+            @click="testImageConnection"
+            :disabled="testingImage || (!imageProviderForm.api_key && !editingImageProvider)"
+          >
+            <span v-if="testingImage" class="spinner-small"></span>
+            {{ testingImage ? '测试中...' : '测试连接' }}
+          </button>
           <button class="btn btn-primary" @click="saveImageProvider">
             {{ editingImageProvider ? '保存' : '添加' }}
           </button>
@@ -312,10 +378,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { getConfig, updateConfig, type Config } from '../api'
+import { getConfig, updateConfig, testConnection, type Config } from '../api'
 
 const loading = ref(true)
 const saving = ref(false)
+const testingText = ref(false)
+const testingImage = ref(false)
 
 // 文本生成配置
 const textConfig = ref<{
@@ -342,9 +410,11 @@ const textProviderForm = ref({
   name: '',
   type: 'openai_compatible',
   api_key: '',
+  api_key_masked: '',
   base_url: '',
   model: '',
-  _has_api_key: false // 标记是否已有 API Key
+  endpoint_type: '/v1/chat/completions',  // 默认端点路径
+  _has_api_key: false
 })
 
 // 图片服务商弹窗
@@ -354,9 +424,12 @@ const imageProviderForm = ref({
   name: '',
   type: '',
   api_key: '',
+  api_key_masked: '',
   base_url: '',
   model: '',
   high_concurrency: false,
+  short_prompt: false,
+  endpoint_type: '/v1/images/generations',  // 默认端点路径
   _has_api_key: false
 })
 
@@ -461,8 +534,10 @@ function openAddTextProviderModal() {
     name: '',
     type: 'openai_compatible',
     api_key: '',
+    api_key_masked: '',
     base_url: '',
     model: '',
+    endpoint_type: '/v1/chat/completions',
     _has_api_key: false
   }
   showTextProviderModal.value = true
@@ -474,10 +549,12 @@ function openEditTextProviderModal(name: string, provider: any) {
   textProviderForm.value = {
     name: name,
     type: provider.type || 'openai_compatible',
-    api_key: '', // 不显示已有的 key，让用户重新输入才会更新
+    api_key: '',
+    api_key_masked: provider.api_key_masked || '',
     base_url: provider.base_url || '',
     model: provider.model || '',
-    _has_api_key: !!provider.api_key // 标记是否已有 key
+    endpoint_type: provider.endpoint_type || '/v1/chat/completions',
+    _has_api_key: !!provider.api_key_masked
   }
   showTextProviderModal.value = true
 }
@@ -526,6 +603,11 @@ async function saveTextProvider() {
     providerData.base_url = textProviderForm.value.base_url
   }
 
+  // 如果是 OpenAI 兼容接口，保存 endpoint_type
+  if (textProviderForm.value.type === 'openai_compatible') {
+    providerData.endpoint_type = textProviderForm.value.endpoint_type
+  }
+
   textConfig.value.providers[name] = providerData
 
   closeTextProviderModal()
@@ -550,9 +632,12 @@ function openAddImageProviderModal() {
     name: '',
     type: 'image_api',
     api_key: '',
+    api_key_masked: '',
     base_url: '',
     model: '',
     high_concurrency: false,
+    short_prompt: false,
+    endpoint_type: '/v1/images/generations',
     _has_api_key: false
   }
   showImageProviderModal.value = true
@@ -565,10 +650,13 @@ function openEditImageProviderModal(name: string, provider: any) {
     name: name,
     type: provider.type || '',
     api_key: '',
+    api_key_masked: provider.api_key_masked || '',
     base_url: provider.base_url || '',
     model: provider.model || '',
     high_concurrency: provider.high_concurrency || false,
-    _has_api_key: !!provider.api_key
+    short_prompt: provider.short_prompt || false,
+    endpoint_type: provider.endpoint_type || '/v1/images/generations',
+    _has_api_key: !!provider.api_key_masked
   }
   showImageProviderModal.value = true
 }
@@ -604,7 +692,13 @@ async function saveImageProvider() {
   const providerData: any = {
     type: imageProviderForm.value.type,
     model: imageProviderForm.value.model,
-    high_concurrency: imageProviderForm.value.high_concurrency
+    high_concurrency: imageProviderForm.value.high_concurrency,
+    short_prompt: imageProviderForm.value.short_prompt
+  }
+
+  // 如果是 OpenAI 兼容接口，保存 endpoint_type
+  if (imageProviderForm.value.type === 'image_api') {
+    providerData.endpoint_type = imageProviderForm.value.endpoint_type
   }
 
   // 如果填写了新的 API Key，使用新的；否则保留原有的
@@ -632,6 +726,84 @@ async function deleteImageProvider(name: string) {
       imageConfig.value.active_provider = ''
     }
     await autoSaveConfig()
+  }
+}
+
+// 测试文本服务商连接
+async function testTextConnection() {
+  testingText.value = true
+  try {
+    const result = await testConnection({
+      type: textProviderForm.value.type,
+      provider_name: editingTextProvider.value || undefined,
+      api_key: textProviderForm.value.api_key || undefined,
+      base_url: textProviderForm.value.base_url,
+      model: textProviderForm.value.model
+    })
+    if (result.success) {
+      alert('✅ ' + result.message)
+    }
+  } catch (e: any) {
+    alert('❌ 连接失败：' + (e.response?.data?.error || e.message))
+  } finally {
+    testingText.value = false
+  }
+}
+
+// 测试图片服务商连接
+async function testImageConnection() {
+  testingImage.value = true
+  try {
+    const result = await testConnection({
+      type: imageProviderForm.value.type,
+      provider_name: editingImageProvider.value || undefined,
+      api_key: imageProviderForm.value.api_key || undefined,
+      base_url: imageProviderForm.value.base_url,
+      model: imageProviderForm.value.model
+    })
+    if (result.success) {
+      alert('✅ ' + result.message)
+    }
+  } catch (e: any) {
+    alert('❌ 连接失败：' + (e.response?.data?.error || e.message))
+  } finally {
+    testingImage.value = false
+  }
+}
+
+// 测试列表中的文本服务商
+async function testTextProviderInList(name: string, provider: any) {
+  try {
+    const result = await testConnection({
+      type: provider.type,
+      provider_name: name,
+      api_key: undefined,
+      base_url: provider.base_url,
+      model: provider.model
+    })
+    if (result.success) {
+      alert('✅ ' + result.message)
+    }
+  } catch (e: any) {
+    alert('❌ 连接失败：' + (e.response?.data?.error || e.message))
+  }
+}
+
+// 测试列表中的图片服务商
+async function testImageProviderInList(name: string, provider: any) {
+  try {
+    const result = await testConnection({
+      type: provider.type,
+      provider_name: name,
+      api_key: undefined,
+      base_url: provider.base_url,
+      model: provider.model
+    })
+    if (result.success) {
+      alert('✅ ' + result.message)
+    }
+  } catch (e: any) {
+    alert('❌ 连接失败：' + (e.response?.data?.error || e.message))
   }
 }
 
@@ -675,7 +847,7 @@ onMounted(() => {
 
 .table-header {
   display: grid;
-  grid-template-columns: 90px 1fr 100px 1fr 80px;
+  grid-template-columns: 90px 1fr 100px 1fr 120px;
   gap: 12px;
   padding: 12px 16px;
   background: #f9fafb;
@@ -689,7 +861,7 @@ onMounted(() => {
 
 .table-row {
   display: grid;
-  grid-template-columns: 90px 1fr 100px 1fr 80px;
+  grid-template-columns: 90px 1fr 100px 1fr 120px;
   gap: 12px;
   padding: 14px 16px;
   border-bottom: 1px solid #e5e7eb;
@@ -735,10 +907,22 @@ onMounted(() => {
   transition: all 0.15s;
 }
 
-.btn-activate:hover {
+.btn-activate:hover:not(:disabled) {
   border-color: var(--primary);
   color: var(--primary);
   background: #fef2f2;
+}
+
+.btn-activate.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: white;
+  cursor: default;
+}
+
+.btn-activate:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* 名称和模型 */

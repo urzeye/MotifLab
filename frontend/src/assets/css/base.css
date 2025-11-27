@@ -102,6 +102,7 @@ body {
 
 /* 通用容器 */
 .container {
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
 }

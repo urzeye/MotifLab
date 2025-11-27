@@ -69,6 +69,13 @@
 </template>
 
 <style scoped>
+/* 确保图片预览区域正确填充 */
+.image-card > div:first-child {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .image-card:hover .hover-overlay {
   opacity: 1;
 }

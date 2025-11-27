@@ -45,8 +45,12 @@ class ImageService:
         self.provider_name = provider_name
         self.provider_config = provider_config
 
+        # 检查是否启用短 prompt 模式
+        self.use_short_prompt = provider_config.get('short_prompt', False)
+
         # 加载提示词模板
         self.prompt_template = self._load_prompt_template()
+        self.prompt_template_short = self._load_prompt_template(short=True)
 
         # 历史记录根目录
         self.history_root_dir = os.path.join(
@@ -63,13 +67,17 @@ class ImageService:
 
         logger.info(f"ImageService 初始化完成: provider={provider_name}, type={provider_type}")
 
-    def _load_prompt_template(self) -> str:
+    def _load_prompt_template(self, short: bool = False) -> str:
         """加载 Prompt 模板"""
+        filename = "image_prompt_short.txt" if short else "image_prompt.txt"
         prompt_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
             "prompts",
-            "image_prompt.txt"
+            filename
         )
+        if not os.path.exists(prompt_path):
+            # 如果短模板不存在，返回空字符串
+            return ""
         with open(prompt_path, "r", encoding="utf-8") as f:
             return f.read()
 
@@ -140,13 +148,22 @@ class ImageService:
             try:
                 logger.debug(f"生成图片 [{index}]: type={page_type}, attempt={attempt + 1}/{max_retries}")
 
-                # 构造图片生成 Prompt（包含完整大纲上下文和用户原始需求）
-                prompt = self.prompt_template.format(
-                    page_content=page_content,
-                    page_type=page_type,
-                    full_outline=full_outline,
-                    user_topic=user_topic if user_topic else "未提供"
-                )
+                # 根据配置选择模板（短 prompt 或完整 prompt）
+                if self.use_short_prompt and self.prompt_template_short:
+                    # 短 prompt 模式：只包含页面类型和内容
+                    prompt = self.prompt_template_short.format(
+                        page_content=page_content,
+                        page_type=page_type
+                    )
+                    logger.debug(f"  使用短 prompt 模式 ({len(prompt)} 字符)")
+                else:
+                    # 完整 prompt 模式：包含大纲和用户需求
+                    prompt = self.prompt_template.format(
+                        page_content=page_content,
+                        page_type=page_type,
+                        full_outline=full_outline,
+                        user_topic=user_topic if user_topic else "未提供"
+                    )
 
                 # 调用生成器生成图片
                 if self.provider_config.get('type') == 'google_genai':

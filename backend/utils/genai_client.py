@@ -5,34 +5,58 @@ from functools import wraps
 from google import genai
 from google.genai import types
 
+# 导入统一的错误解析函数
+from ..generators.google_genai import parse_genai_error
+
 
 def retry_on_429(max_retries=3, base_delay=2):
-    """429 错误自动重试装饰器"""
+    """429 错误自动重试装饰器（带智能错误解析）"""
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            last_error = None
             for attempt in range(max_retries):
                 try:
                     return func(*args, **kwargs)
                 except Exception as e:
-                    error_str = str(e)
-                    if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
-                        if attempt < max_retries - 1:
-                            # 指数退避 + 随机抖动
+                    last_error = e
+                    error_str = str(e).lower()
+
+                    # 不可重试的错误类型
+                    non_retryable = [
+                        "401", "unauthenticated",  # 认证错误
+                        "403", "permission_denied", "forbidden",  # 权限错误
+                        "404", "not_found",  # 资源不存在
+                        "invalid_argument",  # 参数错误
+                        "safety", "blocked", "filter",  # 安全过滤
+                    ]
+
+                    should_retry = True
+                    for keyword in non_retryable:
+                        if keyword in error_str:
+                            should_retry = False
+                            break
+
+                    if not should_retry:
+                        # 直接抛出，不重试
+                        raise Exception(parse_genai_error(e))
+
+                    # 可重试的错误
+                    if attempt < max_retries - 1:
+                        if "429" in error_str or "resource_exhausted" in error_str:
                             wait_time = (base_delay ** attempt) + random.uniform(0, 1)
                             print(f"[重试] 遇到资源限制，{wait_time:.1f}秒后重试 (尝试 {attempt + 2}/{max_retries})")
-                            time.sleep(wait_time)
-                            continue
-                    # 非 429 错误或重试次数耗尽，直接抛出
-                    raise
-            raise Exception(
-                f"GenAI API 重试 {max_retries} 次后仍失败。\n"
-                "可能原因：\n"
-                "1. API配额已用尽或达到速率限制\n"
-                "2. 网络连接持续不稳定\n"
-                "3. API服务暂时不可用\n"
-                "建议：稍后再试，或检查API配额和网络状态"
-            )
+                        else:
+                            wait_time = min(2 ** attempt, 10) + random.uniform(0, 1)
+                            print(f"[重试] 请求失败，{wait_time:.1f}秒后重试 (尝试 {attempt + 2}/{max_retries})")
+                        time.sleep(wait_time)
+                        continue
+
+                    # 重试次数耗尽
+                    raise Exception(parse_genai_error(e))
+
+            # 理论上不会到这里，但保险起见
+            raise Exception(parse_genai_error(last_error))
         return wrapper
     return decorator
 
@@ -40,7 +64,7 @@ def retry_on_429(max_retries=3, base_delay=2):
 class GenAIClient:
     """GenAI 客户端封装类（已弃用，请使用 GoogleGenAIGenerator）"""
 
-    def __init__(self, api_key: str = None):
+    def __init__(self, api_key: str = None, base_url: str = None):
         self.api_key = api_key
         if not self.api_key:
             raise ValueError(
@@ -48,10 +72,21 @@ class GenAIClient:
                 "解决方案：在系统设置页面编辑该服务商，填写 API Key"
             )
 
-        self.client = genai.Client(
-            vertexai=True,
-            api_key=self.api_key,
-        )
+        # 构建客户端参数
+        client_kwargs = {"api_key": self.api_key}
+
+        # 如果有 base_url，使用 http_options
+        if base_url:
+            client_kwargs["http_options"] = {
+                "base_url": base_url,
+                "api_version": "v1beta"
+            }
+
+        # 默认使用 Gemini API (vertexai=False)，因为大多数用户使用 Google AI Studio 的 API Key
+        # Vertex AI 需要 OAuth2 认证，不支持 API Key
+        client_kwargs["vertexai"] = False
+
+        self.client = genai.Client(**client_kwargs)
 
         # 默认安全设置：全部关闭
         self.default_safety_settings = [
@@ -192,12 +227,18 @@ class GenAIClient:
 
         if not image_data:
             raise ValueError(
-                "图片生成失败：API返回为空。\n"
-                "可能原因：\n"
-                "1. 提示词被安全过滤拦截\n"
-                "2. 模型响应异常\n"
-                "3. 网络传输中断\n"
-                "建议：修改提示词内容后重试，或检查网络连接"
+                "❌ 图片生成失败：API 返回为空\n\n"
+                "【可能原因】\n"
+                "1. 提示词触发了安全过滤（最常见）\n"
+                "2. 模型不支持当前的图片生成请求\n"
+                "3. 网络传输过程中数据丢失\n\n"
+                "【解决方案】\n"
+                "1. 修改提示词，避免敏感内容：\n"
+                "   - 避免涉及暴力、血腥、色情等内容\n"
+                "   - 避免涉及真实人物（明星、政治人物等）\n"
+                "   - 使用更中性、积极的描述\n"
+                "2. 尝试简化提示词\n"
+                "3. 检查网络连接后重试"
             )
 
         return image_data

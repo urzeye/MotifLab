@@ -313,6 +313,7 @@ onMounted(async () => {
   aspect-ratio: 3/4;
   overflow: hidden;
   position: relative;
+  flex: 1; /* 填充卡片剩余空间 */
 }
 
 .image-preview img {
@@ -371,6 +372,8 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   gap: 10px;
+  flex: 1; /* 填充卡片剩余空间 */
+  min-height: 240px; /* 确保有最小高度 */
 }
 
 .error-placeholder {
