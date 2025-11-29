@@ -4,7 +4,7 @@ from pathlib import Path
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from backend.config import Config
-from backend.routes.api import api_bp
+from backend.routes import register_routes
 
 
 def setup_logging():
@@ -58,12 +58,13 @@ def create_app():
     CORS(app, resources={
         r"/api/*": {
             "origins": Config.CORS_ORIGINS,
-            "methods": ["GET", "POST", "OPTIONS"],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type"],
         }
     })
 
-    app.register_blueprint(api_bp)
+    # 注册所有 API 路由
+    register_routes(app)
 
     # 启动时验证配置
     _validate_config_on_startup(logger)

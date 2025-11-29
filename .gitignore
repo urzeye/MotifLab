@@ -74,3 +74,7 @@ htmlcov/
 *.temp
 test_*.py
 debug_*.py
+
+# Dev notes
+DEV_NOTES.md
+commit_message.txt
