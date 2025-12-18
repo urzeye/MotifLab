@@ -6,72 +6,173 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Vue 3](https://img.shields.io/badge/vue-3.x-green.svg)](https://vuejs.org/)
 
-# 红墨 - 小红书AI图文生成器
+## 🚀 内测体验
 
-> 让传播不再需要门槛，让创作从未如此简单
+<div align="center">
+
+### ✨ 仅开放注册 1000 名 ✨
+
+**无需部署，立即体验红墨的强大功能！**
+
+---
+
+<a href="https://redink.top">
+  <img src="images/redink.png" alt="红墨在线体验" width="500" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"/>
+</a>
+
+### [点击访问在线体验站 → Redink.top](https://redink.top)
+
+<sub>💡 点击图片或链接即可访问 | 🎯 限量开放，先到先得</sub>
+
+</div>
+
+---
+
+<div align="center">
+
+# 🎨 红墨 - 小红书AI图文生成器
+
+### 让传播不再需要门槛，让创作从未如此简单
 
 ![](images/index.gif)
 
-<p align="center">
-  <em>红墨首页</em>
-</p>
+<sub>*红墨首页 - 一句话开启创作之旅*</sub>
 
-<p align="center">
-  <img src="images/showcase-grid.png" alt="使用红墨生成的各类小红书封面" width="600"/>
-</p>
+---
 
-<p align="center">
-  <em>使用红墨生成的各类小红书封面 - AI驱动，风格统一，文字准确</em>
-</p>
+<img src="images/showcase-grid.png" alt="使用红墨生成的各类小红书封面" width="700" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);"/>
 
+<sub>*使用红墨生成的各类小红书封面 - AI驱动，风格统一，文字准确*</sub>
 
+</div>
 
-## 写在前面
+---
 
-前段时间默子在 Linux.do 发了一个用 Nano banana Pro 做 PPT 的帖子,收获了 600 多个赞。很多人用🍌Nano banana Pro 去做产品宣传图、直接生成漫画等等。我就在想:**为什么不拿🍌2来做点更功利、更刺激的事情?**
+## 💭 写在前面
 
-于是就有了这个项目。一句话一张图片生成小红书图文
+前段时间默子在 Linux.do 发了一个用 Nano banana Pro 做 PPT 的帖子，收获了 **600+ 点赞**。很多人用 🍌 Nano banana Pro 去做产品宣传图、直接生成漫画等等。我就在想：
+
+> **为什么不拿 🍌2 来做点更功利、更刺激的事情？**
+
+于是就有了这个项目：**一句话 + 一张图片 = 完整小红书图文**
 
 ---
 
 ## ✨ 效果展示
 
-### 输入一句话,就能生成完整的小红书图文
+### 📝 输入一句话，生成完整图文
 
-#### 提示词：秋季显白美甲（暗广一个：默子牌美甲），图片 是我的小红书主页。符合我的风格生成
+<table>
+<tr>
+<td width="50%">
 
-#### 同时我还截图了我的小红书主页，包括我的头像，签名，背景，姓名什么的
+#### 🎯 输入示例
 
-![示例1](./images/example-1.png)
+**提示词**：秋季显白美甲（暗广一个：默子牌美甲）
 
-#### 然后等待10-20秒后，就会有每一页的大纲，大家可以根据的自己的需求去调整页面顺序（不建议），自定义每一个页面的内容（这个很建议）
+**参考图片**：上传小红书主页截图
+- ✅ 包含头像、签名、背景、姓名
+- ✅ 自动学习个人风格
 
-![示例2](./images/example-2.png)
+</td>
+<td width="50%">
 
-#### 首先生成的是封面页
+#### ⚡ 生成流程
 
-![示例3](./images/example-3.png)
+1. **智能大纲** (10-20秒)
+  - 自动拆分 6-9 页内容
+  - 可自定义每页描述
 
-#### 然后稍等一会儿后，会生成后面的所有页面（这里是并发生成的所有页面（默认是15个），如果大家的API供应商无法支持高并发的话，记得要去改一下设置）
+2. **封面生成** (即时)
+  - 风格统一的封面设计
 
-![示例4](./images/example-4.png)
+3. **批量生成** (并发)
+  - 最多 15 张图同时生成
+  - 支持单独重新生成
+
+</td>
+</tr>
+</table>
+
+---
+
+### 🖼️ 生成步骤展示
+
+<details open>
+<summary><b>📋 Step 1: 智能大纲生成</b></summary>
+
+<br>
+
+![大纲示例](./images/example-2.png)
+
+**功能特性：**
+- ✏️ 可编辑每页内容
+- 🔄 可调整页面顺序（不建议）
+- ✨ 自定义每页描述（强烈推荐）
+
+</details>
+
+<details open>
+<summary><b>🎨 Step 2: 封面页生成</b></summary>
+
+<br>
+
+![封面示例](./images/example-3.png)
+
+**封面亮点：**
+- 🎯 符合个人风格
+- 📝 文字准确无误
+- 🌈 视觉统一协调
+
+</details>
+
+<details open>
+<summary><b>📚 Step 3: 内容页批量生成</b></summary>
+
+<br>
+
+![内容页示例](./images/example-4.png)
+
+**生成说明：**
+- ⚡ 并发生成所有页面（默认最多 15 张）
+- ⚠️ 如 API 不支持高并发，请在设置中关闭
+- 🔧 支持单独重新生成不满意的页面
+
+</details>
 
 ---
 
 ## 🏗️ 技术架构
 
-### 后端
-- **语言**: Python 3.11+
-- **框架**: Flask
-- **AI 模型**:
-  - Gemini 3 (文案生成)
-  - 🍌Nano banana Pro (图片生成)
-- **包管理**: uv
+<table>
+<tr>
+<td width="50%" valign="top">
 
-### 前端
-- **框架**: Vue 3 + TypeScript
-- **构建**: Vite
-- **状态管理**: Pinia
+### 🔧 后端技术栈
+
+| 技术 | 说明 |
+|------|------|
+| **语言** | Python 3.11+ |
+| **框架** | Flask |
+| **包管理** | uv |
+| **文案AI** | Gemini 3 |
+| **图片AI** | 🍌 Nano banana Pro |
+
+</td>
+<td width="50%" valign="top">
+
+### 🎨 前端技术栈
+
+| 技术 | 说明 |
+|------|------|
+| **框架** | Vue 3 + TypeScript |
+| **构建工具** | Vite |
+| **状态管理** | Pinia |
+| **样式** | Modern CSS |
+
+</td>
+</tr>
+</table>
 
 ---
 

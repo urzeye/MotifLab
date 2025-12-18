@@ -209,8 +209,14 @@ const previewUrl = computed(() => {
   const baseUrl = props.formData.base_url.replace(/\/$/, '').replace(/\/v1$/, '')
 
   switch (props.formData.type) {
-    case 'openai_compatible':
-      return `${baseUrl}/v1/chat/completions`
+    case 'openai_compatible': {
+      // 使用用户自定义的端点路径
+      let endpoint = props.formData.endpoint_type || '/v1/chat/completions'
+      if (!endpoint.startsWith('/')) {
+        endpoint = '/' + endpoint
+      }
+      return `${baseUrl}${endpoint}`
+    }
     case 'google_gemini':
     case 'google_genai':
       return `${baseUrl}/v1beta/models/${props.formData.model || '{model}'}:generateContent`

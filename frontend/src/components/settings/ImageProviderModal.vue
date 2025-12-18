@@ -230,14 +230,16 @@ const previewUrl = computed(() => {
   if (!props.formData.base_url) return ''
 
   const baseUrl = props.formData.base_url.replace(/\/$/, '').replace(/\/v1$/, '')
-  const endpointType = props.formData.endpoint_type || '/v1/images/generations'
 
   switch (props.formData.type) {
-    case 'image_api':
-      if (endpointType.includes('chat')) {
-        return `${baseUrl}/v1/chat/completions`
+    case 'image_api': {
+      // 使用用户自定义的端点路径
+      let endpoint = props.formData.endpoint_type || '/v1/images/generations'
+      if (!endpoint.startsWith('/')) {
+        endpoint = '/' + endpoint
       }
-      return `${baseUrl}/v1/images/generations`
+      return `${baseUrl}${endpoint}`
+    }
     case 'google_genai':
       return `${baseUrl}/v1beta/models/${props.formData.model || '{model}'}:generateImages`
     default:
