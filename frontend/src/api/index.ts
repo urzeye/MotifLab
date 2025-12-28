@@ -170,6 +170,9 @@ export async function retryFailedImages(
 
 // ==================== 历史记录相关 API ====================
 
+/**
+ * 历史记录列表项接口
+ */
 export interface HistoryRecord {
   id: string
   title: string
@@ -181,6 +184,9 @@ export interface HistoryRecord {
   task_id: string | null
 }
 
+/**
+ * 历史记录详情接口
+ */
 export interface HistoryDetail {
   id: string
   title: string
@@ -198,21 +204,102 @@ export interface HistoryDetail {
   thumbnail: string | null
 }
 
-// 创建历史记录
+/**
+ * 创建历史记录参数接口
+ */
+export interface CreateHistoryParams {
+  topic: string
+  outline: { raw: string; pages: Page[] }
+  task_id?: string
+}
+
+/**
+ * 更新历史记录参数接口
+ */
+export interface UpdateHistoryParams {
+  outline?: { raw: string; pages: Page[] }
+  images?: { task_id: string | null; generated: string[] }
+  status?: string
+  thumbnail?: string
+}
+
+/**
+ * 创建历史记录
+ *
+ * 用于在用户生成大纲后保存记录，以便后续查看和继续编辑
+ *
+ * @param topic - 绘本主题/标题
+ * @param outline - 大纲数据，包含原始文本和页面列表
+ * @param outline.raw - 大纲的原始文本
+ * @param outline.pages - 解析后的页面列表
+ * @param taskId - 可选的任务 ID，用于关联图片生成任务
+ *
+ * @returns Promise<{ success: boolean; record_id?: string; error?: string }>
+ * - success: 是否创建成功
+ * - record_id: 创建的记录 ID（成功时返回）
+ * - error: 错误信息（失败时返回）
+ *
+ * @throws {Error} 网络错误或服务器错误
+ *
+ * @example
+ * ```typescript
+ * const result = await createHistory(
+ *   '小兔子的冒险',
+ *   {
+ *     raw: '第一页：小兔子出门了...',
+ *     pages: [{ index: 0, type: 'cover', content: '...' }]
+ *   },
+ *   'task-123'
+ * )
+ * if (result.success) {
+ *   console.log('记录创建成功，ID:', result.record_id)
+ * }
+ * ```
+ */
 export async function createHistory(
   topic: string,
   outline: { raw: string; pages: Page[] },
   taskId?: string
 ): Promise<{ success: boolean; record_id?: string; error?: string }> {
-  const response = await axios.post(`${API_BASE_URL}/history`, {
-    topic,
-    outline,
-    task_id: taskId
-  })
-  return response.data
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/history`,
+      {
+        topic,
+        outline,
+        task_id: taskId
+      },
+      {
+        timeout: 10000 // 10秒超时
+      }
+    )
+    return response.data
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      if (error.code === 'ECONNABORTED') {
+        return { success: false, error: '请求超时，请检查网络连接' }
+      }
+      if (!error.response) {
+        return { success: false, error: '网络连接失败，请检查网络设置' }
+      }
+      const errorMessage = error.response?.data?.error || error.message || '创建历史记录失败'
+      return { success: false, error: errorMessage }
+    }
+    return { success: false, error: '未知错误，请稍后重试' }
+  }
 }
 
-// 获取历史记录列表
+/**
+ * 获取历史记录列表
+ *
+ * 支持分页和按状态筛选
+ *
+ * @param page - 页码，从 1 开始，默认为 1
+ * @param pageSize - 每页数量，默认为 20
+ * @param status - 可选，按状态筛选（如 'draft', 'generating', 'completed'）
+ *
+ * @returns Promise 包含历史记录列表和分页信息
+ */
 export async function getHistoryList(
   page: number = 1,
   pageSize: number = 20,
@@ -224,36 +311,207 @@ export async function getHistoryList(
   page: number
   page_size: number
   total_pages: number
+  error?: string
 }> {
-  const params: any = { page, page_size: pageSize }
-  if (status) params.status = status
+  try {
+    const params: any = { page, page_size: pageSize }
+    if (status) params.status = status
 
-  const response = await axios.get(`${API_BASE_URL}/history`, { params })
-  return response.data
+    const response = await axios.get(`${API_BASE_URL}/history`, {
+      params,
+      timeout: 10000 // 10秒超时
+    })
+    return response.data
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      if (error.code === 'ECONNABORTED') {
+        return {
+          success: false,
+          records: [],
+          total: 0,
+          page: 1,
+          page_size: pageSize,
+          total_pages: 0,
+          error: '请求超时，请检查网络连接'
+        }
+      }
+      if (!error.response) {
+        return {
+          success: false,
+          records: [],
+          total: 0,
+          page: 1,
+          page_size: pageSize,
+          total_pages: 0,
+          error: '网络连接失败，请检查网络设置'
+        }
+      }
+      const errorMessage = error.response?.data?.error || error.message || '获取历史记录列表失败'
+      return {
+        success: false,
+        records: [],
+        total: 0,
+        page: 1,
+        page_size: pageSize,
+        total_pages: 0,
+        error: errorMessage
+      }
+    }
+    return {
+      success: false,
+      records: [],
+      total: 0,
+      page: 1,
+      page_size: pageSize,
+      total_pages: 0,
+      error: '未知错误，请稍后重试'
+    }
+  }
 }
 
-// 获取历史记录详情
+/**
+ * 获取历史记录详情
+ *
+ * 获取指定 ID 的历史记录完整信息，包括大纲和图片数据
+ *
+ * @param recordId - 历史记录 ID
+ *
+ * @returns Promise 包含历史记录详细信息
+ */
 export async function getHistory(recordId: string): Promise<{
   success: boolean
   record?: HistoryDetail
   error?: string
 }> {
-  const response = await axios.get(`${API_BASE_URL}/history/${recordId}`)
-  return response.data
+  try {
+    const response = await axios.get(`${API_BASE_URL}/history/${recordId}`, {
+      timeout: 10000 // 10秒超时
+    })
+    return response.data
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      if (error.code === 'ECONNABORTED') {
+        return { success: false, error: '请求超时，请检查网络连接' }
+      }
+      if (!error.response) {
+        return { success: false, error: '网络连接失败，请检查网络设置' }
+      }
+      if (error.response.status === 404) {
+        return { success: false, error: '历史记录不存在' }
+      }
+      const errorMessage = error.response?.data?.error || error.message || '获取历史记录详情失败'
+      return { success: false, error: errorMessage }
+    }
+    return { success: false, error: '未知错误，请稍后重试' }
+  }
 }
 
-// 更新历史记录
+/**
+ * 更新历史记录
+ *
+ * 用于更新已有的历史记录，如更新大纲、图片列表、状态或缩略图
+ *
+ * @param recordId - 历史记录 ID
+ * @param data - 需要更新的数据
+ * @param data.outline - 可选，更新大纲数据
+ * @param data.images - 可选，更新图片数据（任务 ID 和已生成的图片列表）
+ * @param data.status - 可选，更新状态（如 'draft', 'generating', 'completed'）
+ * @param data.thumbnail - 可选，更新缩略图 URL
+ *
+ * @returns Promise<{ success: boolean; error?: string }>
+ * - success: 是否更新成功
+ * - error: 错误信息（失败时返回）
+ *
+ * @throws {Error} 网络错误或服务器错误
+ *
+ * @example
+ * ```typescript
+ * // 更新图片生成状态
+ * const result = await updateHistory('record-123', {
+ *   status: 'generating',
+ *   images: {
+ *     task_id: 'task-456',
+ *     generated: ['page1.png', 'page2.png']
+ *   }
+ * })
+ *
+ * // 更新缩略图
+ * await updateHistory('record-123', {
+ *   thumbnail: '/api/images/task-456/page1.png?thumbnail=true'
+ * })
+ * ```
+ */
 export async function updateHistory(
   recordId: string,
-  data: {
-    outline?: { raw: string; pages: Page[] }
-    images?: { task_id: string | null; generated: string[] }
-    status?: string
-    thumbnail?: string
-  }
+  data: UpdateHistoryParams
 ): Promise<{ success: boolean; error?: string }> {
-  const response = await axios.put(`${API_BASE_URL}/history/${recordId}`, data)
-  return response.data
+  try {
+    const response = await axios.put(
+      `${API_BASE_URL}/history/${recordId}`,
+      data,
+      {
+        timeout: 10000 // 10秒超时
+      }
+    )
+    return response.data
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      if (error.code === 'ECONNABORTED') {
+        return { success: false, error: '请求超时，请检查网络连接' }
+      }
+      if (!error.response) {
+        return { success: false, error: '网络连接失败，请检查网络设置' }
+      }
+      const errorMessage = error.response?.data?.error || error.message || '更新历史记录失败'
+      return { success: false, error: errorMessage }
+    }
+    return { success: false, error: '未知错误，请稍后重试' }
+  }
+}
+
+/**
+ * 检查历史记录是否存在
+ *
+ * 用于页面刷新后验证 recordId 是否仍然有效
+ * 避免用户刷新页面后继续操作一个已被删除的记录
+ *
+ * @param recordId - 历史记录 ID
+ *
+ * @returns Promise<boolean> 记录是否存在
+ *
+ * @example
+ * ```typescript
+ * const recordId = localStorage.getItem('currentRecordId')
+ * if (recordId) {
+ *   const exists = await checkHistoryExists(recordId)
+ *   if (!exists) {
+ *     console.log('记录不存在，可能已被删除')
+ *     localStorage.removeItem('currentRecordId')
+ *   }
+ * }
+ * ```
+ */
+export async function checkHistoryExists(recordId: string): Promise<boolean> {
+  try {
+    // 使用专用的 /exists 端点，避免获取完整记录数据
+    const response = await axios.get(
+      `${API_BASE_URL}/history/${recordId}/exists`,
+      {
+        timeout: 5000 // 5秒超时
+      }
+    )
+    return response.data.exists === true
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      // 404 表示记录不存在
+      if (error.response?.status === 404) {
+        return false
+      }
+      // 其他错误（网络错误等）也视为不存在
+      return false
+    }
+    return false
+  }
 }
 
 // 删除历史记录
@@ -261,29 +519,95 @@ export async function deleteHistory(recordId: string): Promise<{
   success: boolean
   error?: string
 }> {
-  const response = await axios.delete(`${API_BASE_URL}/history/${recordId}`)
-  return response.data
+  try {
+    const response = await axios.delete(
+      `${API_BASE_URL}/history/${recordId}`,
+      {
+        timeout: 10000 // 10秒超时
+      }
+    )
+    return response.data
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      if (error.code === 'ECONNABORTED') {
+        return { success: false, error: '请求超时，请检查网络连接' }
+      }
+      if (!error.response) {
+        return { success: false, error: '网络连接失败，请检查网络设置' }
+      }
+      const errorMessage = error.response?.data?.error || error.message || '删除历史记录失败'
+      return { success: false, error: errorMessage }
+    }
+    return { success: false, error: '未知错误，请稍后重试' }
+  }
 }
 
-// 搜索历史记录
+/**
+ * 搜索历史记录
+ *
+ * 根据关键词搜索历史记录标题
+ *
+ * @param keyword - 搜索关键词
+ *
+ * @returns Promise 包含匹配的历史记录列表
+ */
 export async function searchHistory(keyword: string): Promise<{
   success: boolean
   records: HistoryRecord[]
+  error?: string
 }> {
-  const response = await axios.get(`${API_BASE_URL}/history/search`, {
-    params: { keyword }
-  })
-  return response.data
+  try {
+    const response = await axios.get(`${API_BASE_URL}/history/search`, {
+      params: { keyword },
+      timeout: 10000 // 10秒超时
+    })
+    return response.data
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      if (error.code === 'ECONNABORTED') {
+        return { success: false, records: [], error: '请求超时，请检查网络连接' }
+      }
+      if (!error.response) {
+        return { success: false, records: [], error: '网络连接失败，请检查网络设置' }
+      }
+      const errorMessage = error.response?.data?.error || error.message || '搜索历史记录失败'
+      return { success: false, records: [], error: errorMessage }
+    }
+    return { success: false, records: [], error: '未知错误，请稍后重试' }
+  }
 }
 
-// 获取统计信息
+/**
+ * 获取统计信息
+ *
+ * 获取历史记录的统计数据，包括总数和按状态分类的数量
+ *
+ * @returns Promise 包含统计信息
+ */
 export async function getHistoryStats(): Promise<{
   success: boolean
   total: number
   by_status: Record<string, number>
+  error?: string
 }> {
-  const response = await axios.get(`${API_BASE_URL}/history/stats`)
-  return response.data
+  try {
+    const response = await axios.get(`${API_BASE_URL}/history/stats`, {
+      timeout: 10000 // 10秒超时
+    })
+    return response.data
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      if (error.code === 'ECONNABORTED') {
+        return { success: false, total: 0, by_status: {}, error: '请求超时，请检查网络连接' }
+      }
+      if (!error.response) {
+        return { success: false, total: 0, by_status: {}, error: '网络连接失败，请检查网络设置' }
+      }
+      const errorMessage = error.response?.data?.error || error.message || '获取统计信息失败'
+      return { success: false, total: 0, by_status: {}, error: errorMessage }
+    }
+    return { success: false, total: 0, by_status: {}, error: '未知错误，请稍后重试' }
+  }
 }
 
 // 使用 POST 方式生成图片（更可靠）
@@ -446,5 +770,27 @@ export async function testConnection(config: {
   error?: string
 }> {
   const response = await axios.post(`${API_BASE_URL}/config/test`, config)
+  return response.data
+}
+
+// ==================== 内容生成 API（标题、文案、标签） ====================
+
+export interface ContentResponse {
+  success: boolean
+  titles?: string[]
+  copywriting?: string
+  tags?: string[]
+  error?: string
+}
+
+// 生成标题、文案、标签
+export async function generateContent(
+  topic: string,
+  outline: string
+): Promise<ContentResponse> {
+  const response = await axios.post<ContentResponse>(`${API_BASE_URL}/content`, {
+    topic,
+    outline
+  })
   return response.data
 }

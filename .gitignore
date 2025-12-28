@@ -78,3 +78,4 @@ debug_*.py
 # Dev notes
 DEV_NOTES.md
 commit_message.txt
+git-changelog.txt

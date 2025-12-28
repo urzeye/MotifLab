@@ -18,7 +18,7 @@ class ImageService:
 
     # 并发配置
     MAX_CONCURRENT = 15  # 最大并发数
-    AUTO_RETRY_COUNT = 3  # 自动重试次数
+    AUTO_RETRY_COUNT = 1  # 不自动重试，超时后让用户手动重试
 
     def __init__(self, provider_name: str = None):
         """
@@ -142,87 +142,73 @@ class ImageService:
         page_type = page["type"]
         page_content = page["content"]
 
-        max_retries = self.AUTO_RETRY_COUNT
+        try:
+            logger.debug(f"生成图片 [{index}]: type={page_type}")
 
-        for attempt in range(max_retries):
-            try:
-                logger.debug(f"生成图片 [{index}]: type={page_type}, attempt={attempt + 1}/{max_retries}")
+            # 根据配置选择模板（短 prompt 或完整 prompt）
+            if self.use_short_prompt and self.prompt_template_short:
+                # 短 prompt 模式：只包含页面类型和内容
+                prompt = self.prompt_template_short.format(
+                    page_content=page_content,
+                    page_type=page_type
+                )
+                logger.debug(f"  使用短 prompt 模式 ({len(prompt)} 字符)")
+            else:
+                # 完整 prompt 模式：包含大纲和用户需求
+                prompt = self.prompt_template.format(
+                    page_content=page_content,
+                    page_type=page_type,
+                    full_outline=full_outline,
+                    user_topic=user_topic if user_topic else "未提供"
+                )
 
-                # 根据配置选择模板（短 prompt 或完整 prompt）
-                if self.use_short_prompt and self.prompt_template_short:
-                    # 短 prompt 模式：只包含页面类型和内容
-                    prompt = self.prompt_template_short.format(
-                        page_content=page_content,
-                        page_type=page_type
-                    )
-                    logger.debug(f"  使用短 prompt 模式 ({len(prompt)} 字符)")
-                else:
-                    # 完整 prompt 模式：包含大纲和用户需求
-                    prompt = self.prompt_template.format(
-                        page_content=page_content,
-                        page_type=page_type,
-                        full_outline=full_outline,
-                        user_topic=user_topic if user_topic else "未提供"
-                    )
+            # 调用生成器生成图片
+            if self.provider_config.get('type') == 'google_genai':
+                logger.debug(f"  使用 Google GenAI 生成器")
+                image_data = self.generator.generate_image(
+                    prompt=prompt,
+                    aspect_ratio=self.provider_config.get('default_aspect_ratio', '3:4'),
+                    temperature=self.provider_config.get('temperature', 1.0),
+                    model=self.provider_config.get('model', 'gemini-3-pro-image-preview'),
+                    reference_image=reference_image,
+                )
+            elif self.provider_config.get('type') == 'image_api':
+                logger.debug(f"  使用 Image API 生成器")
+                # Image API 支持多张参考图片
+                # 组合参考图片：用户上传的图片 + 封面图
+                reference_images = []
+                if user_images:
+                    reference_images.extend(user_images)
+                if reference_image:
+                    reference_images.append(reference_image)
 
-                # 调用生成器生成图片
-                if self.provider_config.get('type') == 'google_genai':
-                    logger.debug(f"  使用 Google GenAI 生成器")
-                    image_data = self.generator.generate_image(
-                        prompt=prompt,
-                        aspect_ratio=self.provider_config.get('default_aspect_ratio', '3:4'),
-                        temperature=self.provider_config.get('temperature', 1.0),
-                        model=self.provider_config.get('model', 'gemini-3-pro-image-preview'),
-                        reference_image=reference_image,
-                    )
-                elif self.provider_config.get('type') == 'image_api':
-                    logger.debug(f"  使用 Image API 生成器")
-                    # Image API 支持多张参考图片
-                    # 组合参考图片：用户上传的图片 + 封面图
-                    reference_images = []
-                    if user_images:
-                        reference_images.extend(user_images)
-                    if reference_image:
-                        reference_images.append(reference_image)
+                image_data = self.generator.generate_image(
+                    prompt=prompt,
+                    aspect_ratio=self.provider_config.get('default_aspect_ratio', '3:4'),
+                    temperature=self.provider_config.get('temperature', 1.0),
+                    model=self.provider_config.get('model', 'nano-banana-2'),
+                    reference_images=reference_images if reference_images else None,
+                )
+            else:
+                logger.debug(f"  使用 OpenAI 兼容生成器")
+                image_data = self.generator.generate_image(
+                    prompt=prompt,
+                    size=self.provider_config.get('default_size', '1024x1024'),
+                    model=self.provider_config.get('model'),
+                    quality=self.provider_config.get('quality', 'standard'),
+                )
 
-                    image_data = self.generator.generate_image(
-                        prompt=prompt,
-                        aspect_ratio=self.provider_config.get('default_aspect_ratio', '3:4'),
-                        temperature=self.provider_config.get('temperature', 1.0),
-                        model=self.provider_config.get('model', 'nano-banana-2'),
-                        reference_images=reference_images if reference_images else None,
-                    )
-                else:
-                    logger.debug(f"  使用 OpenAI 兼容生成器")
-                    image_data = self.generator.generate_image(
-                        prompt=prompt,
-                        size=self.provider_config.get('default_size', '1024x1024'),
-                        model=self.provider_config.get('model'),
-                        quality=self.provider_config.get('quality', 'standard'),
-                    )
+            # 保存图片（使用当前任务目录）
+            filename = f"{index}.png"
+            self._save_image(image_data, filename, self.current_task_dir)
+            logger.info(f"✅ 图片 [{index}] 生成成功: {filename}")
 
-                # 保存图片（使用当前任务目录）
-                filename = f"{index}.png"
-                self._save_image(image_data, filename, self.current_task_dir)
-                logger.info(f"✅ 图片 [{index}] 生成成功: {filename}")
+            return (index, True, filename, None)
 
-                return (index, True, filename, None)
-
-            except Exception as e:
-                error_msg = str(e)
-                logger.warning(f"图片 [{index}] 生成失败 (尝试 {attempt + 1}/{max_retries}): {error_msg[:200]}")
-
-                if attempt < max_retries - 1:
-                    # 等待后重试
-                    wait_time = 2 ** attempt
-                    logger.debug(f"  等待 {wait_time} 秒后重试...")
-                    time.sleep(wait_time)
-                    continue
-
-                logger.error(f"❌ 图片 [{index}] 生成失败，已达最大重试次数")
-                return (index, False, None, error_msg)
-
-        return (index, False, None, "超过最大重试次数")
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"❌ 图片 [{index}] 生成失败: {error_msg[:200]}")
+            return (index, False, None, error_msg)
 
     def generate_images(
         self,

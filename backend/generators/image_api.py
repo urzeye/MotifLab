@@ -1,7 +1,5 @@
 """Image API 图片生成器"""
 import logging
-import time
-import random
 import base64
 import requests
 from typing import Dict, Any, Optional, List, Union
@@ -9,25 +7,6 @@ from .base import ImageGeneratorBase
 from ..utils.image_compressor import compress_image
 
 logger = logging.getLogger(__name__)
-
-
-def retry_on_error(max_retries: int = 3, base_delay: float = 2):
-    """错误重试装饰器"""
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            last_error = None
-            for attempt in range(max_retries):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    last_error = e
-                    if attempt < max_retries - 1:
-                        delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
-                        logger.warning(f"请求失败，{delay:.1f}秒后重试 (尝试 {attempt + 2}/{max_retries}): {str(e)[:100]}")
-                        time.sleep(delay)
-            raise last_error
-        return wrapper
-    return decorator
 
 
 class ImageApiGenerator(ImageGeneratorBase):
@@ -73,7 +52,6 @@ class ImageApiGenerator(ImageGeneratorBase):
         """获取支持的宽高比"""
         return ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"]
 
-    @retry_on_error(max_retries=3, base_delay=2)
     def generate_image(
         self,
         prompt: str,

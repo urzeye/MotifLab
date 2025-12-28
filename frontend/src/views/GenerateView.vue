@@ -216,19 +216,35 @@ onMounted(async () => {
     return
   }
 
-  // 创建历史记录（如果还没有）
-  if (!store.recordId) {
+  // 历史记录处理逻辑：
+  // 正常情况下，recordId 应该在大纲生成页（OutlineView）创建
+  // 这里根据 recordId 是否存在做不同处理
+  if (store.recordId) {
+    // 情况1：recordId 已存在（正常流程）
+    // 更新历史记录状态为 generating，表示图片生成已开始
+    try {
+      await updateHistory(store.recordId, { status: 'generating' })
+      console.log('历史记录状态已更新为 generating:', store.recordId)
+    } catch (e) {
+      // 更新失败不阻断生成流程，仅记录错误
+      console.error('更新历史记录状态失败:', e)
+    }
+  } else {
+    // 情况2：recordId 不存在（异常情况）
+    // 这种情况不应该发生，但作为兜底逻辑，尝试创建历史记录
+    console.warn('警告: recordId 不存在，尝试创建历史记录作为兜底')
     try {
       const result = await createHistory(store.topic, {
         raw: store.outline.raw,
         pages: store.outline.pages
       })
       if (result.success && result.record_id) {
-        store.recordId = result.record_id
-        console.log('创建历史记录:', store.recordId)
+        store.setRecordId(result.record_id)
+        console.log('兜底创建历史记录成功:', store.recordId)
       }
     } catch (e) {
-      console.error('创建历史记录失败:', e)
+      // 创建失败也不阻断生成流程，仅记录错误
+      console.error('兜底创建历史记录失败:', e)
     }
   }
 

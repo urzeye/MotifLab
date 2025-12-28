@@ -29,6 +29,9 @@
 
     <!-- 版权信息 -->
     <div class="page-footer">
+      <div class="footer-tip">
+        配置不成功？访问 <a href="https://redink.top" target="_blank" rel="noopener noreferrer">redink.top</a> 官方站点即刻体验
+      </div>
       <div class="footer-copyright">
         © 2025 <a href="https://github.com/HisMax/RedInk" target="_blank" rel="noopener noreferrer">RedInk</a> by 默子 (Histone)
       </div>
@@ -49,7 +52,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGeneratorStore } from '../stores/generator'
-import { generateOutline } from '../api'
+import { generateOutline, createHistory } from '../api'
 
 // 引入组件
 import ShowcaseBackground from '../components/home/ShowcaseBackground.vue'
@@ -92,9 +95,34 @@ async function handleGenerate() {
     )
 
     if (result.success && result.pages) {
+      // 设置主题和大纲到 store
       store.setTopic(topic.value.trim())
       store.setOutline(result.outline || '', result.pages)
-      store.recordId = null
+
+      // 大纲生成成功后，立即创建历史记录
+      // 这样即使用户刷新页面或关闭浏览器，大纲也不会丢失
+      try {
+        const historyResult = await createHistory(
+          topic.value.trim(),
+          {
+            raw: result.outline || '',
+            pages: result.pages
+          }
+        )
+
+        // 保存历史记录 ID 到 store，后续生成正文和图片时会使用
+        if (historyResult.success && historyResult.record_id) {
+          store.setRecordId(historyResult.record_id)
+        } else {
+          // 创建历史记录失败，记录错误但不阻断流程
+          console.error('创建历史记录失败:', historyResult.error || '未知错误')
+          store.setRecordId(null)
+        }
+      } catch (err: any) {
+        // 创建历史记录异常，记录错误但不阻断流程
+        console.error('创建历史记录异常:', err.message || err)
+        store.setRecordId(null)
+      }
 
       // 保存用户上传的图片到 store
       if (imageFiles.length > 0) {
@@ -206,6 +234,22 @@ async function handleGenerate() {
 
 .footer-license a:hover {
   color: var(--primary);
+}
+
+.footer-tip {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.footer-tip a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.footer-tip a:hover {
+  text-decoration: underline;
 }
 
 /* Error Toast */

@@ -226,7 +226,7 @@ async function loadRecord(id: string) {
   if (res.success && res.record) {
     store.setTopic(res.record.title)
     store.setOutline(res.record.outline.raw, res.record.outline.pages)
-    store.recordId = res.record.id
+    store.setRecordId(res.record.id)
     if (res.record.images.generated.length > 0) {
       store.taskId = res.record.images.task_id
       store.images = res.record.outline.pages.map((page, idx) => {

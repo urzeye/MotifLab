@@ -20,9 +20,9 @@
       <div class="grid-cols-4">
         <div v-for="image in store.images" :key="image.index" class="image-card group">
           <!-- Image Area -->
-          <div 
-            v-if="image.url" 
-            style="position: relative; aspect-ratio: 3/4; overflow: hidden; cursor: pointer;" 
+          <div
+            v-if="image.url"
+            style="position: relative; aspect-ratio: 3/4; overflow: hidden; cursor: pointer;"
             @click="viewImage(image.url)"
           >
             <img
@@ -35,18 +35,18 @@
                <div class="spinner" style="width: 24px; height: 24px; border-width: 2px; border-color: var(--primary); border-top-color: transparent;"></div>
                <span style="font-size: 12px; color: var(--primary); margin-top: 8px; font-weight: 600;">重绘中...</span>
             </div>
-            
+
             <!-- Hover Overlay -->
             <div v-else style="position: absolute; inset: 0; background: rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;" class="hover-overlay">
               预览大图
             </div>
           </div>
-          
+
           <!-- Action Bar -->
           <div style="padding: 12px; border-top: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 12px; color: var(--text-sub);">Page {{ image.index + 1 }}</span>
             <div style="display: flex; gap: 8px;">
-              <button 
+              <button
                 style="border: none; background: none; color: var(--text-sub); cursor: pointer; display: flex; align-items: center;"
                 title="重新生成此图"
                 @click="handleRegenerate(image)"
@@ -54,7 +54,7 @@
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
               </button>
-              <button 
+              <button
                 style="border: none; background: none; color: var(--primary); cursor: pointer; font-size: 12px;"
                 @click="downloadOne(image)"
               >
@@ -65,6 +65,9 @@
         </div>
       </div>
     </div>
+
+    <!-- 标题、文案、标签生成区域 -->
+    <ContentDisplay />
   </div>
 </template>
 
@@ -89,6 +92,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGeneratorStore } from '../stores/generator'
 import { regenerateImage } from '../api'
+import ContentDisplay from '../components/result/ContentDisplay.vue'
 
 const router = useRouter()
 const store = useGeneratorStore()

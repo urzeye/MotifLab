@@ -3,7 +3,11 @@
     <div class="page-header" style="max-width: 1200px; margin: 0 auto 30px auto;">
       <div>
         <h1 class="page-title">编辑大纲</h1>
-        <p class="page-subtitle">调整页面顺序，修改文案，打造完美内容</p>
+        <p class="page-subtitle">
+          调整页面顺序，修改文案，打造完美内容
+          <span v-if="isSaving" class="save-indicator saving">保存中...</span>
+          <span v-else class="save-indicator saved">已保存</span>
+        </p>
       </div>
       <div style="display: flex; gap: 12px;">
         <button class="btn btn-secondary" @click="goBack" style="background: white; border: 1px solid var(--border-color);">
@@ -68,15 +72,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGeneratorStore } from '../stores/generator'
+import { updateHistory, createHistory } from '../api'
 
 const router = useRouter()
 const store = useGeneratorStore()
 
 const dragOverIndex = ref<number | null>(null)
 const draggedIndex = ref<number | null>(null)
+// 保存状态指示
+const isSaving = ref(false)
 
 const getPageTypeName = (type: string) => {
   const names = {
@@ -127,12 +134,162 @@ const goBack = () => {
   router.back()
 }
 
-const startGeneration = () => {
+const startGeneration = async () => {
+  // 如果有待保存的内容，先强制保存
+  if (saveTimer !== null) {
+    clearTimeout(saveTimer)
+    saveTimer = null
+    await autoSaveOutline()
+  }
   router.push('/generate')
 }
+
+// ==================== 自动保存功能 ====================
+
+// 防抖定时器
+let saveTimer: number | null = null
+
+/**
+ * 自动保存大纲到历史记录
+ * 当大纲内容发生变化时，自动更新到后端
+ */
+const autoSaveOutline = async () => {
+  // 如果没有 recordId，说明还未创建历史记录，无法自动保存
+  if (!store.recordId) {
+    console.warn('未找到历史记录ID，无法自动保存')
+    return
+  }
+
+  // 如果没有大纲内容，不需要保存
+  if (!store.outline.pages || store.outline.pages.length === 0) {
+    return
+  }
+
+  try {
+    isSaving.value = true
+
+    // 调用更新历史记录 API
+    const result = await updateHistory(store.recordId, {
+      outline: {
+        raw: store.outline.raw,
+        pages: store.outline.pages
+      }
+    })
+
+    if (!result.success) {
+      console.error('自动保存失败:', result.error)
+    } else {
+      console.log('大纲已自动保存')
+    }
+  } catch (error) {
+    console.error('自动保存出错:', error)
+  } finally {
+    isSaving.value = false
+  }
+}
+
+/**
+ * 防抖函数：延迟执行保存操作
+ * 避免用户频繁编辑时产生大量请求
+ */
+const debouncedSave = () => {
+  // 清除之前的定时器
+  if (saveTimer !== null) {
+    clearTimeout(saveTimer)
+  }
+
+  // 设置新的定时器，300ms 后执行保存
+  saveTimer = window.setTimeout(() => {
+    autoSaveOutline()
+    saveTimer = null
+  }, 300)
+}
+
+/**
+ * 页面加载时检查历史记录
+ * 如果没有 recordId 但有大纲数据，尝试创建历史记录
+ */
+const checkAndCreateHistory = async () => {
+  // 如果已经有 recordId，无需创建
+  if (store.recordId) {
+    console.log('已存在历史记录ID:', store.recordId)
+    return
+  }
+
+  // 如果有大纲数据但没有 recordId，说明是异常情况，尝试创建
+  if (store.outline.pages && store.outline.pages.length > 0) {
+    console.log('检测到大纲数据但无历史记录ID，尝试创建历史记录')
+
+    try {
+      const result = await createHistory(
+        store.topic || '未命名主题',
+        {
+          raw: store.outline.raw,
+          pages: store.outline.pages
+        },
+        store.taskId || undefined
+      )
+
+      if (result.success && result.record_id) {
+        store.setRecordId(result.record_id)
+        console.log('历史记录创建成功，ID:', result.record_id)
+      } else {
+        console.error('创建历史记录失败:', result.error)
+      }
+    } catch (error) {
+      console.error('创建历史记录出错:', error)
+    }
+  }
+}
+
+// 组件挂载时检查历史记录
+onMounted(() => {
+  checkAndCreateHistory()
+})
+
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  if (saveTimer !== null) {
+    clearTimeout(saveTimer)
+    saveTimer = null
+  }
+})
+
+// 监听大纲变化，触发自动保存
+watch(
+  () => store.outline.pages,
+  () => {
+    // 使用防抖函数，避免频繁请求
+    debouncedSave()
+  },
+  { deep: true } // 深度监听，确保能检测到数组内部对象的变化
+)
 </script>
 
 <style scoped>
+/* 保存状态指示器 */
+.save-indicator {
+  margin-left: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.save-indicator.saving {
+  color: #1890ff;
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+}
+
+.save-indicator.saved {
+  color: #52c41a;
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  opacity: 0.7;
+}
+
 /* 网格布局 */
 .outline-grid {
   display: grid;

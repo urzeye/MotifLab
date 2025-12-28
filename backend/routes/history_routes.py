@@ -28,16 +28,35 @@ def create_history_blueprint():
     @history_bp.route('/history', methods=['POST'])
     def create_history():
         """
-        创建历史记录
+        创建历史记录（草稿）
+
+        在用户生成大纲后立即调用，创建一个草稿状态的历史记录。
+        初始状态为 draft，表示大纲已创建但尚未开始生成图片。
 
         请求体：
         - topic: 主题标题（必填）
-        - outline: 大纲内容（必填）
+        - outline: 大纲内容（必填），包含 pages 数组等
         - task_id: 关联的任务 ID（可选）
 
         返回：
         - success: 是否成功
-        - record_id: 新创建的记录 ID
+        - record_id: 新创建的记录 ID（UUID 格式）
+
+        状态流转：
+            新建 -> draft（草稿状态）
+
+        示例请求：
+        {
+            "topic": "小猫的冒险",
+            "outline": {
+                "title": "小猫的冒险",
+                "pages": [
+                    {"page": 1, "content": "..."},
+                    {"page": 2, "content": "..."}
+                ]
+            },
+            "task_id": "abc123"
+        }
         """
         try:
             data = request.get_json()
@@ -136,22 +155,76 @@ def create_history_blueprint():
                 "error": f"获取历史记录详情失败。\n错误详情: {error_msg}"
             }), 500
 
+    @history_bp.route('/history/<record_id>/exists', methods=['GET'])
+    def check_history_exists(record_id):
+        """
+        检查历史记录是否存在
+
+        用于前端在开始生成前检查草稿记录是否已创建。
+
+        路径参数：
+        - record_id: 记录 ID
+
+        返回：
+        - exists: 记录是否存在（boolean）
+        """
+        try:
+            history_service = get_history_service()
+            exists = history_service.record_exists(record_id)
+
+            return jsonify({
+                "exists": exists
+            }), 200
+
+        except Exception as e:
+            error_msg = str(e)
+            return jsonify({
+                "exists": False,
+                "error": f"检查记录失败。\n错误详情: {error_msg}"
+            }), 500
+
     @history_bp.route('/history/<record_id>', methods=['PUT'])
     def update_history(record_id):
         """
         更新历史记录
 
+        支持部分更新，只更新提供的字段。
+        每次更新都会自动刷新 updated_at 时间戳。
+
         路径参数：
         - record_id: 记录 ID
 
         请求体（均为可选）：
-        - outline: 大纲内容
-        - images: 图片信息
-        - status: 状态
+        - outline: 大纲内容（支持修改大纲）
+        - images: 图片信息 { task_id, generated: [] }
+        - status: 状态（draft/generating/partial/completed/error）
         - thumbnail: 缩略图文件名
 
         返回：
         - success: 是否成功
+
+        状态流转说明：
+            draft -> generating: 开始生成图片
+            generating -> partial: 部分图片生成完成
+            generating -> completed: 所有图片生成完成
+            generating -> error: 生成过程出错
+            partial -> generating: 继续生成剩余图片
+            partial -> completed: 剩余图片生成完成
+
+        示例请求（更新状态为生成中）：
+        {
+            "status": "generating"
+        }
+
+        示例请求（更新图片列表）：
+        {
+            "images": {
+                "task_id": "abc123",
+                "generated": ["0.png", "1.png"]
+            },
+            "status": "partial",
+            "thumbnail": "0.png"
+        }
         """
         try:
             data = request.get_json()

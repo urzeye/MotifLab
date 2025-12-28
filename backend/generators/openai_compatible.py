@@ -1,51 +1,11 @@
 """OpenAI 兼容接口图片生成器"""
 import logging
-import time
-import random
 import base64
-from functools import wraps
 from typing import Dict, Any
 import requests
 from .base import ImageGeneratorBase
 
 logger = logging.getLogger(__name__)
-
-
-def retry_on_error(max_retries=5, base_delay=3):
-    """错误自动重试装饰器"""
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            for attempt in range(max_retries):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    error_str = str(e)
-                    # 检查是否是速率限制错误
-                    if "429" in error_str or "rate" in error_str.lower():
-                        if attempt < max_retries - 1:
-                            wait_time = (base_delay ** attempt) + random.uniform(0, 1)
-                            logger.warning(f"遇到速率限制，{wait_time:.1f}秒后重试 (尝试 {attempt + 2}/{max_retries})")
-                            time.sleep(wait_time)
-                            continue
-                    # 其他错误或重试耗尽
-                    if attempt < max_retries - 1:
-                        wait_time = 2 ** attempt
-                        logger.warning(f"请求失败: {error_str[:100]}，{wait_time}秒后重试")
-                        time.sleep(wait_time)
-                        continue
-                    raise
-            logger.error(f"图片生成失败: 重试 {max_retries} 次后仍失败")
-            raise Exception(
-                f"图片生成失败：重试 {max_retries} 次后仍失败。\n"
-                "可能原因：\n"
-                "1. API持续限流或配额不足\n"
-                "2. 网络连接持续不稳定\n"
-                "3. API服务暂时不可用\n"
-                "建议：稍后再试，或检查API配额和网络状态"
-            )
-        return wrapper
-    return decorator
 
 
 class OpenAICompatibleGenerator(ImageGeneratorBase):
@@ -90,7 +50,6 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
         """验证配置"""
         return bool(self.api_key and self.base_url)
 
-    @retry_on_error(max_retries=5, base_delay=3)
     def generate_image(
         self,
         prompt: str,
@@ -154,7 +113,7 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
         if quality and model.startswith('dall-e'):
             payload["quality"] = quality
 
-        response = requests.post(url, headers=headers, json=payload, timeout=180)
+        response = requests.post(url, headers=headers, json=payload, timeout=300)
 
         if response.status_code != 200:
             error_detail = response.text[:500]
@@ -254,7 +213,7 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
             "temperature": 1.0
         }
 
-        response = requests.post(url, headers=headers, json=payload, timeout=180)
+        response = requests.post(url, headers=headers, json=payload, timeout=300)
 
         if response.status_code != 200:
             error_detail = response.text[:500]

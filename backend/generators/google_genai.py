@@ -1,9 +1,6 @@
 """Google GenAI 图片生成器"""
 import logging
-import time
-import random
 import base64
-from functools import wraps
 from typing import Dict, Any, Optional
 from google import genai
 from google.genai import types
@@ -279,58 +276,6 @@ def parse_genai_error(error: Exception) -> str:
     )
 
 
-def retry_on_error(max_retries=5, base_delay=3):
-    """智能重试装饰器，根据错误类型决定是否重试"""
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            last_error = None
-            for attempt in range(max_retries):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    last_error = e
-                    error_str = str(e).lower()
-
-                    # 不可重试的错误类型
-                    non_retryable = [
-                        "401", "unauthenticated",  # 认证错误
-                        "403", "permission_denied", "forbidden",  # 权限错误
-                        "404", "not_found",  # 资源不存在
-                        "invalid_argument",  # 参数错误
-                        "safety", "blocked", "filter",  # 安全过滤
-                    ]
-
-                    should_retry = True
-                    for keyword in non_retryable:
-                        if keyword in error_str:
-                            should_retry = False
-                            break
-
-                    if not should_retry:
-                        # 直接抛出，不重试
-                        raise Exception(parse_genai_error(e))
-
-                    # 可重试的错误
-                    if attempt < max_retries - 1:
-                        if "429" in error_str or "resource_exhausted" in error_str:
-                            wait_time = (base_delay ** attempt) + random.uniform(0, 1)
-                            logger.warning(f"⏳ 遇到速率限制，{wait_time:.1f}秒后重试 (尝试 {attempt + 2}/{max_retries})")
-                        else:
-                            wait_time = min(2 ** attempt, 10) + random.uniform(0, 1)
-                            logger.warning(f"⚠️ 请求失败，{wait_time:.1f}秒后重试 (尝试 {attempt + 2}/{max_retries})")
-                        time.sleep(wait_time)
-                        continue
-
-                    # 重试次数耗尽
-                    raise Exception(parse_genai_error(e))
-
-            # 理论上不会到这里，但保险起见
-            raise Exception(parse_genai_error(last_error))
-        return wrapper
-    return decorator
-
-
 class GoogleGenAIGenerator(ImageGeneratorBase):
     """Google GenAI 图片生成器"""
 
@@ -381,7 +326,6 @@ class GoogleGenAIGenerator(ImageGeneratorBase):
         """验证配置"""
         return bool(self.api_key)
 
-    @retry_on_error(max_retries=5, base_delay=3)
     def generate_image(
         self,
         prompt: str,
