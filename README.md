@@ -4,7 +4,7 @@
 
 ## 红墨官方站点上线啦，注册即送50体验积分！
 
-> ✨ 邀请好友来一起玩吧，你和好友都会有50积分！ ✨
+## 注册需要邀请码！可以到 https://watcha.cn/square/discuss#post_id=1380 获取
 
 <div align="center">
 <a href="https://redink.top">
