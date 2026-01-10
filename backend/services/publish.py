@@ -3,14 +3,20 @@
 
 提供将内容发布到小红书等平台的功能。
 使用 VibeSurf 浏览器自动化实现。
+发布记录存储在 Supabase 中。
 """
 
 import os
-import time
 import logging
 from typing import Dict, Any, Generator, List, Optional
 
-from backend.utils.vibesurf_client import VibeSurfClient, get_vibesurf_client
+from backend.utils.vibesurf_client import get_vibesurf_client
+from backend.utils.supabase_client import (
+    create_publish_record,
+    update_publish_status,
+    get_publish_records,
+    get_publish_record
+)
 
 logger = logging.getLogger(__name__)
 
@@ -226,6 +232,21 @@ class PublishService:
                 - data: dict, 事件数据
         """
         logger.info(f"开始发布到小红书: title={title[:20]}..., images={len(images)}")
+
+        # 创建发布记录到 Supabase
+        record_id = None
+        try:
+            record_result = create_publish_record(
+                title=title,
+                content=content,
+                tags=tags or [],
+                images=[{"url": img, "index": i} for i, img in enumerate(images)]
+            )
+            if record_result.get("success"):
+                record_id = record_result.get("record", {}).get("id")
+                logger.info(f"创建发布记录: {record_id}")
+        except Exception as e:
+            logger.warning(f"创建发布记录失败（将继续发布）: {e}")
 
         try:
             # ==================== 1. 检查 VibeSurf 状态 ====================
@@ -509,6 +530,10 @@ class PublishService:
                 }
             }
 
+            # 更新 Supabase 记录状态为 publishing
+            if record_id:
+                update_publish_status(record_id, "publishing")
+
             publish_task = """
             在小红书发布页面点击发布按钮。
 
@@ -536,12 +561,16 @@ class PublishService:
             # 通常发布成功后会跳转到作品管理页面或显示成功提示
             if "publish" not in final_url.lower() or "success" in final_url.lower():
                 logger.info("发布成功")
+                # 更新 Supabase 记录为成功
+                if record_id:
+                    update_publish_status(record_id, "published", post_url=final_url)
                 yield {
                     "event": "complete",
                     "data": {
                         "status": "success",
                         "message": "发布成功！",
-                        "url": final_url
+                        "url": final_url,
+                        "record_id": record_id
                     }
                 }
             else:
@@ -551,18 +580,23 @@ class PublishService:
                     "data": {
                         "status": "unknown",
                         "message": "发布操作已执行，请在浏览器中确认结果",
-                        "url": final_url
+                        "url": final_url,
+                        "record_id": record_id
                     }
                 }
 
         except Exception as e:
             logger.error(f"发布失败: {e}")
+            # 更新 Supabase 记录为失败
+            if record_id:
+                update_publish_status(record_id, "failed", error=str(e))
             yield {
                 "event": "error",
                 "data": {
                     "status": "exception",
                     "message": f"发布过程中出错: {str(e)}",
-                    "recoverable": False
+                    "recoverable": False,
+                    "record_id": record_id
                 }
             }
 
