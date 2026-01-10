@@ -32,7 +32,7 @@ def run_migration():
         sql = f.read()
 
     print("=" * 50)
-    print("RedInk Supabase 数据库迁移")
+    print("渲染AI Supabase 数据库迁移")
     print("=" * 50)
 
     if not SUPABASE_DB_PASSWORD:

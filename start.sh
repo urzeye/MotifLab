@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 红墨 AI图文生成器 - 启动脚本
+# 渲染AI 图文生成器 - 启动脚本
 
 set -e
 cd "$(dirname "${BASH_SOURCE[0]}")"
@@ -11,7 +11,7 @@ BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${BLUE}🚀 红墨 AI图文生成器${NC}"
+echo -e "${BLUE}🚀 渲染AI 图文生成器${NC}"
 echo ""
 
 # 检查依赖

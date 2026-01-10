@@ -1,7 +1,7 @@
 [project]
-name = "xiaohongshu-generator"
+name = "renderai-generator"
 version = "0.1.0"
-description = "小红书图文生成器"
+description = "渲染AI 图文生成器"
 requires-python = ">=3.9"
 dependencies = [
     "flask>=3.0.0",

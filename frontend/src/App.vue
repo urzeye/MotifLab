@@ -3,7 +3,7 @@
     <!-- 侧边栏 Sidebar -->
     <aside class="layout-sidebar">
       <div class="logo-area">
-        <img src="/logo-banner.png" alt="红墨 - 灵感一触即发" class="logo-icon" />
+        <img src="/logo-banner.png" alt="渲染AI" class="logo-icon" />
       </div>
       
       <nav class="nav-menu">
@@ -23,10 +23,10 @@
       
       <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border-color);">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, #ff6b6b 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">墨</div>
+          <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, #6b9fff 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">渲</div>
           <div>
-            <div style="font-size: 14px; font-weight: 600;">默子</div>
-            <div style="font-size: 12px; color: var(--text-sub);">mozi</div>
+            <div style="font-size: 14px; font-weight: 600;">渲染AI</div>
+            <div style="font-size: 12px; color: var(--text-sub);">RenderAI</div>
           </div>
         </div>
       </div>
@@ -41,10 +41,10 @@
         <footer v-if="route.path !== '/'" class="global-footer">
           <div class="footer-content">
             <div class="footer-tip">
-              配置不成功？访问 <a href="https://redink.top" target="_blank" rel="noopener noreferrer">redink.top</a> 官方站点即刻体验
+              渲染AI - AI驱动的图文创作工具
             </div>
             <div class="footer-text">
-              © 2025 <a href="https://github.com/HisMax/RedInk" target="_blank" rel="noopener noreferrer">RedInk</a> by 默子 (Histone)
+              © 2025 渲染AI (RenderAI)
             </div>
             <div class="footer-license">
               Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a>

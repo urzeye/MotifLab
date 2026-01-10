@@ -1,5 +1,5 @@
 -- 小红书发布记录表
--- 用于存储通过 RedInk + VibeSurf 发布到小红书的帖子记录
+-- 用于存储通过 渲染AI + VibeSurf 发布到小红书的帖子记录
 --
 -- 执行方式：
 -- 1. 登录 Supabase Dashboard: https://supabase.com/dashboard

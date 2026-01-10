@@ -284,7 +284,7 @@ def _test_provider_connection(provider_type: str, config: dict) -> dict:
     Returns:
         dict: 测试结果
     """
-    test_prompt = "请回复'你好，红墨'"
+    test_prompt = "请回复'你好，渲染AI'"
 
     if provider_type == 'google_genai':
         return _test_google_genai(config)
@@ -416,7 +416,7 @@ def _test_image_api(config: dict) -> dict:
 
 def _check_response(result_text: str) -> dict:
     """检查响应是否符合预期"""
-    if "你好" in result_text and "红墨" in result_text:
+    if "你好" in result_text and "渲染AI" in result_text:
         return {
             "success": True,
             "message": f"连接成功！响应: {result_text[:100]}"
