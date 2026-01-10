@@ -20,7 +20,7 @@ command -v npm &>/dev/null || { echo "❌ 需要 Node.js"; exit 1; }
 
 # 安装依赖
 echo "📦 检查依赖..."
-pip3 install -q -e . 2>/dev/null || pip3 install -e .
+pip3 install -q . 2>/dev/null || pip3 install .
 cd frontend && npm install --silent 2>/dev/null && cd ..
 
 # 清理函数
