@@ -51,6 +51,65 @@ body {
   transition: all var(--transition-base);
 }
 
+/* 侧边栏折叠状态 */
+.layout-sidebar.collapsed {
+  width: 72px;
+  padding: 32px 12px;
+}
+
+.layout-sidebar.collapsed .logo-area {
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.layout-sidebar.collapsed .logo-icon {
+  width: 40px;
+  max-width: 40px;
+}
+
+.layout-sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding: 14px;
+}
+
+.layout-sidebar.collapsed .nav-text {
+  display: none;
+}
+
+.layout-sidebar.collapsed .nav-item.active::before {
+  left: 0;
+}
+
+.layout-sidebar.collapsed .brand-badge {
+  justify-content: center;
+}
+
+/* 折叠按钮 */
+.collapse-btn {
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-sub);
+  transition: all var(--transition-fast);
+  z-index: 101;
+}
+
+.collapse-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
 /* ========== 主内容区 ========== */
 .layout-main {
   margin-left: var(--sidebar-width);
@@ -60,6 +119,12 @@ body {
   background: var(--bg-body);
   display: flex;
   flex-direction: column;
+  transition: margin-left var(--transition-base);
+}
+
+/* 侧边栏折叠时的主内容区 */
+#app.sidebar-collapsed .layout-main {
+  margin-left: 72px;
 }
 
 /* Logo 区域 */
