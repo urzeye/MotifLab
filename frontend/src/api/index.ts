@@ -794,3 +794,184 @@ export async function generateContent(
   })
   return response.data
 }
+
+// ==================== 发布相关 API (VibeSurf 浏览器自动化) ====================
+
+/**
+ * VibeSurf 状态响应
+ */
+export interface VibeSurfStatus {
+  running: boolean
+  message: string
+  version?: string
+}
+
+/**
+ * 登录状态响应
+ */
+export interface LoginStatus {
+  logged_in: boolean
+  username?: string
+  message: string
+}
+
+/**
+ * 发布进度事件
+ */
+export interface PublishProgressEvent {
+  step: string
+  message: string
+  progress?: number
+  success?: boolean
+  error?: string
+  post_url?: string
+}
+
+/**
+ * 发布数据
+ */
+export interface PublishData {
+  images: string[]  // 图片 URL 列表
+  title: string
+  content: string
+  tags: string[]
+}
+
+/**
+ * 检查 VibeSurf 运行状态
+ */
+export async function checkVibeSurfStatus(): Promise<{
+  success: boolean
+  status?: VibeSurfStatus
+  error?: string
+}> {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/publish/status`, {
+      timeout: 5000
+    })
+    return response.data
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      if (!error.response) {
+        return { success: false, error: '无法连接到后端服务' }
+      }
+      return { success: false, error: error.response?.data?.error || '检查状态失败' }
+    }
+    return { success: false, error: '未知错误' }
+  }
+}
+
+/**
+ * 检查小红书登录状态
+ */
+export async function checkXiaohongshuLogin(): Promise<{
+  success: boolean
+  status?: LoginStatus
+  error?: string
+}> {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/publish/login-check`, {
+      timeout: 10000
+    })
+    return response.data
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      return { success: false, error: error.response?.data?.error || '检查登录状态失败' }
+    }
+    return { success: false, error: '未知错误' }
+  }
+}
+
+/**
+ * 打开小红书登录页面
+ */
+export async function openXiaohongshuLogin(): Promise<{
+  success: boolean
+  message?: string
+  error?: string
+}> {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/publish/login`, {}, {
+      timeout: 30000
+    })
+    return response.data
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      return { success: false, error: error.response?.data?.error || '打开登录页面失败' }
+    }
+    return { success: false, error: '未知错误' }
+  }
+}
+
+/**
+ * 发布到小红书 (SSE 流式)
+ */
+export async function publishToXiaohongshu(
+  data: PublishData,
+  onProgress: (event: PublishProgressEvent) => void,
+  onComplete: (event: PublishProgressEvent) => void,
+  onError: (event: PublishProgressEvent) => void,
+  onStreamError: (error: Error) => void
+) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/publish/xiaohongshu`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const reader = response.body?.getReader()
+    if (!reader) {
+      throw new Error('无法读取响应流')
+    }
+
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n\n')
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        if (!line.trim()) continue
+
+        const [eventLine, dataLine] = line.split('\n')
+        if (!eventLine || !dataLine) continue
+
+        const eventType = eventLine.replace('event: ', '').trim()
+        const eventData = dataLine.replace('data: ', '').trim()
+
+        try {
+          const data = JSON.parse(eventData)
+
+          switch (eventType) {
+            case 'progress':
+              onProgress(data)
+              break
+            case 'complete':
+              onComplete(data)
+              break
+            case 'error':
+              onError(data)
+              break
+          }
+        } catch (e) {
+          console.error('解析发布 SSE 数据失败:', e)
+        }
+      }
+    }
+  } catch (error) {
+    onStreamError(error as Error)
+  }
+}
