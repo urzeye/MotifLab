@@ -249,11 +249,12 @@ const previewUrl = computed(() => {
 </script>
 
 <style scoped>
-/* 模态框遮罩 */
+/* 模态框遮罩 - 深色主题适配 */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -261,23 +262,24 @@ const previewUrl = computed(() => {
   padding: 20px;
 }
 
-/* 模态框内容 */
+/* 模态框内容 - 使用设计系统变量 */
 .modal-content {
-  background: white;
-  border-radius: 12px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
 }
 
 /* 头部 */
 .modal-header {
   padding: 20px 24px;
-  border-bottom: 1px solid var(--border-color, #eee);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -285,8 +287,9 @@ const previewUrl = computed(() => {
 
 .modal-header h3 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--h4-size);
+  font-weight: var(--h4-weight);
+  color: var(--text-main);
 }
 
 .close-btn {
@@ -294,13 +297,14 @@ const previewUrl = computed(() => {
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #999;
+  color: var(--text-sub);
   padding: 0;
   line-height: 1;
+  transition: color var(--transition-fast);
 }
 
 .close-btn:hover {
-  color: #333;
+  color: var(--text-main);
 }
 
 /* 主体 */
@@ -321,45 +325,72 @@ const previewUrl = computed(() => {
 
 .form-group label {
   display: block;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-main, #1a1a1a);
+  font-size: var(--small-size);
+  font-weight: 600;
+  color: var(--text-main);
   margin-bottom: 8px;
 }
 
+/* 输入框 - 深色主题 WCAG AA 对比度 */
 .form-input {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border-color, #eee);
-  border-radius: 8px;
-  font-size: 14px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: var(--small-size);
+  background: var(--bg-input);
+  color: var(--text-main);
+  transition: all var(--transition-fast);
+}
+
+.form-input::placeholder {
+  color: var(--text-placeholder);
 }
 
 .form-input:focus {
   outline: none;
-  border-color: var(--primary, #ff2442);
-  box-shadow: 0 0 0 3px rgba(255, 36, 66, 0.1);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-fade);
+  background: var(--bg-elevated);
 }
 
+/* 下拉选择框 - 深色主题 */
 .form-select {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border-color, #eee);
-  border-radius: 8px;
-  font-size: 14px;
-  background: white;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: var(--small-size);
+  background: var(--bg-input);
+  color: var(--text-main);
   cursor: pointer;
+  transition: all var(--transition-fast);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23A1A1AA' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-fade);
+}
+
+.form-select option {
+  background: var(--bg-card);
+  color: var(--text-main);
 }
 
 .form-hint {
   display: block;
-  font-size: 12px;
-  color: var(--text-sub, #666);
+  font-size: var(--caption-size);
+  color: var(--text-sub);
   margin-top: 6px;
+  line-height: 1.5;
 }
 
-/* Toggle 开关样式 */
+/* Toggle 开关样式 - 深色主题 */
 .toggle-label {
   display: flex;
   align-items: center;
@@ -370,82 +401,90 @@ const previewUrl = computed(() => {
 .toggle-switch {
   width: 44px;
   height: 24px;
-  background: #d1d5db;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   position: relative;
-  transition: background 0.2s;
+  transition: all var(--transition-fast);
   flex-shrink: 0;
 }
 
 .toggle-switch.active {
-  background: var(--primary, #ff2442);
+  background: var(--primary);
+  border-color: var(--primary);
 }
 
 .toggle-slider {
-  width: 20px;
-  height: 20px;
-  background: white;
+  width: 18px;
+  height: 18px;
+  background: var(--text-sub);
   border-radius: 50%;
   position: absolute;
   top: 2px;
   left: 2px;
-  transition: transform 0.2s;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: all var(--transition-fast);
 }
 
 .toggle-switch.active .toggle-slider {
   transform: translateX(20px);
+  background: var(--text-inverse);
 }
 
 /* 底部 */
 .modal-footer {
   padding: 16px 24px;
-  border-top: 1px solid var(--border-color, #eee);
+  border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: flex-end;
   gap: 12px;
 }
 
-/* 按钮样式 */
+/* 按钮样式 - 深色主题 */
 .btn {
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  font-size: var(--small-size);
   font-weight: 500;
   cursor: pointer;
-  border: 1px solid var(--border-color, #eee);
-  background: white;
-  color: var(--text-main, #1a1a1a);
-  transition: all 0.2s;
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+  color: var(--text-main);
+  transition: all var(--transition-fast);
 }
 
 .btn:hover {
-  background: #f5f5f5;
+  background: var(--bg-card);
+  border-color: var(--border-hover);
 }
 
 .btn-primary {
-  background: var(--primary, #ff2442);
-  border-color: var(--primary, #ff2442);
-  color: white;
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--text-inverse);
+  box-shadow: var(--primary-glow);
 }
 
 .btn-primary:hover {
-  background: var(--primary-hover, #e61e3a);
+  background: var(--primary-hover);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
-  background: #f0f0f0;
-  border-color: #ddd;
-  color: #333;
+  background: var(--bg-elevated);
+  border-color: var(--border-color);
+  color: var(--text-sub);
 }
 
 .btn-secondary:hover {
-  background: #e5e5e5;
+  background: var(--bg-card);
+  color: var(--text-main);
+  border-color: var(--border-hover);
 }
 
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
 /* 加载动画 */

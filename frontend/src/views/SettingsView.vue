@@ -177,29 +177,41 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .section-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: #1a1a1a;
+  font-size: var(--h4-size);
+  font-weight: var(--h4-weight);
+  margin-bottom: 6px;
+  color: var(--text-main);
 }
 
 .section-desc {
-  font-size: 14px;
-  color: #666;
+  font-size: var(--small-size);
+  color: var(--text-sub);
   margin: 0;
 }
 
 /* 按钮样式 */
 .btn-small {
-  padding: 6px 12px;
-  font-size: 13px;
+  padding: 8px 14px;
+  font-size: var(--caption-size);
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-small:hover {
+  background: var(--bg-card);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 /* 加载状态 */
@@ -209,6 +221,6 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   padding: 80px 20px;
-  color: #666;
+  color: var(--text-sub);
 }
 </style>

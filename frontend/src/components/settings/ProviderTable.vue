@@ -102,11 +102,12 @@ const canDelete = computed(() => Object.keys(props.providers).length > 1)
 </script>
 
 <style scoped>
-/* 表格容器 */
+/* 表格容器 - 深色主题 */
 .provider-table {
-  border: 1px solid var(--border-color, #eee);
-  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   overflow: hidden;
+  background: var(--bg-card);
 }
 
 /* 表头 */
@@ -114,13 +115,14 @@ const canDelete = computed(() => Object.keys(props.providers).length > 1)
   display: grid;
   grid-template-columns: 80px 1fr 1fr 1.5fr 120px;
   gap: 12px;
-  padding: 12px 16px;
-  background: #f9fafb;
-  border-bottom: 1px solid var(--border-color, #eee);
-  font-size: 12px;
+  padding: 14px 16px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--caption-size);
   font-weight: 600;
-  color: var(--text-sub, #666);
+  color: var(--text-sub);
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* 表格行 */
@@ -128,10 +130,10 @@ const canDelete = computed(() => Object.keys(props.providers).length > 1)
   display: grid;
   grid-template-columns: 80px 1fr 1fr 1.5fr 120px;
   gap: 12px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border-color, #eee);
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
   align-items: center;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-fast);
 }
 
 .table-row:last-child {
@@ -139,64 +141,67 @@ const canDelete = computed(() => Object.keys(props.providers).length > 1)
 }
 
 .table-row:hover {
-  background: #f9fafb;
+  background: var(--bg-elevated);
 }
 
 .table-row.active {
-  background: rgba(255, 36, 66, 0.02);
+  background: var(--primary-fade);
+  border-left: 3px solid var(--primary);
 }
 
 /* 激活按钮 */
 .btn-activate {
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: var(--radius-xs);
+  font-size: var(--caption-size);
   font-weight: 500;
-  border: 1px solid var(--border-color, #eee);
-  background: white;
-  color: var(--text-sub, #666);
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+  color: var(--text-sub);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
 }
 
 .btn-activate:hover:not(:disabled) {
-  border-color: var(--primary, #ff2442);
-  color: var(--primary, #ff2442);
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-fade);
 }
 
 .btn-activate.active {
-  background: rgba(34, 197, 94, 0.1);
-  border-color: #22c55e;
-  color: #22c55e;
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
   cursor: default;
 }
 
 /* 服务商名称 */
 .provider-name {
   font-weight: 600;
-  color: var(--text-main, #1a1a1a);
+  color: var(--text-main);
 }
 
 /* 模型名称 */
 .model-name {
   font-family: 'Monaco', 'Menlo', monospace;
-  font-size: 12px;
-  color: var(--text-sub, #666);
-  background: #f5f5f5;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-size: var(--caption-size);
+  color: var(--text-sub);
+  background: var(--bg-input);
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-color);
 }
 
 /* API Key 显示 */
 .apikey-masked {
-  font-size: 12px;
+  font-size: var(--caption-size);
   font-family: 'Monaco', 'Menlo', monospace;
-  color: #6b7280;
+  color: var(--text-secondary);
   word-break: break-all;
 }
 
 .apikey-masked.empty {
-  color: #f59e0b;
+  color: #F59E0B;
 }
 
 /* 操作列 */
@@ -208,29 +213,29 @@ const canDelete = computed(() => Object.keys(props.providers).length > 1)
 
 /* 图标按钮 */
 .btn-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: 1px solid var(--border-color, #eee);
-  background: white;
-  color: var(--text-sub, #666);
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+  color: var(--text-sub);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
 }
 
 .btn-icon:hover {
-  border-color: var(--primary, #ff2442);
-  color: var(--primary, #ff2442);
-  background: rgba(255, 36, 66, 0.05);
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-fade);
 }
 
 .btn-icon.danger:hover {
-  border-color: #ef4444;
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.05);
+  border-color: #EF4444;
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.1);
 }
 
 /* 响应式 */
