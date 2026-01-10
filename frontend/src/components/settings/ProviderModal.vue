@@ -27,12 +27,15 @@
           <select
             class="form-select"
             :value="formData.type"
-            @change="updateField('type', ($event.target as HTMLSelectElement).value)"
+            @change="handleTypeChange(($event.target as HTMLSelectElement).value)"
           >
             <option v-for="opt in typeOptions" :key="opt.value" :value="opt.value">
               {{ opt.label }}
             </option>
           </select>
+          <span class="form-hint" v-if="currentPreset && !isEditing">
+            选择后将自动填充默认配置，可自行修改
+          </span>
         </div>
 
         <!-- API Key -->
@@ -113,6 +116,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { textProviderPresets } from '../../composables/useProviderForm'
 
 /**
  * 服务商编辑/添加弹窗组件
@@ -121,6 +125,7 @@ import { computed } from 'vue'
  * - 添加新服务商
  * - 编辑现有服务商
  * - 测试连接
+ * - 预设配置自动填充
  */
 
 // 定义表单数据类型
@@ -159,6 +164,11 @@ const emit = defineEmits<{
   (e: 'update:formData', data: FormData): void
 }>()
 
+// 当前选中的预设
+const currentPreset = computed(() => {
+  return textProviderPresets[props.formData.type]
+})
+
 // 更新表单字段
 function updateField(field: keyof FormData, value: string) {
   emit('update:formData', {
@@ -167,39 +177,57 @@ function updateField(field: keyof FormData, value: string) {
   })
 }
 
-// 是否显示 Base URL
+// 处理类型变更（自动填充预设配置）
+function handleTypeChange(newType: string) {
+  const preset = textProviderPresets[newType]
+
+  // 如果是编辑模式，只更新类型
+  if (props.isEditing) {
+    updateField('type', newType)
+    return
+  }
+
+  // 添加模式：自动填充预设配置
+  if (preset) {
+    emit('update:formData', {
+      ...props.formData,
+      type: newType,
+      base_url: preset.base_url || props.formData.base_url,
+      model: preset.model || props.formData.model,
+      endpoint_type: preset.endpoint || props.formData.endpoint_type
+    })
+  } else {
+    updateField('type', newType)
+  }
+}
+
+// 是否显示 Base URL（所有类型都显示，方便自定义）
 const showBaseUrl = computed(() => {
-  return ['openai_compatible', 'google_gemini', 'google_genai', 'image_api'].includes(props.formData.type)
+  // google_gemini 使用原生 SDK，不需要 base_url
+  return props.formData.type !== 'google_gemini'
 })
 
-// 是否显示端点类型
+// 是否显示端点类型（仅自定义 OpenAI 兼容接口）
 const showEndpointType = computed(() => {
   return props.formData.type === 'openai_compatible'
 })
 
 // Base URL 占位符
 const baseUrlPlaceholder = computed(() => {
-  switch (props.formData.type) {
-    case 'google_gemini':
-    case 'google_genai':
-      return '例如: https://generativelanguage.googleapis.com'
-    default:
-      return '例如: https://api.openai.com'
+  const preset = currentPreset.value
+  if (preset?.base_url) {
+    return preset.base_url
   }
+  return '例如: https://api.openai.com'
 })
 
 // 模型占位符
 const modelPlaceholder = computed(() => {
-  switch (props.formData.type) {
-    case 'google_gemini':
-      return '例如: gemini-2.0-flash-exp'
-    case 'google_genai':
-      return '例如: imagen-3.0-generate-002'
-    case 'image_api':
-      return '例如: flux-pro'
-    default:
-      return '例如: gpt-4o'
+  const preset = currentPreset.value
+  if (preset?.model) {
+    return `推荐: ${preset.model}`
   }
+  return '输入模型名称'
 })
 
 // 预览 URL
@@ -207,24 +235,13 @@ const previewUrl = computed(() => {
   if (!props.formData.base_url) return ''
 
   const baseUrl = props.formData.base_url.replace(/\/$/, '').replace(/\/v1$/, '')
+  const endpoint = props.formData.endpoint_type || '/v1/chat/completions'
 
-  switch (props.formData.type) {
-    case 'openai_compatible': {
-      // 使用用户自定义的端点路径
-      let endpoint = props.formData.endpoint_type || '/v1/chat/completions'
-      if (!endpoint.startsWith('/')) {
-        endpoint = '/' + endpoint
-      }
-      return `${baseUrl}${endpoint}`
-    }
-    case 'google_gemini':
-    case 'google_genai':
-      return `${baseUrl}/v1beta/models/${props.formData.model || '{model}'}:generateContent`
-    case 'image_api':
-      return `${baseUrl}/v1/images/generations`
-    default:
-      return ''
+  if (props.formData.type === 'google_gemini') {
+    return `${baseUrl}/v1beta/models/${props.formData.model || '{model}'}:generateContent`
   }
+
+  return `${baseUrl}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`
 })
 </script>
 
