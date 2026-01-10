@@ -5,7 +5,7 @@
     <div class="composer-input-wrapper">
       <div class="search-icon-static">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
       <textarea
@@ -206,49 +206,55 @@ defineExpose({
 </script>
 
 <style scoped>
-/* 组合框容器 */
+/* 组合框容器 - 适配深色模式 */
 .composer-container {
-  background: white;
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-base);
+}
+
+.composer-container:focus-within {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-glow);
 }
 
 /* 输入区域 */
 .composer-input-wrapper {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 14px;
 }
 
 .search-icon-static {
   flex-shrink: 0;
-  padding-top: 8px;
-  color: #999;
+  padding-top: 10px;
+  color: var(--text-placeholder);
 }
 
 .composer-textarea {
   flex: 1;
   border: none;
   outline: none;
-  font-size: 16px;
-  line-height: 1.6;
+  font-size: var(--body-size);
+  line-height: var(--body-line-height);
   resize: none;
-  min-height: 44px;
+  min-height: 48px;
   max-height: 200px;
-  padding: 8px 0;
+  padding: 10px 0;
   font-family: inherit;
-  color: var(--text-main, #1a1a1a);
+  color: var(--text-main);
+  background: transparent;
 }
 
 .composer-textarea::placeholder {
-  color: #999;
+  color: var(--text-placeholder);
 }
 
 .composer-textarea:disabled {
   background: transparent;
-  color: #999;
+  color: var(--text-secondary);
 }
 
 /* 已上传图片预览 */
@@ -258,18 +264,19 @@ defineExpose({
   gap: 12px;
   margin-top: 16px;
   padding: 16px;
-  background: #fafafa;
-  border-radius: 12px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
   align-items: center;
+  border: 1px dashed var(--border-color);
 }
 
 .uploaded-image-item {
   position: relative;
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color);
 }
 
 .uploaded-image-item img {
@@ -280,12 +287,12 @@ defineExpose({
 
 .remove-image-btn {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 20px;
-  height: 20px;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.7);
   border: none;
   cursor: pointer;
   display: flex;
@@ -293,7 +300,7 @@ defineExpose({
   justify-content: center;
   color: white;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity var(--transition-fast);
 }
 
 .uploaded-image-item:hover .remove-image-btn {
@@ -301,13 +308,13 @@ defineExpose({
 }
 
 .remove-image-btn:hover {
-  background: var(--primary, #ff2442);
+  background: #EF4444;
 }
 
 .upload-hint {
   flex: 1;
-  font-size: 12px;
-  color: var(--text-sub, #666);
+  font-size: var(--caption-size);
+  color: var(--text-sub);
   text-align: right;
 }
 
@@ -316,14 +323,14 @@ defineExpose({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
 }
 
 .toolbar-left {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .tool-btn {
@@ -331,56 +338,70 @@ defineExpose({
   align-items: center;
   justify-content: center;
   position: relative;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: #f5f5f5;
-  border: none;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
   cursor: pointer;
-  color: #666;
-  transition: all 0.2s;
+  color: var(--text-sub);
+  transition: all var(--transition-fast);
 }
 
 .tool-btn:hover {
-  background: #eee;
-  color: var(--primary, #ff2442);
+  background: var(--bg-card);
+  color: var(--text-main);
+  border-color: var(--border-hover);
 }
 
 .tool-btn.active {
-  background: rgba(255, 36, 66, 0.1);
-  color: var(--primary, #ff2442);
+  background: var(--primary-fade);
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
 .badge-count {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 18px;
-  height: 18px;
-  background: var(--primary, #ff2442);
-  color: white;
-  border-radius: 9px;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  background: var(--primary);
+  color: var(--text-inverse);
+  border-radius: 10px;
   font-size: 11px;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 4px;
+  padding: 0 5px;
+  border: 2px solid var(--bg-card);
 }
 
 /* 生成按钮 */
 .generate-btn {
-  padding: 10px 24px;
+  padding: 12px 28px;
   font-size: 15px;
-  border-radius: 100px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  background: var(--primary);
+  color: var(--text-inverse);
+  box-shadow: var(--primary-glow);
+}
+
+.generate-btn:hover:not(:disabled) {
+  background: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(0, 255, 136, 0.4);
 }
 
 .generate-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 /* 加载动画 */
