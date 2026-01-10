@@ -2,6 +2,94 @@ import axios from 'axios'
 
 const API_BASE_URL = '/api'
 
+// ==================== 通用工具函数 ====================
+
+/**
+ * 处理 axios 错误的通用函数
+ */
+function handleAxiosError(error: any, defaultMessage: string, defaultReturn: any = {}): any {
+  if (axios.isAxiosError(error)) {
+    if (error.code === 'ECONNABORTED') {
+      return { success: false, ...defaultReturn, error: '请求超时，请检查网络连接' }
+    }
+    if (!error.response) {
+      return { success: false, ...defaultReturn, error: '网络连接失败，请检查网络设置' }
+    }
+    if (error.response.status === 404) {
+      return { success: false, ...defaultReturn, error: '资源不存在' }
+    }
+    const errorMessage = error.response?.data?.error || error.message || defaultMessage
+    return { success: false, ...defaultReturn, error: errorMessage }
+  }
+  return { success: false, ...defaultReturn, error: '未知错误，请稍后重试' }
+}
+
+/**
+ * SSE 事件处理器类型
+ */
+type SSEEventHandlers = Record<string, (data: any) => void>
+
+/**
+ * 通用 SSE 流处理函数
+ */
+async function handleSSEStream(
+  url: string,
+  body: any,
+  handlers: SSEEventHandlers,
+  onStreamError: (error: Error) => void
+) {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const reader = response.body?.getReader()
+    if (!reader) {
+      throw new Error('无法读取响应流')
+    }
+
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n\n')
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        if (!line.trim()) continue
+
+        const [eventLine, dataLine] = line.split('\n')
+        if (!eventLine || !dataLine) continue
+
+        const eventType = eventLine.replace('event: ', '').trim()
+        const eventData = dataLine.replace('data: ', '').trim()
+
+        try {
+          const data = JSON.parse(eventData)
+          const handler = handlers[eventType]
+          if (handler) handler(data)
+        } catch (e) {
+          console.error('解析 SSE 数据失败:', e)
+        }
+      }
+    }
+  } catch (error) {
+    onStreamError(error as Error)
+  }
+}
+
+// ==================== 类型定义 ====================
+
 export interface Page {
   index: number
   type: 'cover' | 'content' | 'summary'
@@ -13,6 +101,7 @@ export interface OutlineResponse {
   outline?: string
   pages?: Page[]
   error?: string
+  has_images?: boolean
 }
 
 export interface ProgressEvent {
@@ -30,149 +119,6 @@ export interface FinishEvent {
   images: string[]
 }
 
-// 生成大纲（支持图片上传）
-export async function generateOutline(
-  topic: string,
-  images?: File[]
-): Promise<OutlineResponse & { has_images?: boolean }> {
-  // 如果有图片，使用 FormData
-  if (images && images.length > 0) {
-    const formData = new FormData()
-    formData.append('topic', topic)
-    images.forEach((file) => {
-      formData.append('images', file)
-    })
-
-    const response = await axios.post<OutlineResponse & { has_images?: boolean }>(
-      `${API_BASE_URL}/outline`,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      }
-    )
-    return response.data
-  }
-
-  // 无图片，使用 JSON
-  const response = await axios.post<OutlineResponse>(`${API_BASE_URL}/outline`, {
-    topic
-  })
-  return response.data
-}
-
-// 获取图片 URL（新格式：task_id/filename）
-// thumbnail 参数：true=缩略图（默认），false=原图
-export function getImageUrl(taskId: string, filename: string, thumbnail: boolean = true): string {
-  const thumbParam = thumbnail ? '?thumbnail=true' : '?thumbnail=false'
-  return `${API_BASE_URL}/images/${taskId}/${filename}${thumbParam}`
-}
-
-// 重新生成图片（即使成功的也可以重新生成）
-export async function regenerateImage(
-  taskId: string,
-  page: Page,
-  useReference: boolean = true,
-  context?: {
-    fullOutline?: string
-    userTopic?: string
-  }
-): Promise<{ success: boolean; index: number; image_url?: string; error?: string }> {
-  const response = await axios.post(`${API_BASE_URL}/regenerate`, {
-    task_id: taskId,
-    page,
-    use_reference: useReference,
-    full_outline: context?.fullOutline,
-    user_topic: context?.userTopic
-  })
-  return response.data
-}
-
-// 批量重试失败的图片（SSE）
-export async function retryFailedImages(
-  taskId: string,
-  pages: Page[],
-  onProgress: (event: ProgressEvent) => void,
-  onComplete: (event: ProgressEvent) => void,
-  onError: (event: ProgressEvent) => void,
-  onFinish: (event: { success: boolean; total: number; completed: number; failed: number }) => void,
-  onStreamError: (error: Error) => void
-) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/retry-failed`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        task_id: taskId,
-        pages
-      })
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const reader = response.body?.getReader()
-    if (!reader) {
-      throw new Error('无法读取响应流')
-    }
-
-    const decoder = new TextDecoder()
-    let buffer = ''
-
-    while (true) {
-      const { done, value } = await reader.read()
-
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n\n')
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        if (!line.trim()) continue
-
-        const [eventLine, dataLine] = line.split('\n')
-        if (!eventLine || !dataLine) continue
-
-        const eventType = eventLine.replace('event: ', '').trim()
-        const eventData = dataLine.replace('data: ', '').trim()
-
-        try {
-          const data = JSON.parse(eventData)
-
-          switch (eventType) {
-            case 'retry_start':
-              onProgress({ index: -1, status: 'generating', message: data.message })
-              break
-            case 'complete':
-              onComplete(data)
-              break
-            case 'error':
-              onError(data)
-              break
-            case 'retry_finish':
-              onFinish(data)
-              break
-          }
-        } catch (e) {
-          console.error('解析 SSE 数据失败:', e)
-        }
-      }
-    }
-  } catch (error) {
-    onStreamError(error as Error)
-  }
-}
-
-// ==================== 历史记录相关 API ====================
-
-/**
- * 历史记录列表项接口
- */
 export interface HistoryRecord {
   id: string
   title: string
@@ -184,38 +130,17 @@ export interface HistoryRecord {
   task_id: string | null
 }
 
-/**
- * 历史记录详情接口
- */
 export interface HistoryDetail {
   id: string
   title: string
   created_at: string
   updated_at: string
-  outline: {
-    raw: string
-    pages: Page[]
-  }
-  images: {
-    task_id: string | null
-    generated: string[]
-  }
+  outline: { raw: string; pages: Page[] }
+  images: { task_id: string | null; generated: string[] }
   status: string
   thumbnail: string | null
 }
 
-/**
- * 创建历史记录参数接口
- */
-export interface CreateHistoryParams {
-  topic: string
-  outline: { raw: string; pages: Page[] }
-  task_id?: string
-}
-
-/**
- * 更新历史记录参数接口
- */
 export interface UpdateHistoryParams {
   outline?: { raw: string; pages: Page[] }
   images?: { task_id: string | null; generated: string[] }
@@ -223,394 +148,102 @@ export interface UpdateHistoryParams {
   thumbnail?: string
 }
 
-/**
- * 创建历史记录
- *
- * 用于在用户生成大纲后保存记录，以便后续查看和继续编辑
- *
- * @param topic - 绘本主题/标题
- * @param outline - 大纲数据，包含原始文本和页面列表
- * @param outline.raw - 大纲的原始文本
- * @param outline.pages - 解析后的页面列表
- * @param taskId - 可选的任务 ID，用于关联图片生成任务
- *
- * @returns Promise<{ success: boolean; record_id?: string; error?: string }>
- * - success: 是否创建成功
- * - record_id: 创建的记录 ID（成功时返回）
- * - error: 错误信息（失败时返回）
- *
- * @throws {Error} 网络错误或服务器错误
- *
- * @example
- * ```typescript
- * const result = await createHistory(
- *   '小兔子的冒险',
- *   {
- *     raw: '第一页：小兔子出门了...',
- *     pages: [{ index: 0, type: 'cover', content: '...' }]
- *   },
- *   'task-123'
- * )
- * if (result.success) {
- *   console.log('记录创建成功，ID:', result.record_id)
- * }
- * ```
- */
-export async function createHistory(
-  topic: string,
-  outline: { raw: string; pages: Page[] },
-  taskId?: string
-): Promise<{ success: boolean; record_id?: string; error?: string }> {
-  try {
-    const response = await axios.post(
-      `${API_BASE_URL}/history`,
-      {
-        topic,
-        outline,
-        task_id: taskId
-      },
-      {
-        timeout: 10000 // 10秒超时
-      }
-    )
-    return response.data
-  } catch (error: any) {
-    if (axios.isAxiosError(error)) {
-      if (error.code === 'ECONNABORTED') {
-        return { success: false, error: '请求超时，请检查网络连接' }
-      }
-      if (!error.response) {
-        return { success: false, error: '网络连接失败，请检查网络设置' }
-      }
-      const errorMessage = error.response?.data?.error || error.message || '创建历史记录失败'
-      return { success: false, error: errorMessage }
-    }
-    return { success: false, error: '未知错误，请稍后重试' }
-  }
+export interface VibeSurfStatus {
+  running: boolean
+  message: string
+  version?: string
 }
 
-/**
- * 获取历史记录列表
- *
- * 支持分页和按状态筛选
- *
- * @param page - 页码，从 1 开始，默认为 1
- * @param pageSize - 每页数量，默认为 20
- * @param status - 可选，按状态筛选（如 'draft', 'generating', 'completed'）
- *
- * @returns Promise 包含历史记录列表和分页信息
- */
-export async function getHistoryList(
-  page: number = 1,
-  pageSize: number = 20,
-  status?: string
-): Promise<{
-  success: boolean
-  records: HistoryRecord[]
-  total: number
-  page: number
-  page_size: number
-  total_pages: number
-  error?: string
-}> {
-  try {
-    const params: any = { page, page_size: pageSize }
-    if (status) params.status = status
+export interface LoginStatus {
+  logged_in: boolean
+  username?: string
+  message: string
+}
 
-    const response = await axios.get(`${API_BASE_URL}/history`, {
-      params,
-      timeout: 10000 // 10秒超时
+export interface PublishProgressEvent {
+  step: string
+  message: string
+  progress?: number
+  success?: boolean
+  error?: string
+  post_url?: string
+}
+
+export interface PublishData {
+  images: string[]
+  title: string
+  content: string
+  tags: string[]
+}
+
+export interface ContentResponse {
+  success: boolean
+  titles?: string[]
+  copywriting?: string
+  tags?: string[]
+  error?: string
+}
+
+// ==================== 大纲生成 API ====================
+
+export async function generateOutline(topic: string, images?: File[]): Promise<OutlineResponse> {
+  if (images && images.length > 0) {
+    const formData = new FormData()
+    formData.append('topic', topic)
+    images.forEach(file => formData.append('images', file))
+    const response = await axios.post<OutlineResponse>(`${API_BASE_URL}/outline`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
     })
     return response.data
-  } catch (error: any) {
-    if (axios.isAxiosError(error)) {
-      if (error.code === 'ECONNABORTED') {
-        return {
-          success: false,
-          records: [],
-          total: 0,
-          page: 1,
-          page_size: pageSize,
-          total_pages: 0,
-          error: '请求超时，请检查网络连接'
-        }
-      }
-      if (!error.response) {
-        return {
-          success: false,
-          records: [],
-          total: 0,
-          page: 1,
-          page_size: pageSize,
-          total_pages: 0,
-          error: '网络连接失败，请检查网络设置'
-        }
-      }
-      const errorMessage = error.response?.data?.error || error.message || '获取历史记录列表失败'
-      return {
-        success: false,
-        records: [],
-        total: 0,
-        page: 1,
-        page_size: pageSize,
-        total_pages: 0,
-        error: errorMessage
-      }
-    }
-    return {
-      success: false,
-      records: [],
-      total: 0,
-      page: 1,
-      page_size: pageSize,
-      total_pages: 0,
-      error: '未知错误，请稍后重试'
-    }
   }
+  const response = await axios.post<OutlineResponse>(`${API_BASE_URL}/outline`, { topic })
+  return response.data
 }
 
-/**
- * 获取历史记录详情
- *
- * 获取指定 ID 的历史记录完整信息，包括大纲和图片数据
- *
- * @param recordId - 历史记录 ID
- *
- * @returns Promise 包含历史记录详细信息
- */
-export async function getHistory(recordId: string): Promise<{
-  success: boolean
-  record?: HistoryDetail
-  error?: string
-}> {
-  try {
-    const response = await axios.get(`${API_BASE_URL}/history/${recordId}`, {
-      timeout: 10000 // 10秒超时
-    })
-    return response.data
-  } catch (error: any) {
-    if (axios.isAxiosError(error)) {
-      if (error.code === 'ECONNABORTED') {
-        return { success: false, error: '请求超时，请检查网络连接' }
-      }
-      if (!error.response) {
-        return { success: false, error: '网络连接失败，请检查网络设置' }
-      }
-      if (error.response.status === 404) {
-        return { success: false, error: '历史记录不存在' }
-      }
-      const errorMessage = error.response?.data?.error || error.message || '获取历史记录详情失败'
-      return { success: false, error: errorMessage }
-    }
-    return { success: false, error: '未知错误，请稍后重试' }
-  }
+// ==================== 图片生成 API ====================
+
+export function getImageUrl(taskId: string, filename: string, thumbnail = true): string {
+  return `${API_BASE_URL}/images/${taskId}/${filename}?thumbnail=${thumbnail}`
 }
 
-/**
- * 更新历史记录
- *
- * 用于更新已有的历史记录，如更新大纲、图片列表、状态或缩略图
- *
- * @param recordId - 历史记录 ID
- * @param data - 需要更新的数据
- * @param data.outline - 可选，更新大纲数据
- * @param data.images - 可选，更新图片数据（任务 ID 和已生成的图片列表）
- * @param data.status - 可选，更新状态（如 'draft', 'generating', 'completed'）
- * @param data.thumbnail - 可选，更新缩略图 URL
- *
- * @returns Promise<{ success: boolean; error?: string }>
- * - success: 是否更新成功
- * - error: 错误信息（失败时返回）
- *
- * @throws {Error} 网络错误或服务器错误
- *
- * @example
- * ```typescript
- * // 更新图片生成状态
- * const result = await updateHistory('record-123', {
- *   status: 'generating',
- *   images: {
- *     task_id: 'task-456',
- *     generated: ['page1.png', 'page2.png']
- *   }
- * })
- *
- * // 更新缩略图
- * await updateHistory('record-123', {
- *   thumbnail: '/api/images/task-456/page1.png?thumbnail=true'
- * })
- * ```
- */
-export async function updateHistory(
-  recordId: string,
-  data: UpdateHistoryParams
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const response = await axios.put(
-      `${API_BASE_URL}/history/${recordId}`,
-      data,
-      {
-        timeout: 10000 // 10秒超时
-      }
-    )
-    return response.data
-  } catch (error: any) {
-    if (axios.isAxiosError(error)) {
-      if (error.code === 'ECONNABORTED') {
-        return { success: false, error: '请求超时，请检查网络连接' }
-      }
-      if (!error.response) {
-        return { success: false, error: '网络连接失败，请检查网络设置' }
-      }
-      const errorMessage = error.response?.data?.error || error.message || '更新历史记录失败'
-      return { success: false, error: errorMessage }
-    }
-    return { success: false, error: '未知错误，请稍后重试' }
-  }
+export async function regenerateImage(
+  taskId: string,
+  page: Page,
+  useReference = true,
+  context?: { fullOutline?: string; userTopic?: string }
+): Promise<{ success: boolean; index: number; image_url?: string; error?: string }> {
+  const response = await axios.post(`${API_BASE_URL}/regenerate`, {
+    task_id: taskId,
+    page,
+    use_reference: useReference,
+    full_outline: context?.fullOutline,
+    user_topic: context?.userTopic
+  })
+  return response.data
 }
 
-/**
- * 检查历史记录是否存在
- *
- * 用于页面刷新后验证 recordId 是否仍然有效
- * 避免用户刷新页面后继续操作一个已被删除的记录
- *
- * @param recordId - 历史记录 ID
- *
- * @returns Promise<boolean> 记录是否存在
- *
- * @example
- * ```typescript
- * const recordId = localStorage.getItem('currentRecordId')
- * if (recordId) {
- *   const exists = await checkHistoryExists(recordId)
- *   if (!exists) {
- *     console.log('记录不存在，可能已被删除')
- *     localStorage.removeItem('currentRecordId')
- *   }
- * }
- * ```
- */
-export async function checkHistoryExists(recordId: string): Promise<boolean> {
-  try {
-    // 使用专用的 /exists 端点，避免获取完整记录数据
-    const response = await axios.get(
-      `${API_BASE_URL}/history/${recordId}/exists`,
-      {
-        timeout: 5000 // 5秒超时
-      }
-    )
-    return response.data.exists === true
-  } catch (error: any) {
-    if (axios.isAxiosError(error)) {
-      // 404 表示记录不存在
-      if (error.response?.status === 404) {
-        return false
-      }
-      // 其他错误（网络错误等）也视为不存在
-      return false
-    }
-    return false
-  }
+export async function retryFailedImages(
+  taskId: string,
+  pages: Page[],
+  onProgress: (event: ProgressEvent) => void,
+  onComplete: (event: ProgressEvent) => void,
+  onError: (event: ProgressEvent) => void,
+  onFinish: (event: { success: boolean; total: number; completed: number; failed: number }) => void,
+  onStreamError: (error: Error) => void
+) {
+  await handleSSEStream(
+    `${API_BASE_URL}/retry-failed`,
+    { task_id: taskId, pages },
+    {
+      retry_start: (data) => onProgress({ index: -1, status: 'generating', message: data.message }),
+      complete: onComplete,
+      error: onError,
+      retry_finish: onFinish
+    },
+    onStreamError
+  )
 }
 
-// 删除历史记录
-export async function deleteHistory(recordId: string): Promise<{
-  success: boolean
-  error?: string
-}> {
-  try {
-    const response = await axios.delete(
-      `${API_BASE_URL}/history/${recordId}`,
-      {
-        timeout: 10000 // 10秒超时
-      }
-    )
-    return response.data
-  } catch (error: any) {
-    if (axios.isAxiosError(error)) {
-      if (error.code === 'ECONNABORTED') {
-        return { success: false, error: '请求超时，请检查网络连接' }
-      }
-      if (!error.response) {
-        return { success: false, error: '网络连接失败，请检查网络设置' }
-      }
-      const errorMessage = error.response?.data?.error || error.message || '删除历史记录失败'
-      return { success: false, error: errorMessage }
-    }
-    return { success: false, error: '未知错误，请稍后重试' }
-  }
-}
-
-/**
- * 搜索历史记录
- *
- * 根据关键词搜索历史记录标题
- *
- * @param keyword - 搜索关键词
- *
- * @returns Promise 包含匹配的历史记录列表
- */
-export async function searchHistory(keyword: string): Promise<{
-  success: boolean
-  records: HistoryRecord[]
-  error?: string
-}> {
-  try {
-    const response = await axios.get(`${API_BASE_URL}/history/search`, {
-      params: { keyword },
-      timeout: 10000 // 10秒超时
-    })
-    return response.data
-  } catch (error: any) {
-    if (axios.isAxiosError(error)) {
-      if (error.code === 'ECONNABORTED') {
-        return { success: false, records: [], error: '请求超时，请检查网络连接' }
-      }
-      if (!error.response) {
-        return { success: false, records: [], error: '网络连接失败，请检查网络设置' }
-      }
-      const errorMessage = error.response?.data?.error || error.message || '搜索历史记录失败'
-      return { success: false, records: [], error: errorMessage }
-    }
-    return { success: false, records: [], error: '未知错误，请稍后重试' }
-  }
-}
-
-/**
- * 获取统计信息
- *
- * 获取历史记录的统计数据，包括总数和按状态分类的数量
- *
- * @returns Promise 包含统计信息
- */
-export async function getHistoryStats(): Promise<{
-  success: boolean
-  total: number
-  by_status: Record<string, number>
-  error?: string
-}> {
-  try {
-    const response = await axios.get(`${API_BASE_URL}/history/stats`, {
-      timeout: 10000 // 10秒超时
-    })
-    return response.data
-  } catch (error: any) {
-    if (axios.isAxiosError(error)) {
-      if (error.code === 'ECONNABORTED') {
-        return { success: false, total: 0, by_status: {}, error: '请求超时，请检查网络连接' }
-      }
-      if (!error.response) {
-        return { success: false, total: 0, by_status: {}, error: '网络连接失败，请检查网络设置' }
-      }
-      const errorMessage = error.response?.data?.error || error.message || '获取统计信息失败'
-      return { success: false, total: 0, by_status: {}, error: errorMessage }
-    }
-    return { success: false, total: 0, by_status: {}, error: '未知错误，请稍后重试' }
-  }
-}
-
-// 使用 POST 方式生成图片（更可靠）
 export async function generateImagesPost(
   pages: Page[],
   taskId: string | null,
@@ -623,94 +256,141 @@ export async function generateImagesPost(
   userImages?: File[],
   userTopic?: string
 ) {
+  let userImagesBase64: string[] = []
+  if (userImages && userImages.length > 0) {
+    userImagesBase64 = await Promise.all(
+      userImages.map(file => new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      }))
+    )
+  }
+
+  await handleSSEStream(
+    `${API_BASE_URL}/generate`,
+    {
+      pages,
+      task_id: taskId,
+      full_outline: fullOutline,
+      user_images: userImagesBase64.length > 0 ? userImagesBase64 : undefined,
+      user_topic: userTopic || ''
+    },
+    { progress: onProgress, complete: onComplete, error: onError, finish: onFinish },
+    onStreamError
+  )
+}
+
+// ==================== 历史记录 API ====================
+
+export async function createHistory(
+  topic: string,
+  outline: { raw: string; pages: Page[] },
+  taskId?: string
+): Promise<{ success: boolean; record_id?: string; error?: string }> {
   try {
-    // 将用户图片转换为 base64
-    let userImagesBase64: string[] = []
-    if (userImages && userImages.length > 0) {
-      userImagesBase64 = await Promise.all(
-        userImages.map(file => {
-          return new Promise<string>((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onload = () => resolve(reader.result as string)
-            reader.onerror = reject
-            reader.readAsDataURL(file)
-          })
-        })
-      )
-    }
-
-    const response = await fetch(`${API_BASE_URL}/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        pages,
-        task_id: taskId,
-        full_outline: fullOutline,
-        user_images: userImagesBase64.length > 0 ? userImagesBase64 : undefined,
-        user_topic: userTopic || ''
-      })
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const reader = response.body?.getReader()
-    if (!reader) {
-      throw new Error('无法读取响应流')
-    }
-
-    const decoder = new TextDecoder()
-    let buffer = ''
-
-    while (true) {
-      const { done, value } = await reader.read()
-
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n\n')
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        if (!line.trim()) continue
-
-        const [eventLine, dataLine] = line.split('\n')
-        if (!eventLine || !dataLine) continue
-
-        const eventType = eventLine.replace('event: ', '').trim()
-        const eventData = dataLine.replace('data: ', '').trim()
-
-        try {
-          const data = JSON.parse(eventData)
-
-          switch (eventType) {
-            case 'progress':
-              onProgress(data)
-              break
-            case 'complete':
-              onComplete(data)
-              break
-            case 'error':
-              onError(data)
-              break
-            case 'finish':
-              onFinish(data)
-              break
-          }
-        } catch (e) {
-          console.error('解析 SSE 数据失败:', e)
-        }
-      }
-    }
+    const response = await axios.post(`${API_BASE_URL}/history`, { topic, outline, task_id: taskId }, { timeout: 10000 })
+    return response.data
   } catch (error) {
-    onStreamError(error as Error)
+    return handleAxiosError(error, '创建历史记录失败')
   }
 }
 
-// 扫描所有任务并同步图片列表
+export async function getHistoryList(
+  page = 1,
+  pageSize = 20,
+  status?: string
+): Promise<{
+  success: boolean
+  records: HistoryRecord[]
+  total: number
+  page: number
+  page_size: number
+  total_pages: number
+  error?: string
+}> {
+  const defaultReturn = { records: [], total: 0, page: 1, page_size: pageSize, total_pages: 0 }
+  try {
+    const params: any = { page, page_size: pageSize }
+    if (status) params.status = status
+    const response = await axios.get(`${API_BASE_URL}/history`, { params, timeout: 10000 })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '获取历史记录列表失败', defaultReturn)
+  }
+}
+
+export async function getHistory(recordId: string): Promise<{
+  success: boolean
+  record?: HistoryDetail
+  error?: string
+}> {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/history/${recordId}`, { timeout: 10000 })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '获取历史记录详情失败')
+  }
+}
+
+export async function updateHistory(
+  recordId: string,
+  data: UpdateHistoryParams
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const response = await axios.put(`${API_BASE_URL}/history/${recordId}`, data, { timeout: 10000 })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '更新历史记录失败')
+  }
+}
+
+export async function checkHistoryExists(recordId: string): Promise<boolean> {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/history/${recordId}/exists`, { timeout: 5000 })
+    return response.data.exists === true
+  } catch {
+    return false
+  }
+}
+
+export async function deleteHistory(recordId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const response = await axios.delete(`${API_BASE_URL}/history/${recordId}`, { timeout: 10000 })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '删除历史记录失败')
+  }
+}
+
+export async function searchHistory(keyword: string): Promise<{
+  success: boolean
+  records: HistoryRecord[]
+  error?: string
+}> {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/history/search`, { params: { keyword }, timeout: 10000 })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '搜索历史记录失败', { records: [] })
+  }
+}
+
+export async function getHistoryStats(): Promise<{
+  success: boolean
+  total: number
+  by_status: Record<string, number>
+  error?: string
+}> {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/history/stats`, { timeout: 10000 })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '获取统计信息失败', { total: 0, by_status: {} })
+  }
+}
+
 export async function scanAllTasks(): Promise<{
   success: boolean
   total_tasks?: number
@@ -727,185 +407,67 @@ export async function scanAllTasks(): Promise<{
 // ==================== 配置管理 API ====================
 
 export interface Config {
-  text_generation: {
-    active_provider: string
-    providers: Record<string, any>
-  }
-  image_generation: {
-    active_provider: string
-    providers: Record<string, any>
-  }
+  text_generation: { active_provider: string; providers: Record<string, any> }
+  image_generation: { active_provider: string; providers: Record<string, any> }
 }
 
-// 获取配置
-export async function getConfig(): Promise<{
-  success: boolean
-  config?: Config
-  error?: string
-}> {
+export async function getConfig(): Promise<{ success: boolean; config?: Config; error?: string }> {
   const response = await axios.get(`${API_BASE_URL}/config`)
   return response.data
 }
 
-// 更新配置
-export async function updateConfig(config: Partial<Config>): Promise<{
-  success: boolean
-  message?: string
-  error?: string
-}> {
+export async function updateConfig(config: Partial<Config>): Promise<{ success: boolean; message?: string; error?: string }> {
   const response = await axios.post(`${API_BASE_URL}/config`, config)
   return response.data
 }
 
-// 测试服务商连接
 export async function testConnection(config: {
   type: string
   provider_name?: string
   api_key?: string
   base_url?: string
   model: string
-}): Promise<{
-  success: boolean
-  message?: string
-  error?: string
-}> {
+}): Promise<{ success: boolean; message?: string; error?: string }> {
   const response = await axios.post(`${API_BASE_URL}/config/test`, config)
   return response.data
 }
 
-// ==================== 内容生成 API（标题、文案、标签） ====================
+// ==================== 内容生成 API ====================
 
-export interface ContentResponse {
-  success: boolean
-  titles?: string[]
-  copywriting?: string
-  tags?: string[]
-  error?: string
-}
-
-// 生成标题、文案、标签
-export async function generateContent(
-  topic: string,
-  outline: string
-): Promise<ContentResponse> {
-  const response = await axios.post<ContentResponse>(`${API_BASE_URL}/content`, {
-    topic,
-    outline
-  })
+export async function generateContent(topic: string, outline: string): Promise<ContentResponse> {
+  const response = await axios.post<ContentResponse>(`${API_BASE_URL}/content`, { topic, outline })
   return response.data
 }
 
-// ==================== 发布相关 API (VibeSurf 浏览器自动化) ====================
+// ==================== 发布 API (VibeSurf) ====================
 
-/**
- * VibeSurf 状态响应
- */
-export interface VibeSurfStatus {
-  running: boolean
-  message: string
-  version?: string
-}
-
-/**
- * 登录状态响应
- */
-export interface LoginStatus {
-  logged_in: boolean
-  username?: string
-  message: string
-}
-
-/**
- * 发布进度事件
- */
-export interface PublishProgressEvent {
-  step: string
-  message: string
-  progress?: number
-  success?: boolean
-  error?: string
-  post_url?: string
-}
-
-/**
- * 发布数据
- */
-export interface PublishData {
-  images: string[]  // 图片 URL 列表
-  title: string
-  content: string
-  tags: string[]
-}
-
-/**
- * 检查 VibeSurf 运行状态
- */
-export async function checkVibeSurfStatus(): Promise<{
-  success: boolean
-  status?: VibeSurfStatus
-  error?: string
-}> {
+export async function checkVibeSurfStatus(): Promise<{ success: boolean; status?: VibeSurfStatus; error?: string }> {
   try {
-    const response = await axios.get(`${API_BASE_URL}/publish/status`, {
-      timeout: 5000
-    })
+    const response = await axios.get(`${API_BASE_URL}/publish/status`, { timeout: 5000 })
     return response.data
-  } catch (error: any) {
-    if (axios.isAxiosError(error)) {
-      if (!error.response) {
-        return { success: false, error: '无法连接到后端服务' }
-      }
-      return { success: false, error: error.response?.data?.error || '检查状态失败' }
-    }
-    return { success: false, error: '未知错误' }
+  } catch (error) {
+    return handleAxiosError(error, '检查状态失败')
   }
 }
 
-/**
- * 检查小红书登录状态
- */
-export async function checkXiaohongshuLogin(): Promise<{
-  success: boolean
-  status?: LoginStatus
-  error?: string
-}> {
+export async function checkXiaohongshuLogin(): Promise<{ success: boolean; status?: LoginStatus; error?: string }> {
   try {
-    const response = await axios.get(`${API_BASE_URL}/publish/login-check`, {
-      timeout: 10000
-    })
+    const response = await axios.get(`${API_BASE_URL}/publish/login-check`, { timeout: 10000 })
     return response.data
-  } catch (error: any) {
-    if (axios.isAxiosError(error)) {
-      return { success: false, error: error.response?.data?.error || '检查登录状态失败' }
-    }
-    return { success: false, error: '未知错误' }
+  } catch (error) {
+    return handleAxiosError(error, '检查登录状态失败')
   }
 }
 
-/**
- * 打开小红书登录页面
- */
-export async function openXiaohongshuLogin(): Promise<{
-  success: boolean
-  message?: string
-  error?: string
-}> {
+export async function openXiaohongshuLogin(): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const response = await axios.post(`${API_BASE_URL}/publish/login`, {}, {
-      timeout: 30000
-    })
+    const response = await axios.post(`${API_BASE_URL}/publish/login`, {}, { timeout: 30000 })
     return response.data
-  } catch (error: any) {
-    if (axios.isAxiosError(error)) {
-      return { success: false, error: error.response?.data?.error || '打开登录页面失败' }
-    }
-    return { success: false, error: '未知错误' }
+  } catch (error) {
+    return handleAxiosError(error, '打开登录页面失败')
   }
 }
 
-/**
- * 发布到小红书 (SSE 流式)
- */
 export async function publishToXiaohongshu(
   data: PublishData,
   onProgress: (event: PublishProgressEvent) => void,
@@ -913,65 +475,10 @@ export async function publishToXiaohongshu(
   onError: (event: PublishProgressEvent) => void,
   onStreamError: (error: Error) => void
 ) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/publish/xiaohongshu`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data)
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const reader = response.body?.getReader()
-    if (!reader) {
-      throw new Error('无法读取响应流')
-    }
-
-    const decoder = new TextDecoder()
-    let buffer = ''
-
-    while (true) {
-      const { done, value } = await reader.read()
-
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n\n')
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        if (!line.trim()) continue
-
-        const [eventLine, dataLine] = line.split('\n')
-        if (!eventLine || !dataLine) continue
-
-        const eventType = eventLine.replace('event: ', '').trim()
-        const eventData = dataLine.replace('data: ', '').trim()
-
-        try {
-          const data = JSON.parse(eventData)
-
-          switch (eventType) {
-            case 'progress':
-              onProgress(data)
-              break
-            case 'complete':
-              onComplete(data)
-              break
-            case 'error':
-              onError(data)
-              break
-          }
-        } catch (e) {
-          console.error('解析发布 SSE 数据失败:', e)
-        }
-      }
-    }
-  } catch (error) {
-    onStreamError(error as Error)
-  }
+  await handleSSEStream(
+    `${API_BASE_URL}/publish/xiaohongshu`,
+    data,
+    { progress: onProgress, complete: onComplete, error: onError },
+    onStreamError
+  )
 }
