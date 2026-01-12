@@ -17,8 +17,9 @@ class ImageService:
     """图片生成服务类"""
 
     # 并发配置
-    MAX_CONCURRENT = 15  # 最大并发数
+    MAX_CONCURRENT = 1  # 最大并发数（降低以避免 API 速率限制）
     AUTO_RETRY_COUNT = 1  # 不自动重试，超时后让用户手动重试
+    REQUEST_DELAY = 35  # 请求间隔（秒），避免触发速率限制
 
     def __init__(self, provider_name: str = None):
         """
@@ -320,6 +321,21 @@ class ImageService:
                         "phase": "cover"
                     }
                 }
+
+                # 封面生成后等待，避免速率限制
+                if self.REQUEST_DELAY > 0 and other_pages:
+                    logger.info(f"封面生成完成，等待 {self.REQUEST_DELAY} 秒后生成内容页...")
+                    yield {
+                        "event": "progress",
+                        "data": {
+                            "status": "waiting",
+                            "message": f"等待 {self.REQUEST_DELAY} 秒后开始生成内容页...",
+                            "current": 1,
+                            "total": total,
+                            "phase": "cover"
+                        }
+                    }
+                    time.sleep(self.REQUEST_DELAY)
             else:
                 failed_pages.append(cover_page)
                 self._task_states[task_id]["failed"][index] = error
@@ -445,7 +461,23 @@ class ImageService:
                     }
                 }
 
-                for page in other_pages:
+                for i, page in enumerate(other_pages):
+                    # 在非第一张图片前添加延迟，避免触发速率限制
+                    if i > 0 and self.REQUEST_DELAY > 0:
+                        logger.info(f"等待 {self.REQUEST_DELAY} 秒后生成下一张图片（避免速率限制）...")
+                        yield {
+                            "event": "progress",
+                            "data": {
+                                "index": page["index"],
+                                "status": "waiting",
+                                "message": f"等待 {self.REQUEST_DELAY} 秒（避免 API 速率限制）...",
+                                "current": len(generated_images),
+                                "total": total,
+                                "phase": "content"
+                            }
+                        }
+                        time.sleep(self.REQUEST_DELAY)
+
                     # 发送生成进度
                     yield {
                         "event": "progress",
