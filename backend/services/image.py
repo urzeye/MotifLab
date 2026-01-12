@@ -12,6 +12,10 @@ from backend.utils.image_compressor import compress_image
 
 logger = logging.getLogger(__name__)
 
+# 存储模式常量
+STORAGE_MODE_LOCAL = "local"
+STORAGE_MODE_SUPABASE = "supabase"
+
 
 class ImageService:
     """图片生成服务类"""
@@ -29,6 +33,10 @@ class ImageService:
             provider_name: 服务商名称，如果为None则使用配置文件中的激活服务商
         """
         logger.debug("初始化 ImageService...")
+
+        # 存储模式（默认为本地）
+        self.storage_mode = os.getenv("HISTORY_STORAGE_MODE", STORAGE_MODE_LOCAL)
+        logger.info(f"图片存储模式: {self.storage_mode}")
 
         # 获取服务商配置
         if provider_name is None:
@@ -53,20 +61,27 @@ class ImageService:
         self.prompt_template = self._load_prompt_template()
         self.prompt_template_short = self._load_prompt_template(short=True)
 
-        # 历史记录根目录
+        # 历史记录根目录（本地模式使用）
         self.history_root_dir = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
             "history"
         )
-        os.makedirs(self.history_root_dir, exist_ok=True)
+        if self.storage_mode == STORAGE_MODE_LOCAL:
+            os.makedirs(self.history_root_dir, exist_ok=True)
 
         # 当前任务的输出目录（每个任务一个子文件夹）
         self.current_task_dir = None
+        self.current_task_id = None  # 用于 Supabase 存储
 
         # 存储任务状态（用于重试）
         self._task_states: Dict[str, Dict] = {}
 
         logger.info(f"ImageService 初始化完成: provider={provider_name}, type={provider_type}")
+
+    @property
+    def is_supabase_mode(self) -> bool:
+        """是否使用 Supabase 存储模式"""
+        return self.storage_mode == STORAGE_MODE_SUPABASE
 
     def _load_prompt_template(self, short: bool = False) -> str:
         """加载 Prompt 模板"""
@@ -84,16 +99,44 @@ class ImageService:
 
     def _save_image(self, image_data: bytes, filename: str, task_dir: str = None) -> str:
         """
-        保存图片到本地，同时生成缩略图
+        保存图片，同时生成缩略图
+
+        根据存储模式选择保存到本地文件系统或 Supabase Storage
 
         Args:
             image_data: 图片二进制数据
             filename: 文件名
-            task_dir: 任务目录（如果为None则使用当前任务目录）
+            task_dir: 任务目录（本地模式使用，如果为None则使用当前任务目录）
 
         Returns:
-            保存的文件路径
+            保存的文件路径（本地模式）或 URL（Supabase 模式）
         """
+        if self.is_supabase_mode:
+            return self._save_image_supabase(image_data, filename)
+        return self._save_image_local(image_data, filename, task_dir)
+
+    def _save_image_supabase(self, image_data: bytes, filename: str) -> str:
+        """Supabase 模式：上传图片到 Storage"""
+        from backend.utils.supabase_client import upload_image, get_image_url
+
+        if self.current_task_id is None:
+            raise ValueError("任务 ID 未设置")
+
+        # 上传原图
+        url = upload_image(self.current_task_id, filename, image_data)
+        if not url:
+            raise Exception(f"上传图片失败: {filename}")
+
+        # 生成并上传缩略图
+        thumbnail_data = compress_image(image_data, max_size_kb=50)
+        thumbnail_filename = f"thumb_{filename}"
+        upload_image(self.current_task_id, thumbnail_filename, thumbnail_data)
+
+        logger.debug(f"图片已上传到 Supabase Storage: {self.current_task_id}/{filename}")
+        return url
+
+    def _save_image_local(self, image_data: bytes, filename: str, task_dir: str = None) -> str:
+        """本地模式：保存图片到本地文件系统"""
         if task_dir is None:
             task_dir = self.current_task_dir
 
@@ -123,7 +166,7 @@ class ImageService:
         full_outline: str = "",
         user_images: Optional[List[bytes]] = None,
         user_topic: str = ""
-    ) -> Tuple[int, bool, Optional[str], Optional[str]]:
+    ) -> Tuple[int, bool, Optional[str], Optional[str], Optional[bytes]]:
         """
         生成单张图片（带自动重试）
 
@@ -137,7 +180,7 @@ class ImageService:
             user_topic: 用户原始输入
 
         Returns:
-            (index, success, filename, error_message)
+            (index, success, filename, error_message, image_bytes)
         """
         index = page["index"]
         page_type = page["type"]
@@ -204,12 +247,12 @@ class ImageService:
             self._save_image(image_data, filename, self.current_task_dir)
             logger.info(f"✅ 图片 [{index}] 生成成功: {filename}")
 
-            return (index, True, filename, None)
+            return (index, True, filename, None, image_data)
 
         except Exception as e:
             error_msg = str(e)
             logger.error(f"❌ 图片 [{index}] 生成失败: {error_msg[:200]}")
-            return (index, False, None, error_msg)
+            return (index, False, None, error_msg, None)
 
     def generate_images(
         self,
@@ -238,10 +281,17 @@ class ImageService:
 
         logger.info(f"开始图片生成任务: task_id={task_id}, pages={len(pages)}")
 
-        # 创建任务专属目录
-        self.current_task_dir = os.path.join(self.history_root_dir, task_id)
-        os.makedirs(self.current_task_dir, exist_ok=True)
-        logger.debug(f"任务目录: {self.current_task_dir}")
+        # 设置任务 ID 和目录
+        self.current_task_id = task_id
+        if self.is_supabase_mode:
+            # Supabase 模式不需要本地目录
+            self.current_task_dir = None
+            logger.debug(f"Supabase 存储模式: task_id={task_id}")
+        else:
+            # 本地模式：创建任务专属目录
+            self.current_task_dir = os.path.join(self.history_root_dir, task_id)
+            os.makedirs(self.current_task_dir, exist_ok=True)
+            logger.debug(f"任务目录: {self.current_task_dir}")
 
         total = len(pages)
         generated_images = []
@@ -294,7 +344,7 @@ class ImageService:
             }
 
             # 生成封面（使用用户上传的图片作为参考）
-            index, success, filename, error = self._generate_single_image(
+            index, success, filename, error, cover_image_bytes = self._generate_single_image(
                 cover_page, task_id, reference_image=None, full_outline=full_outline,
                 user_images=compressed_user_images, user_topic=user_topic
             )
@@ -303,14 +353,11 @@ class ImageService:
                 generated_images.append(filename)
                 self._task_states[task_id]["generated"][index] = filename
 
-                # 读取封面图片作为参考，并立即压缩到200KB以内
-                cover_path = os.path.join(self.current_task_dir, filename)
-                with open(cover_path, "rb") as f:
-                    cover_image_data = f.read()
-
-                # 压缩封面图（减少内存占用和后续传输开销）
-                cover_image_data = compress_image(cover_image_data, max_size_kb=200)
-                self._task_states[task_id]["cover_image"] = cover_image_data
+                # 保存封面图片作为参考（压缩到200KB以内）
+                # 注意：cover_image_bytes 在上面的 _generate_single_image 中已获取
+                if cover_image_bytes:
+                    cover_image_data = compress_image(cover_image_bytes, max_size_kb=200)
+                    self._task_states[task_id]["cover_image"] = cover_image_data
 
                 yield {
                     "event": "complete",
@@ -403,7 +450,7 @@ class ImageService:
                     for future in as_completed(future_to_page):
                         page = future_to_page[future]
                         try:
-                            index, success, filename, error = future.result()
+                            index, success, filename, error, _ = future.result()
 
                             if success:
                                 generated_images.append(filename)
@@ -491,7 +538,7 @@ class ImageService:
                     }
 
                     # 生成单张图片
-                    index, success, filename, error = self._generate_single_image(
+                    index, success, filename, error, _ = self._generate_single_image(
                         page,
                         task_id,
                         cover_image_data,
@@ -564,8 +611,13 @@ class ImageService:
         Returns:
             生成结果
         """
-        self.current_task_dir = os.path.join(self.history_root_dir, task_id)
-        os.makedirs(self.current_task_dir, exist_ok=True)
+        # 设置任务 ID 和目录
+        self.current_task_id = task_id
+        if self.is_supabase_mode:
+            self.current_task_dir = None
+        else:
+            self.current_task_dir = os.path.join(self.history_root_dir, task_id)
+            os.makedirs(self.current_task_dir, exist_ok=True)
 
         reference_image = None
         user_images = None
@@ -591,7 +643,7 @@ class ImageService:
                 # 压缩封面图到 200KB
                 reference_image = compress_image(cover_data, max_size_kb=200)
 
-        index, success, filename, error = self._generate_single_image(
+        index, success, filename, error, _ = self._generate_single_image(
             page,
             task_id,
             reference_image,
@@ -674,7 +726,7 @@ class ImageService:
             for future in as_completed(future_to_page):
                 page = future_to_page[future]
                 try:
-                    index, success, filename, error = future.result()
+                    index, success, filename, error, _ = future.result()
 
                     if success:
                         success_count += 1
@@ -754,15 +806,18 @@ class ImageService:
 
     def get_image_path(self, task_id: str, filename: str) -> str:
         """
-        获取图片完整路径
+        获取图片路径或 URL
 
         Args:
             task_id: 任务ID
             filename: 文件名
 
         Returns:
-            完整路径
+            本地模式返回完整路径，Supabase 模式返回公开 URL
         """
+        if self.is_supabase_mode:
+            from backend.utils.supabase_client import get_image_url
+            return get_image_url(task_id, filename)
         task_dir = os.path.join(self.history_root_dir, task_id)
         return os.path.join(task_dir, filename)
 
