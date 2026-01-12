@@ -79,3 +79,15 @@ debug_*.py
 DEV_NOTES.md
 commit_message.txt
 git-changelog.txt
+
+# xiaohongshu-mcp binary (downloaded separately)
+tools/xiaohongshu-mcp/xiaohongshu-mcp
+tools/xiaohongshu-mcp/config.json
+
+# Data directory (contains login sessions)
+data/xiaohongshu/*
+!data/xiaohongshu/.gitkeep
+
+# Service PID files
+.service-pids
+.pids

@@ -443,7 +443,7 @@ def _test_image_api(config: dict) -> dict:
 
 def _check_response(result_text: str) -> dict:
     """检查响应是否符合预期"""
-    if "你好" in result_text and "红墨" in result_text:
+    if "你好" in result_text and ("红墨" in result_text or "RenderInk" in result_text or "渲染" in result_text):
         return {
             "success": True,
             "message": f"连接成功！响应: {result_text[:100]}"

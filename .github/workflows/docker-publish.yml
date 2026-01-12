@@ -10,7 +10,7 @@ on:
 
 env:
   DOCKER_USERNAME: histonemax
-  IMAGE_NAME: redink
+  IMAGE_NAME: renderink
 
 jobs:
   build-and-push:

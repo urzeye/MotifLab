@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 红墨 AI图文生成器 - Linux 启动脚本
+# RenderInk AI图文生成器 - Linux 启动脚本
 
 set -e
 
@@ -19,7 +19,7 @@ NC='\033[0m'
 clear
 echo -e "${CYAN}"
 echo "╔═══════════════════════════════════════════════╗"
-echo "║     🐧 红墨 AI图文生成器 - Linux 版           ║"
+echo "║     🐧 RenderInk AI图文生成器 - Linux 版      ║"
 echo "╚═══════════════════════════════════════════════╝"
 echo -e "${NC}"
 

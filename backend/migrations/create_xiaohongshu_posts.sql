@@ -1,5 +1,5 @@
 -- 小红书发布记录表
--- 用于存储通过 RedInk + VibeSurf 发布到小红书的帖子记录
+-- 用于存储通过 RenderInk + xiaohongshu-mcp 发布到小红书的帖子记录
 
 CREATE TABLE IF NOT EXISTS xiaohongshu_posts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -53,7 +53,7 @@ CREATE POLICY "Allow all operations for authenticated users" ON xiaohongshu_post
   USING (true)
   WITH CHECK (true);
 
-COMMENT ON TABLE xiaohongshu_posts IS '小红书发布记录表 - 存储通过 RedInk 自动发布的帖子';
+COMMENT ON TABLE xiaohongshu_posts IS '小红书发布记录表 - 存储通过 RenderInk 自动发布的帖子';
 COMMENT ON COLUMN xiaohongshu_posts.status IS '发布状态: draft-草稿, publishing-发布中, published-已发布, failed-失败';
 COMMENT ON COLUMN xiaohongshu_posts.images IS 'JSON 数组，包含图片 URL 和顺序索引';
 COMMENT ON COLUMN xiaohongshu_posts.tags IS 'JSON 数组，包含标签字符串';

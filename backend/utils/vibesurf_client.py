@@ -246,7 +246,7 @@ class VibeSurfClient:
                 "result": None
             }
 
-    def execute_agent(self, task: str, tab_id: str = None, timeout: int = None) -> Dict[str, Any]:
+    def execute_agent(self, task: str, tab_id: str = None, task_files: List[str] = None, timeout: int = None) -> Dict[str, Any]:
         """
         执行 AI 自动化代理 (browser-use)
 
@@ -255,12 +255,14 @@ class VibeSurfClient:
         - 复杂的表单填写
         - 多步骤工作流
         - 需要动态判断的任务
+        - 文件上传
 
         Args:
             task: 任务描述，应该描述目标而非具体步骤
                   好的例子: "在小红书发布一篇图文，标题为xxx，内容为xxx"
                   差的例子: "点击发布按钮，然后输入标题..."
             tab_id: 可选的标签页 ID，不指定则创建新标签页
+            task_files: 可选的文件路径列表，用于上传文件
             timeout: 超时时间（秒），默认 120 秒
 
         Returns:
@@ -272,9 +274,14 @@ class VibeSurfClient:
         try:
             logger.info(f"启动 AI 代理任务: {task[:100]}...")
 
-            parameters = {"task": task}
+            # VibeSurf 需要 tasks 数组格式
+            task_obj = {"task": task}
             if tab_id:
-                parameters["tab_id"] = tab_id
+                task_obj["tab_id"] = tab_id
+            if task_files:
+                task_obj["task_files"] = task_files
+
+            parameters = {"tasks": [task_obj]}
 
             response = requests.post(
                 f"{self.base_url}/api/tool/execute",

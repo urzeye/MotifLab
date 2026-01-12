@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 红墨 AI图文生成器 - macOS 启动脚本
+# RenderInk AI图文生成器 - macOS 启动脚本
 # 双击此文件即可启动
 
 set -e
@@ -21,7 +21,7 @@ NC='\033[0m'
 clear
 echo -e "${CYAN}"
 echo "╔═══════════════════════════════════════════════╗"
-echo "║     🍎 红墨 AI图文生成器 - macOS 版           ║"
+echo "║     🍎 RenderInk AI图文生成器 - macOS 版      ║"
 echo "╚═══════════════════════════════════════════════╝"
 echo -e "${NC}"
 

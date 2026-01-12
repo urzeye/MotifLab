@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 红墨 AI图文生成器 - 快捷启动脚本
+# RenderInk AI图文生成器 - 快捷启动脚本
 # 自动检测系统并运行对应平台脚本
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

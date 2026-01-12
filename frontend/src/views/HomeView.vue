@@ -8,7 +8,7 @@
       <div class="hero-content">
         <div class="brand-pill">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-          AI 驱动的红墨创作助手
+          AI 驱动的 RenderInk 创作助手
         </div>
         <div class="platform-slogan">
           让传播不再需要门槛，让创作从未如此简单
@@ -30,10 +30,10 @@
     <!-- 版权信息 -->
     <div class="page-footer">
       <div class="footer-tip">
-        配置不成功？访问 <a href="https://redink.top" target="_blank" rel="noopener noreferrer">redink.top</a> 官方站点即刻体验
+        配置不成功？访问 <a href="https://renderink.top" target="_blank" rel="noopener noreferrer">renderink.top</a> 官方站点即刻体验
       </div>
       <div class="footer-copyright">
-        © 2025 <a href="https://github.com/HisMax/RedInk" target="_blank" rel="noopener noreferrer">RedInk</a> by 默子 (Histone)
+        © 2025 <a href="https://github.com/HisMax/RenderInk" target="_blank" rel="noopener noreferrer">RenderInk</a> by 默子 (Histone)
       </div>
       <div class="footer-license">
         Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a>

@@ -1,7 +1,7 @@
 services:
-  redink:
-    image: histonemax/redink:latest
-    container_name: redink
+  renderink:
+    image: histonemax/renderink:latest
+    container_name: renderink
     ports:
       - "12398:12398"
     volumes:
