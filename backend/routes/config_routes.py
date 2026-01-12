@@ -250,20 +250,8 @@ def _load_provider_config(provider_type: str, provider_name: str, config: dict) 
     Returns:
         dict: 合并后的配置
     """
-    # 文本服务商类型列表
-    text_provider_types = [
-        'google_gemini',
-        'openai_compatible',
-        'deepseek',
-        'openai',
-        'moonshot',
-        'zhipu',
-        'qwen',
-        'siliconflow'
-    ]
-
     # 确定配置文件路径
-    if provider_type in text_provider_types:
+    if provider_type in ['openai_compatible', 'google_gemini']:
         config_path = TEXT_CONFIG_PATH
     else:
         config_path = IMAGE_CONFIG_PATH
@@ -298,31 +286,16 @@ def _test_provider_connection(provider_type: str, config: dict) -> dict:
     """
     test_prompt = "请回复'你好，渲染AI'"
 
-    # OpenAI 兼容的文本服务商类型
-    openai_compatible_types = [
-        'openai_compatible',
-        'deepseek',
-        'openai',
-        'moonshot',
-        'zhipu',
-        'qwen',
-        'siliconflow'
-    ]
-
     if provider_type == 'google_genai':
         return _test_google_genai(config)
 
     elif provider_type == 'google_gemini':
         return _test_google_gemini(config, test_prompt)
 
-    elif provider_type in openai_compatible_types:
+    elif provider_type == 'openai_compatible':
         return _test_openai_compatible(config, test_prompt)
 
     elif provider_type == 'image_api':
-        return _test_image_api(config)
-
-    elif provider_type in ['siliconflow_flux', 'jimeng']:
-        # 图片服务商使用 image_api 测试方法
         return _test_image_api(config)
 
     else:
@@ -443,7 +416,7 @@ def _test_image_api(config: dict) -> dict:
 
 def _check_response(result_text: str) -> dict:
     """检查响应是否符合预期"""
-    if "你好" in result_text and ("红墨" in result_text or "RenderInk" in result_text or "渲染" in result_text):
+    if "你好" in result_text and "渲染AI" in result_text:
         return {
             "success": True,
             "message": f"连接成功！响应: {result_text[:100]}"

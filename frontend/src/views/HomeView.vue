@@ -8,7 +8,7 @@
       <div class="hero-content">
         <div class="brand-pill">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-          AI 驱动的渲染AI创作助手
+          AI 驱动的图文创作助手
         </div>
         <div class="platform-slogan">
           让传播不再需要门槛，让创作从未如此简单
@@ -29,8 +29,11 @@
 
     <!-- 版权信息 -->
     <div class="page-footer">
+      <div class="footer-tip">
+        渲染AI - 让创作更简单
+      </div>
       <div class="footer-copyright">
-        © 2025 渲染AI (RenderInk)
+        © 2025 渲染AI (RenderAI)
       </div>
       <div class="footer-license">
         Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a>
@@ -147,66 +150,67 @@ async function handleGenerate() {
 <style scoped>
 .home-container {
   max-width: 1100px;
-  padding-top: 10px;
+  padding-top: 16px;
   position: relative;
   z-index: 1;
 }
 
-/* Hero Section */
+/* Hero Section - 深色模式优化 */
 .hero-section {
   text-align: center;
-  margin-bottom: 40px;
-  padding: 50px 60px;
+  margin-bottom: 48px;
+  padding: 56px 64px;
   animation: fadeIn 0.6s ease-out;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
-  backdrop-filter: blur(10px);
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-color);
 }
 
 .hero-content {
-  margin-bottom: 36px;
+  margin-bottom: 40px;
 }
 
 .brand-pill {
-  display: inline-block;
-  padding: 6px 16px;
-  background: rgba(255, 36, 66, 0.08);
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 20px;
+  background: var(--primary-fade);
   color: var(--primary);
-  border-radius: 100px;
-  font-size: 13px;
+  border-radius: var(--radius-sm);
+  font-size: var(--small-size);
   font-weight: 600;
-  margin-bottom: 20px;
-  letter-spacing: 0.5px;
+  margin-bottom: 24px;
+  border: 1px solid var(--primary-light);
 }
 
 .platform-slogan {
-  font-size: 20px;
+  font-size: var(--h3-size);
   font-weight: 600;
   color: var(--text-main);
-  margin-bottom: 24px;
-  line-height: 1.6;
-  letter-spacing: 0.5px;
+  margin-bottom: 28px;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
 }
 
 .page-subtitle {
-  font-size: 16px;
+  font-size: var(--body-size);
   color: var(--text-sub);
   margin-top: 12px;
+  line-height: var(--body-line-height);
 }
 
 /* Page Footer */
 .page-footer {
   text-align: center;
-  padding: 24px 0 16px;
-  margin-top: 20px;
+  padding: 32px 0 20px;
+  margin-top: 32px;
 }
 
 .footer-copyright {
-  font-size: 15px;
-  color: #333;
+  font-size: var(--small-size);
+  color: var(--text-main);
   font-weight: 500;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .footer-copyright a {
@@ -216,16 +220,16 @@ async function handleGenerate() {
 }
 
 .footer-copyright a:hover {
-  text-decoration: underline;
+  color: var(--primary-hover);
 }
 
 .footer-license {
-  font-size: 13px;
-  color: #999;
+  font-size: var(--caption-size);
+  color: var(--text-secondary);
 }
 
 .footer-license a {
-  color: #666;
+  color: var(--text-sub);
   text-decoration: none;
 }
 
@@ -234,19 +238,9 @@ async function handleGenerate() {
 }
 
 .footer-tip {
-  font-size: 14px;
-  color: #666;
+  font-size: var(--small-size);
+  color: var(--text-sub);
   margin-bottom: 12px;
-}
-
-.footer-tip a {
-  color: var(--primary);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.footer-tip a:hover {
-  text-decoration: underline;
 }
 
 /* Error Toast */
@@ -255,14 +249,14 @@ async function handleGenerate() {
   bottom: 32px;
   left: 50%;
   transform: translateX(-50%);
-  background: #FF4D4F;
+  background: #EF4444;
   color: white;
-  padding: 12px 24px;
-  border-radius: 50px;
-  box-shadow: 0 8px 24px rgba(255, 77, 79, 0.3);
+  padding: 14px 28px;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   z-index: 1000;
   animation: slideUp 0.3s ease-out;
 }

@@ -38,7 +38,7 @@ def setup_logging():
 def create_app():
     # 设置日志
     logger = setup_logging()
-    logger.info("🚀 正在启动 RenderInk AI图文生成器...")
+    logger.info("🚀 正在启动 渲染AI 图文生成器...")
 
     # 检查是否存在前端构建产物（Docker 环境）
     frontend_dist = Path(__file__).parent.parent / 'frontend' / 'dist'
@@ -83,7 +83,7 @@ def create_app():
         @app.route('/')
         def index():
             return {
-                "message": "RenderInk AI图文生成器 API",
+                "message": "渲染AI 图文生成器 API",
                 "version": "0.1.0",
                 "endpoints": {
                     "health": "/api/health",

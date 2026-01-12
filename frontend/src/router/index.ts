@@ -5,6 +5,7 @@ import GenerateView from '../views/GenerateView.vue'
 import ResultView from '../views/ResultView.vue'
 import HistoryView from '../views/HistoryView.vue'
 import SettingsView from '../views/SettingsView.vue'
+import PublishView from '../views/PublishView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -28,6 +29,11 @@ const router = createRouter({
       path: '/result',
       name: 'result',
       component: ResultView
+    },
+    {
+      path: '/publish',
+      name: 'publish',
+      component: PublishView
     },
     {
       path: '/history',
