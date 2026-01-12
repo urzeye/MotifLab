@@ -255,7 +255,15 @@ def get_text_chat_client(provider_config: dict):
 
     Args:
         provider_config: 服务商配置字典
-            - type: 'google_gemini' 或 'openai_compatible'
+            - type: 服务商类型
+              - 'google_gemini': 使用原生 Google Gemini SDK
+              - 'openai_compatible': 自定义 OpenAI 兼容接口
+              - 'deepseek': DeepSeek
+              - 'openai': OpenAI
+              - 'moonshot': Moonshot (Kimi)
+              - 'zhipu': 智谱 AI
+              - 'qwen': 通义千问
+              - 'siliconflow': SiliconFlow
             - api_key: API密钥
             - base_url: API基础URL（可选）
             - endpoint_type: 自定义端点路径（可选）
@@ -268,8 +276,10 @@ def get_text_chat_client(provider_config: dict):
     base_url = provider_config.get('base_url')
     endpoint_type = provider_config.get('endpoint_type')
 
+    # Google Gemini 使用原生 SDK
     if provider_type == 'google_gemini':
         from .genai_client import GenAIClient
         return GenAIClient(api_key=api_key, base_url=base_url)
-    else:
-        return TextChatClient(api_key=api_key, base_url=base_url, endpoint_type=endpoint_type)
+
+    # 所有其他类型都使用 OpenAI 兼容客户端
+    return TextChatClient(api_key=api_key, base_url=base_url, endpoint_type=endpoint_type)

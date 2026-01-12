@@ -7,7 +7,7 @@ API 路由模块
 - history_routes: 历史记录 CRUD API
 - config_routes: 配置管理 API
 - content_routes: 内容生成相关 API（标题、文案、标签）
-- publish_routes: 发布相关 API（VibeSurf 浏览器自动化）
+- publish_routes: 发布相关 API（xiaohongshu-mcp 集成）
 
 所有路由都注册到统一的 /api 前缀下
 """
