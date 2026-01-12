@@ -391,22 +391,31 @@ class GoogleGenAIGenerator(ImageGeneratorBase):
             )
         ]
 
-        image_config_kwargs = {
-            "aspect_ratio": aspect_ratio,
-        }
+        image_config_kwargs = {}
+
+        # gemini-2.0-flash-exp-image-generation 不支持 aspect_ratio
+        # 只有 Imagen 或其他特定模型支持
+        if "imagen" in model.lower() or self.is_vertexai:
+            image_config_kwargs["aspect_ratio"] = aspect_ratio
 
         # 只有在 Vertex AI 模式下才支持 output_mime_type
         if self.is_vertexai:
             image_config_kwargs["output_mime_type"] = "image/png"
 
-        generate_content_config = types.GenerateContentConfig(
-            temperature=temperature,
-            top_p=0.95,
-            max_output_tokens=32768,
-            response_modalities=["TEXT", "IMAGE"],
-            safety_settings=self.safety_settings,
-            image_config=types.ImageConfig(**image_config_kwargs),
-        )
+        # 构建生成配置
+        config_kwargs = {
+            "temperature": temperature,
+            "top_p": 0.95,
+            "max_output_tokens": 32768,
+            "response_modalities": ["TEXT", "IMAGE"],
+            "safety_settings": self.safety_settings,
+        }
+
+        # 只有当有 image_config 参数时才添加
+        if image_config_kwargs:
+            config_kwargs["image_config"] = types.ImageConfig(**image_config_kwargs)
+
+        generate_content_config = types.GenerateContentConfig(**config_kwargs)
 
         image_data = None
         logger.debug(f"  开始调用 API: model={model}")

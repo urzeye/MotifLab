@@ -40,11 +40,8 @@
         <!-- 全局页脚版权信息（首页除外） -->
         <footer v-if="route.path !== '/'" class="global-footer">
           <div class="footer-content">
-            <div class="footer-tip">
-              配置不成功？访问 <a href="https://renderink.top" target="_blank" rel="noopener noreferrer">renderink.top</a> 官方站点即刻体验
-            </div>
             <div class="footer-text">
-              © 2025 <a href="https://github.com/HisMax/RenderInk" target="_blank" rel="noopener noreferrer">RenderInk</a> by 默子 (Histone)
+              © 2025 渲染AI (RenderInk)
             </div>
             <div class="footer-license">
               Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a>
