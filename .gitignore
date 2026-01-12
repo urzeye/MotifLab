@@ -80,8 +80,9 @@ DEV_NOTES.md
 commit_message.txt
 git-changelog.txt
 
-# xiaohongshu-mcp binary (downloaded separately)
+# xiaohongshu-mcp binaries (downloaded separately)
 tools/xiaohongshu-mcp/xiaohongshu-mcp
+tools/xiaohongshu-mcp/xiaohongshu-login
 tools/xiaohongshu-mcp/config.json
 
 # Data directory (contains login sessions)
