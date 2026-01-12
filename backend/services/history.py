@@ -3,15 +3,28 @@
 
 负责管理绘本生成历史记录的存储、查询、更新和删除。
 支持草稿、生成中、完成等多种状态流转。
+
+存储模式：
+- local: 本地文件存储（默认）
+- supabase: Supabase 云存储
+
+通过环境变量 HISTORY_STORAGE_MODE 控制存储模式。
 """
 
 import os
 import json
 import uuid
+import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 from enum import Enum
+
+logger = logging.getLogger(__name__)
+
+# 存储模式常量
+STORAGE_MODE_LOCAL = "local"
+STORAGE_MODE_SUPABASE = "supabase"
 
 
 class RecordStatus:
@@ -28,18 +41,29 @@ class HistoryService:
         """
         初始化历史记录服务
 
-        创建历史记录存储目录和索引文件
+        根据 HISTORY_STORAGE_MODE 环境变量选择存储模式：
+        - local: 本地文件存储（默认）
+        - supabase: Supabase 云存储
         """
-        # 历史记录存储目录（项目根目录/history）
+        # 存储模式（默认为本地）
+        self.storage_mode = os.getenv("HISTORY_STORAGE_MODE", STORAGE_MODE_LOCAL)
+        logger.info(f"历史记录服务初始化，存储模式: {self.storage_mode}")
+
+        # 本地存储相关配置
         self.history_dir = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
             "history"
         )
-        os.makedirs(self.history_dir, exist_ok=True)
 
-        # 索引文件路径
-        self.index_file = os.path.join(self.history_dir, "index.json")
-        self._init_index()
+        if self.storage_mode == STORAGE_MODE_LOCAL:
+            os.makedirs(self.history_dir, exist_ok=True)
+            self.index_file = os.path.join(self.history_dir, "index.json")
+            self._init_index()
+
+    @property
+    def is_supabase_mode(self) -> bool:
+        """是否使用 Supabase 存储模式"""
+        return self.storage_mode == STORAGE_MODE_SUPABASE
 
     def _init_index(self) -> None:
         """
@@ -108,6 +132,37 @@ class HistoryService:
         状态流转：
             新建 -> draft（草稿状态）
         """
+        if self.is_supabase_mode:
+            return self._create_record_supabase(topic, outline, task_id)
+        return self._create_record_local(topic, outline, task_id)
+
+    def _create_record_supabase(self, topic: str, outline: Dict, task_id: Optional[str]) -> str:
+        """Supabase 模式：创建历史记录"""
+        from backend.utils.supabase_client import create_history_record as sb_create
+
+        page_count = len(outline.get("pages", []))
+        result = sb_create(
+            title=topic,
+            topic=topic,
+            task_id=task_id,
+            outline=outline,
+            images=[],
+            thumbnail=None,
+            status=RecordStatus.DRAFT,
+            page_count=page_count
+        )
+
+        if result.get("success") and result.get("record"):
+            record_id = result["record"].get("id")
+            logger.info(f"Supabase 创建历史记录成功: {record_id}")
+            return record_id
+        else:
+            error = result.get("error", "未知错误")
+            logger.error(f"Supabase 创建历史记录失败: {error}")
+            raise Exception(f"创建历史记录失败: {error}")
+
+    def _create_record_local(self, topic: str, outline: Dict, task_id: Optional[str]) -> str:
+        """本地模式：创建历史记录"""
         # 生成唯一记录 ID
         record_id = str(uuid.uuid4())
         now = datetime.now().isoformat()
@@ -168,6 +223,23 @@ class HistoryService:
             - status: 当前状态
             - thumbnail: 缩略图文件名
         """
+        if self.is_supabase_mode:
+            return self._get_record_supabase(record_id)
+        return self._get_record_local(record_id)
+
+    def _get_record_supabase(self, record_id: str) -> Optional[Dict]:
+        """Supabase 模式：获取历史记录"""
+        from backend.utils.supabase_client import get_history_record as sb_get
+
+        result = sb_get(record_id)
+        if result.get("success") and result.get("record"):
+            record = result["record"]
+            # 转换格式以兼容本地模式
+            return self._convert_supabase_record(record)
+        return None
+
+    def _get_record_local(self, record_id: str) -> Optional[Dict]:
+        """本地模式：获取历史记录"""
         record_path = self._get_record_path(record_id)
 
         if not os.path.exists(record_path):
@@ -179,6 +251,22 @@ class HistoryService:
         except Exception:
             return None
 
+    def _convert_supabase_record(self, record: Dict) -> Dict:
+        """将 Supabase 记录格式转换为本地格式"""
+        return {
+            "id": record.get("id"),
+            "title": record.get("title"),
+            "created_at": record.get("created_at"),
+            "updated_at": record.get("updated_at"),
+            "outline": record.get("outline", {}),
+            "images": {
+                "task_id": record.get("task_id"),
+                "generated": record.get("images", [])
+            },
+            "status": record.get("status"),
+            "thumbnail": record.get("thumbnail")
+        }
+
     def record_exists(self, record_id: str) -> bool:
         """
         检查历史记录是否存在
@@ -189,6 +277,10 @@ class HistoryService:
         Returns:
             bool: 记录是否存在
         """
+        if self.is_supabase_mode:
+            from backend.utils.supabase_client import get_history_record as sb_get
+            result = sb_get(record_id)
+            return result.get("success", False)
         record_path = self._get_record_path(record_id)
         return os.path.exists(record_path)
 
@@ -224,8 +316,52 @@ class HistoryService:
             partial -> generating: 继续生成剩余图片
             partial -> completed: 剩余图片生成完成
         """
+        if self.is_supabase_mode:
+            return self._update_record_supabase(record_id, outline, images, status, thumbnail)
+        return self._update_record_local(record_id, outline, images, status, thumbnail)
+
+    def _update_record_supabase(
+        self,
+        record_id: str,
+        outline: Optional[Dict] = None,
+        images: Optional[Dict] = None,
+        status: Optional[str] = None,
+        thumbnail: Optional[str] = None
+    ) -> bool:
+        """Supabase 模式：更新历史记录"""
+        from backend.utils.supabase_client import update_history_record as sb_update
+
+        # 构建更新数据
+        data = {}
+        if outline is not None:
+            data["outline"] = outline
+            data["page_count"] = len(outline.get("pages", []))
+        if images is not None:
+            data["images"] = images.get("generated", [])
+            if images.get("task_id"):
+                data["task_id"] = images.get("task_id")
+        if status is not None:
+            data["status"] = status
+        if thumbnail is not None:
+            data["thumbnail"] = thumbnail
+
+        if not data:
+            return True  # 没有要更新的数据
+
+        result = sb_update(record_id, data)
+        return result.get("success", False)
+
+    def _update_record_local(
+        self,
+        record_id: str,
+        outline: Optional[Dict] = None,
+        images: Optional[Dict] = None,
+        status: Optional[str] = None,
+        thumbnail: Optional[str] = None
+    ) -> bool:
+        """本地模式：更新历史记录"""
         # 获取现有记录
-        record = self.get_record(record_id)
+        record = self._get_record_local(record_id)
         if not record:
             return False
 
@@ -286,9 +422,9 @@ class HistoryService:
         删除历史记录
 
         会同时删除：
-        1. 记录 JSON 文件
-        2. 关联的任务图片目录
-        3. 索引中的记录
+        1. 记录 JSON 文件（本地模式）/ 数据库记录（Supabase 模式）
+        2. 关联的任务图片目录（本地模式）/ Storage 图片（Supabase 模式）
+        3. 索引中的记录（本地模式）
 
         Args:
             record_id: 记录 ID
@@ -296,7 +432,20 @@ class HistoryService:
         Returns:
             bool: 删除是否成功，记录不存在时返回 False
         """
-        record = self.get_record(record_id)
+        if self.is_supabase_mode:
+            return self._delete_record_supabase(record_id)
+        return self._delete_record_local(record_id)
+
+    def _delete_record_supabase(self, record_id: str) -> bool:
+        """Supabase 模式：删除历史记录"""
+        from backend.utils.supabase_client import delete_history_record as sb_delete
+
+        result = sb_delete(record_id)
+        return result.get("success", False)
+
+    def _delete_record_local(self, record_id: str) -> bool:
+        """本地模式：删除历史记录"""
+        record = self._get_record_local(record_id)
         if not record:
             return False
 
@@ -308,9 +457,9 @@ class HistoryService:
                 try:
                     import shutil
                     shutil.rmtree(task_dir)
-                    print(f"已删除任务目录: {task_dir}")
+                    logger.info(f"已删除任务目录: {task_dir}")
                 except Exception as e:
-                    print(f"删除任务目录失败: {task_dir}, {e}")
+                    logger.error(f"删除任务目录失败: {task_dir}, {e}")
 
         # 删除记录 JSON 文件
         record_path = self._get_record_path(record_id)
@@ -348,6 +497,34 @@ class HistoryService:
                 - page_size: 每页大小
                 - total_pages: 总页数
         """
+        if self.is_supabase_mode:
+            return self._list_records_supabase(page, page_size, status)
+        return self._list_records_local(page, page_size, status)
+
+    def _list_records_supabase(self, page: int, page_size: int, status: Optional[str]) -> Dict:
+        """Supabase 模式：获取历史记录列表"""
+        from backend.utils.supabase_client import list_history_records as sb_list
+
+        result = sb_list(page, page_size, status)
+        if result.get("success"):
+            total = result.get("total", 0)
+            return {
+                "records": result.get("records", []),
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": (total + page_size - 1) // page_size if total > 0 else 0
+            }
+        return {
+            "records": [],
+            "total": 0,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": 0
+        }
+
+    def _list_records_local(self, page: int, page_size: int, status: Optional[str]) -> Dict:
+        """本地模式：获取历史记录列表"""
         index = self._load_index()
         records = index.get("records", [])
 
@@ -379,6 +556,21 @@ class HistoryService:
         Returns:
             List[Dict]: 匹配的记录列表（按创建时间倒序）
         """
+        if self.is_supabase_mode:
+            return self._search_records_supabase(keyword)
+        return self._search_records_local(keyword)
+
+    def _search_records_supabase(self, keyword: str) -> List[Dict]:
+        """Supabase 模式：搜索历史记录"""
+        from backend.utils.supabase_client import search_history_records as sb_search
+
+        result = sb_search(keyword)
+        if result.get("success"):
+            return result.get("records", [])
+        return []
+
+    def _search_records_local(self, keyword: str) -> List[Dict]:
+        """本地模式：搜索历史记录"""
         index = self._load_index()
         records = index.get("records", [])
 
@@ -405,6 +597,21 @@ class HistoryService:
                     - completed: 已完成数
                     - error: 错误数
         """
+        if self.is_supabase_mode:
+            return self._get_statistics_supabase()
+        return self._get_statistics_local()
+
+    def _get_statistics_supabase(self) -> Dict:
+        """Supabase 模式：获取统计信息"""
+        from backend.utils.supabase_client import get_history_statistics as sb_stats
+
+        result = sb_stats()
+        if result.get("success"):
+            return result.get("statistics", {"total": 0, "by_status": {}})
+        return {"total": 0, "by_status": {}}
+
+    def _get_statistics_local(self) -> Dict:
+        """本地模式：获取统计信息"""
         index = self._load_index()
         records = index.get("records", [])
 

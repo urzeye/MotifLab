@@ -117,16 +117,33 @@ def create_image_blueprint():
         - thumbnail: 是否返回缩略图（默认 true）
 
         返回：
-        - 成功：图片文件
+        - 成功：图片文件（本地模式）或重定向到 Supabase Storage（云存储模式）
         - 失败：JSON 错误信息
         """
+        from flask import redirect
+
         try:
             logger.debug(f"获取图片: {task_id}/{filename}")
+
+            # 检查存储模式
+            storage_mode = os.environ.get("HISTORY_STORAGE_MODE", "local")
 
             # 检查是否请求缩略图
             thumbnail = request.args.get('thumbnail', 'true').lower() == 'true'
 
-            # 构建 history 目录路径
+            if storage_mode == "supabase":
+                # Supabase 模式：重定向到 Storage URL
+                from backend.utils.supabase_client import get_image_url
+
+                if thumbnail:
+                    thumb_filename = f"thumb_{filename}"
+                    url = get_image_url(task_id, thumb_filename)
+                else:
+                    url = get_image_url(task_id, filename)
+
+                return redirect(url)
+
+            # 本地模式：从文件系统读取
             history_root = os.path.join(
                 os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
                 "history"
