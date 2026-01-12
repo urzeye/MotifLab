@@ -84,10 +84,10 @@ start_mcp() {
 
     check_mcp
 
-    # 启动 MCP 服务
+    # 启动 MCP 服务（非无头模式，方便登录）
     "$TOOL_DIR/xiaohongshu-mcp" \
-        --port=18060 \
-        --data-dir="$DATA_DIR" \
+        -port=":18060" \
+        -headless=false \
         > "$PROJECT_DIR/logs/mcp.log" 2>&1 &
     MCP_PID=$!
     echo "$MCP_PID" >> "$PID_FILE"

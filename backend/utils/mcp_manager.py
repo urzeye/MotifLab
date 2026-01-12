@@ -79,8 +79,8 @@ class MCPManager:
                 self.process = subprocess.Popen(
                     [
                         str(self.binary_path),
-                        f"--port=18060",
-                        f"--data-dir={self.data_dir}",
+                        "-port=:18060",
+                        "-headless=false",
                     ],
                     stdout=f,
                     stderr=subprocess.STDOUT,
