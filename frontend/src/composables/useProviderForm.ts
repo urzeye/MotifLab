@@ -30,15 +30,103 @@ export interface ProviderForm {
   _has_api_key: boolean
 }
 
-export const textTypeOptions = [
-  { value: 'google_gemini', label: 'Google Gemini' },
-  { value: 'openai_compatible', label: 'OpenAI 兼容接口' }
-]
+// 文本生成服务商预设配置
+export const textProviderPresets: Record<string, {
+  label: string
+  base_url: string
+  model: string
+  endpoint?: string
+}> = {
+  google_gemini: {
+    label: 'Google Gemini',
+    base_url: 'https://generativelanguage.googleapis.com',
+    model: 'gemini-2.0-flash-exp'
+  },
+  deepseek: {
+    label: 'DeepSeek',
+    base_url: 'https://api.deepseek.com',
+    model: 'deepseek-chat',
+    endpoint: '/v1/chat/completions'
+  },
+  openai: {
+    label: 'OpenAI',
+    base_url: 'https://api.openai.com',
+    model: 'gpt-4o',
+    endpoint: '/v1/chat/completions'
+  },
+  moonshot: {
+    label: 'Moonshot (Kimi)',
+    base_url: 'https://api.moonshot.cn',
+    model: 'moonshot-v1-8k',
+    endpoint: '/v1/chat/completions'
+  },
+  zhipu: {
+    label: '智谱 AI (GLM)',
+    base_url: 'https://open.bigmodel.cn/api/paas',
+    model: 'glm-4-flash',
+    endpoint: '/v4/chat/completions'
+  },
+  qwen: {
+    label: '通义千问 (Qwen)',
+    base_url: 'https://dashscope.aliyuncs.com/compatible-mode',
+    model: 'qwen-turbo',
+    endpoint: '/v1/chat/completions'
+  },
+  siliconflow: {
+    label: 'SiliconFlow',
+    base_url: 'https://api.siliconflow.cn',
+    model: 'deepseek-ai/DeepSeek-V3',
+    endpoint: '/v1/chat/completions'
+  },
+  openai_compatible: {
+    label: '自定义 OpenAI 兼容',
+    base_url: '',
+    model: '',
+    endpoint: '/v1/chat/completions'
+  }
+}
 
-export const imageTypeOptions = [
-  { value: 'google_genai', label: 'Google GenAI' },
-  { value: 'image_api', label: 'OpenAI 兼容接口' }
-]
+export const textTypeOptions = Object.entries(textProviderPresets).map(([value, preset]) => ({
+  value,
+  label: preset.label
+}))
+
+// 图片生成服务商预设配置
+export const imageProviderPresets: Record<string, {
+  label: string
+  base_url: string
+  model: string
+  endpoint?: string
+}> = {
+  google_genai: {
+    label: 'Google GenAI (Imagen)',
+    base_url: 'https://generativelanguage.googleapis.com',
+    model: 'imagen-3.0-generate-002'
+  },
+  siliconflow_flux: {
+    label: 'SiliconFlow (Flux)',
+    base_url: 'https://api.siliconflow.cn',
+    model: 'black-forest-labs/FLUX.1-schnell',
+    endpoint: '/v1/images/generations'
+  },
+  jimeng: {
+    label: '即梦 AI',
+    base_url: 'https://api.jimeng.jianying.com',
+    model: 'jimeng-2.0-pro',
+    endpoint: '/v1/chat/completions'
+  },
+  image_api: {
+    label: '自定义 OpenAI 兼容',
+    base_url: '',
+    model: '',
+    endpoint: '/v1/images/generations'
+  }
+}
+
+export const imageTypeOptions = Object.entries(imageProviderPresets).map(([value, preset]) => ({
+  value,
+  label: preset.label
+}))
 
 function createEmptyForm(isImage: boolean): ProviderForm {
   return {

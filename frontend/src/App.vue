@@ -1,30 +1,38 @@
 <template>
-  <div id="app">
+  <div id="app" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
     <!-- 侧边栏 Sidebar -->
-    <aside class="layout-sidebar">
+    <aside class="layout-sidebar" :class="{ collapsed: sidebarCollapsed }">
       <div class="logo-area">
         <img src="/logo-banner.png" alt="渲染AI" class="logo-icon" />
       </div>
-      
+
       <nav class="nav-menu">
         <RouterLink to="/" class="nav-item" active-class="active">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-          创作中心
+          <span class="nav-text">创作中心</span>
         </RouterLink>
         <RouterLink to="/history" class="nav-item" active-class="active">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-          历史记录
+          <span class="nav-text">历史记录</span>
         </RouterLink>
         <RouterLink to="/settings" class="nav-item" active-class="active">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6m0 6v6m-6-6h6m6 0h-6"></path><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-          系统设置
+          <span class="nav-text">系统设置</span>
         </RouterLink>
       </nav>
-      
+
+      <!-- 折叠按钮 -->
+      <button class="collapse-btn" @click="toggleSidebar" :title="sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline v-if="sidebarCollapsed" points="9 18 15 12 9 6"></polyline>
+          <polyline v-else points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+
       <div class="sidebar-footer">
         <div class="brand-badge">
           <div class="brand-icon">R</div>
-          <div class="brand-info">
+          <div class="brand-info" v-show="!sidebarCollapsed">
             <div class="brand-name">渲染AI</div>
             <div class="brand-sub">RenderAI</div>
           </div>
@@ -58,11 +66,26 @@
 
 <script setup lang="ts">
 import { RouterView, RouterLink } from 'vue-router'
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { setupAutoSave } from './stores/generator'
+
+// 侧边栏折叠状态
+const sidebarCollapsed = ref(false)
+
+// 切换侧边栏折叠状态
+const toggleSidebar = () => {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+  // 保存状态到 localStorage
+  localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed.value))
+}
 
 // 启用自动保存到 localStorage
 onMounted(() => {
   setupAutoSave()
+  // 恢复侧边栏状态
+  const saved = localStorage.getItem('sidebarCollapsed')
+  if (saved === 'true') {
+    sidebarCollapsed.value = true
+  }
 })
 </script>

@@ -10,7 +10,7 @@
         </p>
       </div>
       <div style="display: flex; gap: 12px;">
-        <button class="btn btn-secondary" @click="goBack" style="background: white; border: 1px solid var(--border-color);">
+        <button class="btn btn-secondary" @click="goBack">
           上一步
         </button>
         <button class="btn btn-primary" @click="startGeneration">
@@ -304,21 +304,20 @@ watch(
 .outline-card {
   display: flex;
   flex-direction: column;
-  padding: 16px; /* 减小内边距 */
+  padding: 16px;
   transition: all 0.2s ease;
-  border: none;
-  border-radius: 8px; /* 较小的圆角 */
-  background: white;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  /* 保持一定的长宽比感，虽然高度自适应，但由于 flex column 和内容撑开，
-     这里设置一个 min-height 让它看起来像个竖向卡片 */
-  min-height: 360px; 
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  min-height: 360px;
   position: relative;
 }
 
 .outline-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-hover);
   z-index: 10;
 }
 
@@ -334,7 +333,7 @@ watch(
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .page-info {
@@ -346,7 +345,7 @@ watch(
 .page-number {
   font-size: 14px;
   font-weight: 700;
-  color: #ccc;
+  color: var(--text-secondary);
   font-family: 'Inter', sans-serif;
 }
 
@@ -358,9 +357,9 @@ watch(
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-.page-type.cover { color: #FF4D4F; background: #FFF1F0; }
-.page-type.content { color: #8c8c8c; background: #f5f5f5; }
-.page-type.summary { color: #52C41A; background: #F6FFED; }
+.page-type.cover { color: var(--primary); background: var(--primary-light); }
+.page-type.content { color: var(--text-sub); background: var(--bg-elevated); }
+.page-type.summary { color: #52C41A; background: rgba(82, 196, 26, 0.1); }
 
 .card-controls {
   display: flex;
@@ -373,6 +372,7 @@ watch(
 .drag-handle {
   cursor: grab;
   padding: 2px;
+  color: var(--text-placeholder);
 }
 .drag-handle:active { cursor: grabbing; }
 
@@ -380,25 +380,29 @@ watch(
   background: none;
   border: none;
   cursor: pointer;
-  color: #999;
+  color: var(--text-sub);
   padding: 2px;
   transition: color 0.2s;
 }
-.icon-btn:hover { color: #FF4D4F; }
+.icon-btn:hover { color: #EF4444; }
 
 /* 文本区域 - 核心 */
 .textarea-paper {
-  flex: 1; /* 占据剩余空间 */
+  flex: 1;
   width: 100%;
   border: none;
   background: transparent;
   padding: 0;
-  font-size: 16px; /* 更大的字号 */
-  line-height: 1.7; /* 舒适行高 */
-  color: #333;
-  resize: none; /* 禁止手动拉伸，保持卡片整体感 */
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--text-main);
+  resize: none;
   font-family: inherit;
   margin-bottom: 10px;
+}
+
+.textarea-paper::placeholder {
+  color: var(--text-placeholder);
 }
 
 .textarea-paper:focus {
@@ -408,13 +412,13 @@ watch(
 .word-count {
   text-align: right;
   font-size: 11px;
-  color: #ddd;
+  color: var(--text-secondary);
   margin-top: auto;
 }
 
 /* 添加卡片 */
 .add-card-dashed {
-  border: 2px dashed #eee;
+  border: 2px dashed var(--border-color);
   background: transparent;
   box-shadow: none;
   display: flex;
@@ -422,14 +426,14 @@ watch(
   justify-content: center;
   cursor: pointer;
   min-height: 360px;
-  color: #ccc;
+  color: var(--text-placeholder);
   transition: all 0.2s;
 }
 
 .add-card-dashed:hover {
   border-color: var(--primary);
   color: var(--primary);
-  background: rgba(255, 36, 66, 0.02);
+  background: var(--primary-fade);
 }
 
 .add-content {
