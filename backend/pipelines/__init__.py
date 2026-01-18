@@ -6,9 +6,10 @@
 
 可用流水线：
 - RedBookPipeline: 小红书图文生成流水线
-- ConceptPipeline: 概念图生成流水线（预留）
+- ConceptPipeline: 概念图生成流水线
 """
 
 from .redbook_pipeline import RedBookPipeline
+from .concept_pipeline import ConceptPipeline
 
-__all__ = ['RedBookPipeline']
+__all__ = ['RedBookPipeline', 'ConceptPipeline']
