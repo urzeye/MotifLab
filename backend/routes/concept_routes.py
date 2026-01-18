@@ -26,6 +26,7 @@ from backend.skills.concept.design import DesignInput
 from backend.skills.concept.generate import GenerateInput
 from backend.pipelines import ConceptPipeline
 from backend.config import Config
+from backend.services.concept_history import get_concept_history_service
 
 logger = logging.getLogger(__name__)
 
@@ -394,6 +395,102 @@ def create_concept_blueprint():
 
         except Exception as e:
             logger.exception(f"初始化失败: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
+
+    # ===== 历史记录 API =====
+
+    @bp.route('/history', methods=['GET'])
+    def list_history():
+        """
+        获取概念可视化历史记录列表
+
+        Query params:
+        - page: 页码，默认 1
+        - page_size: 每页数量，默认 20
+        - status: 状态过滤（可选）
+
+        Response:
+        {
+            "success": true,
+            "data": {
+                "records": [...],
+                "total": 10,
+                "page": 1,
+                "page_size": 20,
+                "total_pages": 1
+            }
+        }
+        """
+        try:
+            page = request.args.get('page', 1, type=int)
+            page_size = request.args.get('page_size', 20, type=int)
+            status = request.args.get('status', None)
+
+            service = get_concept_history_service()
+            result = service.list_records(page=page, page_size=page_size, status=status)
+
+            return jsonify({
+                "success": True,
+                "data": result
+            })
+
+        except Exception as e:
+            logger.exception(f"获取历史列表失败: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
+
+    @bp.route('/history/<record_id>', methods=['GET'])
+    def get_history_detail(record_id):
+        """
+        获取历史记录详情
+
+        Response:
+        {
+            "success": true,
+            "data": {
+                "id": "xxx",
+                "title": "...",
+                "pipeline_data": {...},
+                ...
+            }
+        }
+        """
+        try:
+            service = get_concept_history_service()
+            record = service.get_record(record_id)
+
+            if not record:
+                return jsonify({"success": False, "error": "记录不存在"}), 404
+
+            return jsonify({
+                "success": True,
+                "data": record
+            })
+
+        except Exception as e:
+            logger.exception(f"获取历史详情失败: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
+
+    @bp.route('/history/<record_id>', methods=['DELETE'])
+    def delete_history(record_id):
+        """
+        删除历史记录
+
+        Response:
+        {
+            "success": true
+        }
+        """
+        try:
+            service = get_concept_history_service()
+            success = service.delete_record(record_id)
+
+            if not success:
+                return jsonify({"success": False, "error": "删除失败或记录不存在"}), 404
+
+            return jsonify({"success": True})
+
+        except Exception as e:
+            logger.exception(f"删除历史记录失败: {e}")
             return jsonify({"success": False, "error": str(e)}), 500
 
     return bp

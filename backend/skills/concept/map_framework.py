@@ -110,7 +110,7 @@ class ConceptMapSkill(BaseSkill):
         )
 
         try:
-            response = self.text_client.generate(prompt)
+            response = self.text_client.generate_text(prompt, max_output_tokens=16000)
 
             # 提取JSON
             result = self._extract_json(response)
@@ -147,22 +147,42 @@ class ConceptMapSkill(BaseSkill):
 
     def _extract_json(self, response: str) -> Optional[dict]:
         """从响应中提取JSON"""
+        import re
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # 策略1: 直接解析
         try:
-            if "```json" in response:
-                json_str = response.split("```json")[1].split("```")[0]
-            elif "```" in response:
-                json_str = response.split("```")[0] if response.strip().startswith("{") else response.split("```")[1].split("```")[0]
-            else:
-                json_str = response
-
-            json_str = json_str.strip()
-            if json_str.endswith("```"):
-                json_str = json_str[:-3].strip()
-
-            return json.loads(json_str)
-
+            return json.loads(response.strip())
         except json.JSONDecodeError:
-            return None
+            pass
+
+        # 策略2: 提取 ```json ... ``` 块
+        if "```json" in response:
+            try:
+                json_str = response.split("```json")[1].split("```")[0]
+                return json.loads(json_str.strip())
+            except (json.JSONDecodeError, IndexError):
+                pass
+
+        # 策略3: 提取 ``` ... ``` 块
+        if "```" in response:
+            try:
+                json_str = response.split("```")[1].split("```")[0]
+                return json.loads(json_str.strip())
+            except (json.JSONDecodeError, IndexError):
+                pass
+
+        # 策略4: 使用正则查找 JSON 对象
+        try:
+            match = re.search(r'\{[\s\S]*\}', response)
+            if match:
+                return json.loads(match.group())
+        except json.JSONDecodeError:
+            pass
+
+        logger.warning(f"无法从响应中提取JSON，响应内容: {response[:1000]}")
+        return None
 
     def format_output(self, result: SkillResult) -> str:
         """格式化输出结果"""

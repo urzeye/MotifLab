@@ -22,6 +22,7 @@ from backend.skills.concept.analyze import AnalyzeInput
 from backend.skills.concept.map_framework import MapInput
 from backend.skills.concept.design import DesignInput
 from backend.skills.concept.generate import GenerateInput
+from backend.services.concept_history import get_concept_history_service, ConceptRecordStatus
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +122,17 @@ class ConceptPipeline(BasePipeline):
             'task_id': task_id,
         }
 
+        # 创建历史记录
+        history_service = get_concept_history_service()
+        record_id = history_service.create_record(
+            title=article[:30] + "..." if len(article) > 30 else article,
+            article=article,
+            task_id=task_id,
+            style=style
+        )
+        self._accumulated_data['record_id'] = record_id
+        logger.info(f"创建概念历史记录: {record_id}")
+
         total_skills = len(self.skills)
         yield PipelineEvent(
             event="start",
@@ -184,6 +196,14 @@ class ConceptPipeline(BasePipeline):
                     result = skill.run(skill_input)
 
                 if not result.success:
+                    # 更新历史记录为错误状态
+                    record_id = self._accumulated_data.get('record_id')
+                    if record_id:
+                        history_service.update_record(
+                            record_id,
+                            status=ConceptRecordStatus.ERROR
+                        )
+
                     yield PipelineEvent(
                         event="step_error",
                         step=step_index + 1,
@@ -201,6 +221,22 @@ class ConceptPipeline(BasePipeline):
                 self._accumulated_data[step_name] = result.data
                 current_data = result.data
 
+                # 更新历史记录的 pipeline_data
+                record_id = self._accumulated_data.get('record_id')
+                if record_id:
+                    update_data = {step_name: result.data}
+                    # 如果是 analyze 步骤，更新标题
+                    title_update = None
+                    if step_name == "analyze" and result.data:
+                        main_theme = result.data.get('main_theme')
+                        if main_theme:
+                            title_update = main_theme
+                    history_service.update_record(
+                        record_id,
+                        title=title_update,
+                        pipeline_data=update_data
+                    )
+
                 yield PipelineEvent(
                     event="step_complete",
                     step=step_index + 1,
@@ -211,6 +247,14 @@ class ConceptPipeline(BasePipeline):
 
             except Exception as e:
                 logger.exception(f"技能 {skill.name} 执行异常")
+                # 更新历史记录为错误状态
+                record_id = self._accumulated_data.get('record_id')
+                if record_id:
+                    history_service.update_record(
+                        record_id,
+                        status=ConceptRecordStatus.ERROR
+                    )
+
                 yield PipelineEvent(
                     event="step_error",
                     step=step_index + 1,
@@ -231,13 +275,33 @@ class ConceptPipeline(BasePipeline):
         # 构建最终输出
         final_output = self._build_final_output()
 
+        # 更新历史记录为完成状态
+        record_id = self._accumulated_data.get('record_id')
+        if record_id:
+            generate_data = self._accumulated_data.get('generate', {})
+            image_results = generate_data.get('results', [])
+            thumbnail = None
+            if image_results and len(image_results) > 0:
+                first_image = image_results[0]
+                if first_image.get('output_path'):
+                    thumbnail = first_image['output_path']
+
+            history_service.update_record(
+                record_id,
+                status=ConceptRecordStatus.COMPLETED,
+                thumbnail=thumbnail,
+                image_count=len(image_results)
+            )
+            logger.info(f"概念历史记录完成: {record_id}, 图片数: {len(image_results)}")
+
         yield PipelineEvent(
             event="complete",
             result=final_output,
             progress=1.0,
             metadata={
                 "elapsed_time": self._context.elapsed_time,
-                "task_id": task_id
+                "task_id": task_id,
+                "record_id": record_id
             }
         )
 
