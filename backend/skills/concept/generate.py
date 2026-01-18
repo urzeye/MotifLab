@@ -258,7 +258,7 @@ class ConceptGenerateSkill(BaseSkill):
         Returns:
             生成结果字典
         """
-        output_path = str(output_dir / output_name)
+        output_path = output_dir / f"{output_name}.png"
 
         # 添加统一样式前缀
         if self.style_prefix:
@@ -267,20 +267,26 @@ class ConceptGenerateSkill(BaseSkill):
             full_prompt = prompt
 
         try:
-            result = self.image_client.generate_image(full_prompt, output_path)
+            # generate_image 返回 bytes
+            image_data = self.image_client.generate_image(full_prompt)
 
-            if result.get("success"):
-                logger.info(f"图像已保存: {result.get('output_path')}")
+            if image_data and isinstance(image_data, bytes):
+                # 保存图片到文件
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(output_path, 'wb') as f:
+                    f.write(image_data)
+
+                logger.info(f"图像已保存: {output_path}")
                 return {
                     "success": True,
-                    "output_path": result.get("output_path"),
-                    "url": result.get("url")
+                    "output_path": str(output_path),
+                    "url": None
                 }
             else:
-                logger.error(f"生成失败: {result.get('error')}")
+                logger.error(f"生成失败: 返回数据无效")
                 return {
                     "success": False,
-                    "error": result.get("error", "未知错误")
+                    "error": "生成返回数据无效"
                 }
 
         except Exception as e:

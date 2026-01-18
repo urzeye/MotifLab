@@ -71,6 +71,12 @@ def create_app():
     # 注册所有 API 路由
     register_routes(app)
 
+    # 添加 output 目录的静态文件服务
+    output_dir = Path(__file__).parent.parent / 'output'
+    @app.route('/output/<path:filename>')
+    def serve_output(filename):
+        return send_from_directory(str(output_dir), filename)
+
     # 启动时验证配置
     _validate_config_on_startup(logger)
 

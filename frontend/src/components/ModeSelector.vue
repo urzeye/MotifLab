@@ -59,7 +59,6 @@
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
         </div>
-        <div class="coming-soon-badge">即将推出</div>
       </div>
     </div>
   </div>
@@ -188,18 +187,6 @@ defineEmits<{
 
 .mode-card.concept:hover .mode-action {
   color: #3b82f6;
-}
-
-.coming-soon-badge {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 10px;
-  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
-  color: white;
-  border-radius: var(--radius-xs);
 }
 
 /* 响应式 */

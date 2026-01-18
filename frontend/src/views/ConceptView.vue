@@ -228,7 +228,7 @@
         <button class="btn btn-primary" @click="resetAndStartNew">
           生成新的概念图
         </button>
-        <router-link to="/history" class="btn btn-secondary">
+        <router-link to="/concept/history" class="btn btn-secondary">
           查看历史记录
         </router-link>
       </div>
@@ -424,7 +424,7 @@ const handlePipelineEvent = (event: any) => {
             ...generatedImages.value[idx],
             ...event.result,
             status: event.result.success ? 'done' : 'error',
-            url: event.result.output_path || event.result.url
+            url: event.result.output_path ? `/${event.result.output_path}` : event.result.url
           }
           if (event.result.success) {
             generateProgress.value.success++

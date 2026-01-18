@@ -18,9 +18,9 @@ echo ""
 command -v python3 &>/dev/null || { echo "❌ 需要 Python3"; exit 1; }
 command -v npm &>/dev/null || { echo "❌ 需要 Node.js"; exit 1; }
 
-# 安装依赖
+# 安装依赖（不安装为包，保持可编辑）
 echo "📦 检查依赖..."
-pip3 install -q . 2>/dev/null || pip3 install .
+pip3 install -q -r requirements.txt 2>/dev/null || true
 cd frontend && npm install --silent 2>/dev/null && cd ..
 
 # 清理函数
@@ -33,7 +33,7 @@ trap cleanup SIGINT SIGTERM
 
 # 启动服务
 echo "🔧 启动后端..."
-python3 backend/app.py &
+PYTHONPATH="$(pwd):$PYTHONPATH" python3 backend/app.py &
 BACKEND_PID=$!
 sleep 2
 
