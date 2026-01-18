@@ -482,3 +482,75 @@ export async function publishToXiaohongshu(
     onStreamError
   )
 }
+
+// ==================== 概念可视化历史 API ====================
+
+export interface ConceptHistoryRecord {
+  id: string
+  title: string
+  created_at: string
+  updated_at: string
+  status: string
+  task_id: string
+  style: string | null
+  article_preview: string
+  thumbnail: string | null
+  image_count: number
+}
+
+export interface ConceptHistoryDetail extends ConceptHistoryRecord {
+  article_full: string
+  pipeline_data: {
+    analyze: any
+    map: any
+    design: any
+    generate: any
+  }
+}
+
+export async function getConceptHistoryList(
+  page = 1,
+  pageSize = 20,
+  status?: string
+): Promise<{
+  success: boolean
+  data?: {
+    records: ConceptHistoryRecord[]
+    total: number
+    page: number
+    page_size: number
+    total_pages: number
+  }
+  error?: string
+}> {
+  try {
+    const params: any = { page, page_size: pageSize }
+    if (status) params.status = status
+    const response = await axios.get(`${API_BASE_URL}/concept/history`, { params, timeout: 10000 })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '获取概念历史列表失败', { data: { records: [], total: 0, page: 1, page_size: pageSize, total_pages: 0 } })
+  }
+}
+
+export async function getConceptHistory(recordId: string): Promise<{
+  success: boolean
+  data?: ConceptHistoryDetail
+  error?: string
+}> {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/concept/history/${recordId}`, { timeout: 10000 })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '获取概念历史详情失败')
+  }
+}
+
+export async function deleteConceptHistory(recordId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const response = await axios.delete(`${API_BASE_URL}/concept/history/${recordId}`, { timeout: 10000 })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '删除概念历史记录失败')
+  }
+}

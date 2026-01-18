@@ -20,54 +20,33 @@ class AnalyzeInput:
     max_concepts: int = 8  # 最大提取概念数
 
 
-ANALYZE_PROMPT = '''你是一个概念分析专家。请分析以下文章，提取核心要点。
+ANALYZE_PROMPT = '''分析文章，提取3-4个核心概念。
 
-**任务：**
-1. 识别文章的核心主题和论点
-2. 提取5-8个关键概念
-3. 为每个概念找出文章中最有力的原文引文
-4. 识别概念之间的层级关系或逻辑关系
-5. 为每个概念推荐适合的可视化类型
+可视化类型: hierarchy/comparison/network/flowchart
 
-**可视化类型选项：**
-- hierarchy: 层级/优先级概念 → 金字塔图
-- comparison: 二元对比概念 → 对比图
-- network: 系统/关系概念 → 网络图
-- flowchart: 过程/决策概念 → 流程图
-- terrain: 优化/权衡概念 → 地形图
-- attractor: 吸引/趋向概念 → 吸引子图
-
-**输出格式（必须是有效JSON）：**
+输出JSON格式:
 ```json
 {{
-  "main_theme": "文章主题的一句话总结",
+  "main_theme": "主题(20字内)",
   "key_concepts": [
     {{
-      "id": "concept_1",
-      "name": "概念名称（简短英文）",
-      "name_cn": "概念中文名称",
-      "description": "概念描述（1-2句话）",
-      "key_quote": "原文引文（英文）",
-      "visualization_type": "hierarchy|comparison|network|flowchart|terrain|attractor",
-      "importance": 1-10
+      "id": "c1",
+      "name": "EnglishName",
+      "name_cn": "中文名",
+      "description": "描述(30字内)",
+      "key_quote": "引文(50字内)",
+      "visualization_type": "hierarchy",
+      "importance": 10
     }}
   ],
-  "relationships": [
-    {{
-      "from": "concept_id",
-      "to": "concept_id",
-      "type": "contains|constrains|enables|contrasts"
-    }}
-  ]
+  "relationships": []
 }}
 ```
 
-**文章内容：**
----
+文章:
 {article}
----
 
-请直接输出JSON，不要有任何其他文字。
+直接输出JSON:
 '''
 
 
@@ -117,7 +96,7 @@ class ConceptAnalyzeSkill(BaseSkill):
         prompt = ANALYZE_PROMPT.format(article=article)
 
         try:
-            response = self.text_client.generate(prompt)
+            response = self.text_client.generate_text(prompt, max_output_tokens=16000)
 
             # 提取JSON
             result = self._extract_json(response)
@@ -143,19 +122,46 @@ class ConceptAnalyzeSkill(BaseSkill):
 
     def _extract_json(self, response: str) -> Optional[dict]:
         """从响应中提取JSON"""
+        import re
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # 记录原始响应（截取前500字符）
+        logger.debug(f"LLM原始响应: {response[:500]}...")
+
+        # 策略1: 直接解析
         try:
-            # 尝试找到JSON块
-            if "```json" in response:
-                json_str = response.split("```json")[1].split("```")[0]
-            elif "```" in response:
-                json_str = response.split("```")[1].split("```")[0]
-            else:
-                json_str = response
-
-            return json.loads(json_str.strip())
-
+            return json.loads(response.strip())
         except json.JSONDecodeError:
-            return None
+            pass
+
+        # 策略2: 提取 ```json ... ``` 块
+        if "```json" in response:
+            try:
+                json_str = response.split("```json")[1].split("```")[0]
+                return json.loads(json_str.strip())
+            except (json.JSONDecodeError, IndexError):
+                pass
+
+        # 策略3: 提取 ``` ... ``` 块
+        if "```" in response:
+            try:
+                json_str = response.split("```")[1].split("```")[0]
+                return json.loads(json_str.strip())
+            except (json.JSONDecodeError, IndexError):
+                pass
+
+        # 策略4: 使用正则查找 JSON 对象
+        try:
+            # 查找第一个 { 到最后一个 } 之间的内容
+            match = re.search(r'\{[\s\S]*\}', response)
+            if match:
+                return json.loads(match.group())
+        except json.JSONDecodeError:
+            pass
+
+        logger.warning(f"无法从响应中提取JSON，响应内容: {response[:1000]}")
+        return None
 
     def format_output(self, result: SkillResult) -> str:
         """格式化输出结果"""

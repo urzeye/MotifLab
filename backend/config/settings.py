@@ -8,6 +8,29 @@ from typing import Dict, Any, Optional
 logger = logging.getLogger(__name__)
 
 
+def _get_project_root() -> Path:
+    """获取项目根目录（处理包安装和直接运行两种情况）"""
+    # 优先使用环境变量
+    if os.getenv('RENDERINK_ROOT'):
+        return Path(os.getenv('RENDERINK_ROOT'))
+
+    # 尝试从当前工作目录查找配置文件
+    cwd = Path.cwd()
+    if (cwd / 'text_providers.yaml').exists():
+        return cwd
+
+    # 尝试从 __file__ 推断（直接运行时）
+    config_py = Path(__file__)
+    if config_py.exists():
+        # backend/config/settings.py -> 项目根目录
+        potential_root = config_py.parent.parent.parent
+        if (potential_root / 'text_providers.yaml').exists():
+            return potential_root
+
+    # 默认返回当前工作目录
+    return cwd
+
+
 def _resolve_env_vars(value: Any) -> Any:
     """递归解析配置值中的环境变量占位符 ${VAR_NAME}"""
     if isinstance(value, str):
@@ -40,7 +63,7 @@ class Config:
         if cache_key in cls._configs:
             return cls._configs[cache_key]
 
-        config_path = Path(__file__).parent.parent / f'{config_type}_providers.yaml'
+        config_path = _get_project_root() / f'{config_type}_providers.yaml'
         logger.debug(f"加载{config_type}服务商配置: {config_path}")
 
         if not config_path.exists():

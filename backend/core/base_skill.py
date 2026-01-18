@@ -16,9 +16,10 @@ class SkillResult:
     success: bool
     data: Any = None
     error: Optional[str] = None
+    message: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
     def to_dict(self) -> Dict[str, Any]:
-        return {"success": self.success, "data": self.data, "error": self.error, "metadata": self.metadata}
+        return {"success": self.success, "data": self.data, "error": self.error, "message": self.message, "metadata": self.metadata}
 
 class BaseSkill(ABC):
     name: str = "base_skill"

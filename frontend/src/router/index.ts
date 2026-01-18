@@ -12,6 +12,7 @@ import PublishView from '../views/PublishView.vue'
 
 // 概念图模式页面
 import ConceptView from '../views/ConceptView.vue'
+import ConceptHistoryView from '../views/ConceptHistoryView.vue'
 
 // 通用页面
 import HistoryView from '../views/HistoryView.vue'
@@ -61,12 +62,11 @@ const router = createRouter({
       name: 'concept',
       component: ConceptView
     },
-    // 概念图子页面待实现
-    // {
-    //   path: '/concept/analyze',
-    //   name: 'concept-analyze',
-    //   component: ConceptAnalyzeView
-    // },
+    {
+      path: '/concept/history',
+      name: 'concept-history',
+      component: ConceptHistoryView
+    },
 
     // ============ 通用页面 ============
     {
