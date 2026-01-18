@@ -8,6 +8,8 @@ API 路由模块
 - config_routes: 配置管理 API
 - content_routes: 内容生成相关 API（标题、文案、标签）
 - publish_routes: 发布相关 API（xiaohongshu-mcp 集成）
+- pipeline_routes: 统一流水线 API（新架构）
+- knowledge_routes: 知识库管理 API（预留）
 
 所有路由都注册到统一的 /api 前缀下
 """
@@ -30,17 +32,24 @@ def create_api_blueprint():
     from .config_routes import create_config_blueprint
     from .content_routes import create_content_blueprint
     from .publish_routes import create_publish_blueprint
+    from .pipeline_routes import create_pipeline_blueprint
+    from .knowledge_routes import create_knowledge_blueprint
 
     # 创建主 API 蓝图
     api_bp = Blueprint('api', __name__, url_prefix='/api')
 
     # 将子蓝图注册到主蓝图（不带额外前缀）
+    # 原有路由（保持向后兼容）
     api_bp.register_blueprint(create_outline_blueprint())
     api_bp.register_blueprint(create_image_blueprint())
     api_bp.register_blueprint(create_history_blueprint())
     api_bp.register_blueprint(create_config_blueprint())
     api_bp.register_blueprint(create_content_blueprint())
     api_bp.register_blueprint(create_publish_blueprint())
+
+    # 新架构路由
+    api_bp.register_blueprint(create_pipeline_blueprint())
+    api_bp.register_blueprint(create_knowledge_blueprint())
 
     return api_bp
 
