@@ -277,9 +277,14 @@ class ConceptGenerateSkill(BaseSkill):
                     f.write(image_data)
 
                 logger.info(f"图像已保存: {output_path}")
+                # 返回相对于项目根目录的路径，用于前端 URL
+                relative_path = str(output_path)
+                # 如果是绝对路径，提取 output/ 开始的相对部分
+                if "/output/" in relative_path:
+                    relative_path = "output/" + relative_path.split("/output/", 1)[1]
                 return {
                     "success": True,
-                    "output_path": str(output_path),
+                    "output_path": relative_path,
                     "url": None
                 }
             else:
