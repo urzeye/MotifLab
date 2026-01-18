@@ -42,36 +42,24 @@ DESIGN_PROMPT = '''你是一位专业的技术文档设计师，擅长创建概�
 **任务：**
 为每个概念设计图像提示词（英文）。
 
-**输出格式（必须是有效JSON）：**
+**输出JSON格式：**
 ```json
 {{
   "designs": [
     {{
-      "concept_id": "概念ID",
-      "title": "中文标题",
+      "concept_id": "c1",
+      "title": "中文标题(15字内)",
       "chart_type": "图表类型",
-      "layout": "split|center|comparison",
-      "visual_elements": ["元素1", "元素2"],
-      "text_boxes": [
-        {{"label": "DEFINITION 定义:", "content": "概念定义"}},
-        {{"label": "KEY INSIGHT 核心洞察:", "content": "来自映射框架的insight"}},
-        {{"label": "KEY QUOTE 关键引文:", "content": "核心引文"}}
-      ],
-      "key_quote": "关键引文（中文）",
-      "image_prompt": "完整的图像生成提示词（英文，300-500词）"
+      "visual_elements": ["元素1", "元素2", "元素3"],
+      "image_prompt": "Technical infographic. [描述主图和布局，80-120词]. 4K resolution."
     }}
   ]
 }}
 ```
 
-**提示词生成规则：**
-1. 以 "Technical infographic." 开头
-2. 描述主图（2D或等轴测3D技术插图）
-3. 包含双语标签（英文 + 中文）
-4. 必须包含3-5个文本框，内容来自原文和映射洞察
-5. 以 "4K ultra-high resolution. Clean professional aesthetic." 结尾
-
-请直接输出JSON，不要有任何其他文字。
+**规则：**
+- image_prompt 必须英文，80-120词，以"Technical infographic."开头
+- 只输出JSON，无其他文字
 '''
 
 
