@@ -197,6 +197,13 @@ body {
   border-radius: 0 2px 2px 0;
 }
 
+/* 导航分割线 */
+.nav-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 12px 0;
+}
+
 /* ========== 通用容器 ========== */
 .container {
   width: 100%;

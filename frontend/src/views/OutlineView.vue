@@ -141,7 +141,7 @@ const startGeneration = async () => {
     saveTimer = null
     await autoSaveOutline()
   }
-  router.push('/generate')
+  router.push('/redbook/generate')
 }
 
 // ==================== 自动保存功能 ====================

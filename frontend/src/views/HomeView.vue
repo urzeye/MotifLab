@@ -135,7 +135,7 @@ async function handleGenerate() {
       composerRef.value?.clearPreviews()
       uploadedImageFiles.value = []
 
-      router.push('/outline')
+      router.push('/redbook/outline')
     } else {
       error.value = result.error || '生成大纲失败'
     }
