@@ -11,9 +11,9 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-# Supabase 配置
-SUPABASE_URL = os.getenv("SUPABASE_URL", "https://cnwgxcvsunbxclgkykln.supabase.co")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNud2d4Y3ZzdW5ieGNsZ2t5a2xuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzYwMTc1NCwiZXhwIjoyMDgzMTc3NzU0fQ.CVTRoi-M992K6DjAGW_MNQ83pzFxAE33jfgIkbLcLSU")
+# Supabase 配置（从 .env 环境变量读取）
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 
 _supabase_client = None
 
@@ -231,7 +231,7 @@ def get_publish_record(record_id: str) -> Dict[str, Any]:
 
 # ==================== Storage 操作 ====================
 
-STORAGE_BUCKET = "redink-images"
+STORAGE_BUCKET = "renderink-images"
 
 
 def upload_image(task_id: str, filename: str, data: bytes, content_type: str = "image/png") -> Optional[str]:
