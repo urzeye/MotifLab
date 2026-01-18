@@ -1,0 +1,25 @@
+canonical_chart: flowchart
+confidence: 0.9
+description: 一种人机协作模式：人类提供愿景，AI 在只读模式下草拟详细规范（计划），人类进行评审与调整（精炼），最后再进入开发（执行）。
+description_en: A collaborative workflow where the human provides a vision, the AI
+  drafts detailed specs in a read-only 'Plan Mode', followed by human-led refinement
+  before final implementation.
+discovered_at: '2026-01-18T16:57:24.733562'
+keywords:
+- plan mode
+- collaborative refinement
+- iterative development
+- read-only drafting
+name: 计划-精炼-执行工作流 (Plan-Refine-Execute Workflow)
+name_en: Plan-Refine-Execute Workflow
+origin: Software Engineering / AI-Assisted Development
+source_quote: Use 'Plan Mode' (read-only) to have the agent draft detailed specs from
+  your vision, then refine collaboratively before execution.
+suggested_charts:
+- timeline
+- cycle
+use_when: 在开始复杂的 AI 编码任务前，确保人类意图与 AI 理解对齐
+visual_elements:
+- 3-step sequence
+- feedback loop
+- funnel
