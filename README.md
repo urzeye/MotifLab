@@ -102,8 +102,8 @@
 
 ### 1. 克隆项目
 ```bash
-git clone https://github.com/joshua23/redink-xiaohongshu.git
-cd redink-xiaohongshu
+git clone https://github.com/joshua23/renderink-xiaohongshu.git
+cd renderink-xiaohongshu
 ```
 
 ### 2. 配置 API 服务

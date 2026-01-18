@@ -6,7 +6,7 @@
 1. 确保 Supabase 配置正确（检查 backend/utils/supabase_client.py）
 2. 确保已在 Supabase Dashboard 中：
    - 执行 create_history_records.sql 创建数据库表
-   - 创建 Storage bucket "redink-images" 并设为 public
+   - 创建 Storage bucket "renderink-images" 并设为 public
 3. 运行: python -m backend.migrations.migrate_local_to_supabase
 
 注意：
@@ -212,7 +212,7 @@ def main():
     logger.info("")
     logger.info("下一步：")
     logger.info("  1. 验证数据: 在 Supabase Dashboard 检查 history_records 表")
-    logger.info("  2. 验证图片: 在 Storage 页面检查 redink-images bucket")
+    logger.info("  2. 验证图片: 在 Storage 页面检查 renderink-images bucket")
     logger.info("  3. 切换模式: 设置环境变量 HISTORY_STORAGE_MODE=supabase")
     logger.info("  4. 重启服务: python -m backend.app")
 

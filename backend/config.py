@@ -1,9 +1,27 @@
 import logging
+import os
+import re
 import yaml
 from pathlib import Path
 from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_env_vars(value: Any) -> Any:
+    """递归解析配置值中的环境变量占位符 ${VAR_NAME}"""
+    if isinstance(value, str):
+        pattern = r'\$\{([^}]+)\}'
+        matches = re.findall(pattern, value)
+        for var_name in matches:
+            env_value = os.getenv(var_name, '')
+            value = value.replace(f'${{{var_name}}}', env_value)
+        return value
+    elif isinstance(value, dict):
+        return {k: _resolve_env_vars(v) for k, v in value.items()}
+    elif isinstance(value, list):
+        return [_resolve_env_vars(item) for item in value]
+    return value
 
 
 class Config:
@@ -32,7 +50,8 @@ class Config:
 
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
-                cls._configs[cache_key] = yaml.safe_load(f) or {}
+                raw_config = yaml.safe_load(f) or {}
+            cls._configs[cache_key] = _resolve_env_vars(raw_config)
             logger.debug(f"{config_type}配置加载成功: {list(cls._configs[cache_key].get('providers', {}).keys())}")
         except yaml.YAMLError as e:
             logger.error(f"{config_type}配置文件 YAML 格式错误: {e}")

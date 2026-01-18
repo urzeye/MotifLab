@@ -1,6 +1,11 @@
 import logging
 import sys
 from pathlib import Path
+
+# 加载 .env 环境变量（必须在其他模块导入之前）
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent.parent / '.env')
+
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from backend.config import Config

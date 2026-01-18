@@ -54,10 +54,9 @@ history/*
 # 但保留 .gitkeep 文件以保持目录结构
 !history/.gitkeep
 
-# API configurations (contain API keys)
+# API configurations
 .gemini/
-/image_providers.yaml
-/text_providers.yaml
+# yaml 配置文件现在使用环境变量引用，可以安全提交
 
 # Logs
 *.log
