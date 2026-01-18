@@ -18,7 +18,7 @@
         >
           {{ isRetrying ? '补全中...' : '一键补全失败图片' }}
         </button>
-        <button class="btn" @click="router.push('/outline')" style="border:1px solid var(--border-color)">
+        <button class="btn" @click="router.push('/redbook/outline')" style="border:1px solid var(--border-color)">
           返回大纲
         </button>
       </div>
@@ -307,7 +307,7 @@ onMounted(async () => {
       // 如果没有失败的，跳转到结果页
       if (!hasFailedImages.value) {
         setTimeout(() => {
-          router.push('/result')
+          router.push('/redbook/result')
         }, 1000)
       }
     },

@@ -260,7 +260,7 @@ const canPublish = computed(() => {
 
 // 方法
 const goBack = () => {
-  router.push('/result')
+  router.push('/redbook/result')
 }
 
 const goHome = () => {

@@ -239,7 +239,7 @@ async function loadRecord(id: string) {
         }
       })
     }
-    router.push('/outline')
+    router.push('/redbook/outline')
   }
 }
 

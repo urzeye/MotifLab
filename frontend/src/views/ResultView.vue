@@ -113,7 +113,7 @@ const startOver = () => {
 }
 
 const goToPublish = () => {
-  router.push('/publish')
+  router.push('/redbook/publish')
 }
 
 const downloadOne = (image: any) => {
