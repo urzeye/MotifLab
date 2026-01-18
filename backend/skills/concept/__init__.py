@@ -1,17 +1,21 @@
 """
-概念图生成专用技能
+概念可视化技能模块
 
-用于将学术文章或复杂概念转换为可视化概念图。
-
-- MapFrameworkSkill: 理论框架映射技能
-- DiscoverSkill: 框架发现技能
-
-注：这些技能将在后续版本中实现，
-当 Concept Visualizer 项目代码迁移完成后。
+将文章转化为概念图的完整技能集：
+- ConceptAnalyzeSkill: 分析文章提取核心概念
+- ConceptMapSkill: 将概念映射到理论框架
+- ConceptDesignSkill: 设计可视化方案和生成提示词
+- ConceptGenerateSkill: 生成概念图图像
 """
 
-# TODO: 从 Concept Visualizer 迁移以下技能
-# from .map_framework import MapFrameworkSkill
-# from .discover import DiscoverSkill
+from .analyze import ConceptAnalyzeSkill
+from .map_framework import ConceptMapSkill
+from .design import ConceptDesignSkill
+from .generate import ConceptGenerateSkill
 
-__all__ = []
+__all__ = [
+    "ConceptAnalyzeSkill",
+    "ConceptMapSkill",
+    "ConceptDesignSkill",
+    "ConceptGenerateSkill"
+]

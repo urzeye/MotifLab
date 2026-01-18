@@ -7,7 +7,7 @@
 import logging
 from typing import Any, Dict, Generator, Optional
 
-from backend.pipelines import RedBookPipeline
+from backend.pipelines import RedBookPipeline, ConceptPipeline
 from backend.core.base_pipeline import BasePipeline, PipelineEvent
 from backend.config import Config
 
@@ -20,7 +20,7 @@ class PipelineService:
     # 可用的流水线类型
     PIPELINE_TYPES = {
         'redbook': RedBookPipeline,
-        # 'concept': ConceptPipeline,  # 后续添加
+        'concept': ConceptPipeline,
     }
 
     def __init__(self):

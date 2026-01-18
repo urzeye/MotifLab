@@ -81,8 +81,13 @@ def create_app():
             return send_from_directory(app.static_folder, 'index.html')
 
         # 处理 Vue Router 的 HTML5 History 模式
+        # 只对非 API 路由返回 index.html
         @app.errorhandler(404)
         def fallback(e):
+            from flask import request
+            # API 路由返回真正的 404 JSON
+            if request.path.startswith('/api/'):
+                return {"success": False, "error": "Not found"}, 404
             return send_from_directory(app.static_folder, 'index.html')
     else:
         @app.route('/')

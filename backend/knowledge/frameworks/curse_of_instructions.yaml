@@ -1,0 +1,24 @@
+canonical_chart: comparison
+confidence: 0.9
+description: 随着指令数量和复杂度的增加，AI Agent 对指令的遵循能力和执行精度反而下降的现象。
+description_en: A phenomenon where increasing the number and complexity of instructions
+  simultaneously reduces an AI agent's adherence and performance.
+discovered_at: '2026-01-18T16:57:24.732239'
+keywords:
+- cognitive load
+- instruction following
+- context density
+- performance degradation
+name: 指令诅咒 (Curse of Instructions)
+name_en: Curse of Instructions
+origin: Cognitive Science / AI Prompt Engineering
+source_quote: Research shows the 'curse of instructions'—too many directives simultaneously
+  reduces adherence.
+suggested_charts:
+- line
+- matrix
+use_when: 当 AI 无法遵循长篇复杂的 Prompt 或出现逻辑遗漏时
+visual_elements:
+- downward curve
+- inverted U-shape
+- interference patterns
