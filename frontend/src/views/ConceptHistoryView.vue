@@ -135,8 +135,17 @@
                 v-for="(img, idx) in selectedRecord.pipeline_data.generate.results"
                 :key="idx"
                 class="image-item"
+                @click="openLightbox(idx)"
               >
                 <img :src="`/${img.output_path}`" :alt="`概念图 ${idx + 1}`" />
+                <div class="image-overlay">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    <line x1="11" y1="8" x2="11" y2="14"></line>
+                    <line x1="8" y1="11" x2="14" y2="11"></line>
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
@@ -167,11 +176,44 @@
         </div>
       </div>
     </div>
+
+    <!-- Image Lightbox -->
+    <div v-if="lightboxOpen" class="lightbox-overlay" @click.self="closeLightbox">
+      <button class="lightbox-close" @click="closeLightbox">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <button class="lightbox-nav lightbox-prev" @click="prevImage" :disabled="lightboxIndex === 0">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      <div class="lightbox-content">
+        <img
+          v-if="currentLightboxImage"
+          :src="`/${currentLightboxImage.output_path}`"
+          :alt="`概念图 ${lightboxIndex + 1}`"
+        />
+        <div class="lightbox-info">
+          {{ lightboxIndex + 1 }} / {{ lightboxImages.length }}
+          <span v-if="currentLightboxImage?.filename" class="lightbox-filename">
+            {{ currentLightboxImage.filename }}
+          </span>
+        </div>
+      </div>
+      <button class="lightbox-nav lightbox-next" @click="nextImage" :disabled="lightboxIndex >= lightboxImages.length - 1">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   getConceptHistoryList,
@@ -189,6 +231,46 @@ const currentTab = ref('all')
 const currentPage = ref(1)
 const totalPages = ref(1)
 const selectedRecord = ref<ConceptHistoryDetail | null>(null)
+
+// Lightbox state
+const lightboxOpen = ref(false)
+const lightboxIndex = ref(0)
+
+const lightboxImages = computed(() => {
+  return selectedRecord.value?.pipeline_data?.generate?.results || []
+})
+
+const currentLightboxImage = computed(() => {
+  return lightboxImages.value[lightboxIndex.value] || null
+})
+
+function openLightbox(index: number) {
+  lightboxIndex.value = index
+  lightboxOpen.value = true
+}
+
+function closeLightbox() {
+  lightboxOpen.value = false
+}
+
+function prevImage() {
+  if (lightboxIndex.value > 0) {
+    lightboxIndex.value--
+  }
+}
+
+function nextImage() {
+  if (lightboxIndex.value < lightboxImages.value.length - 1) {
+    lightboxIndex.value++
+  }
+}
+
+function handleKeydown(e: KeyboardEvent) {
+  if (!lightboxOpen.value) return
+  if (e.key === 'Escape') closeLightbox()
+  if (e.key === 'ArrowLeft') prevImage()
+  if (e.key === 'ArrowRight') nextImage()
+}
 
 async function loadData() {
   loading.value = true
@@ -261,6 +343,11 @@ function getStatusText(status: string) {
 
 onMounted(() => {
   loadData()
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
@@ -554,11 +641,34 @@ onMounted(() => {
 .image-item {
   border-radius: 8px;
   overflow: hidden;
+  cursor: pointer;
+  position: relative;
 }
 
 .image-item img {
   width: 100%;
   display: block;
+  transition: transform 0.3s;
+}
+
+.image-item:hover img {
+  transform: scale(1.05);
+}
+
+.image-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  color: white;
+}
+
+.image-item:hover .image-overlay {
+  opacity: 1;
 }
 
 .theme-info {
@@ -604,5 +714,94 @@ onMounted(() => {
   font-size: 14px;
   line-height: 1.6;
   color: #333;
+}
+
+/* Lightbox */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 8px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.lightbox-close:hover {
+  opacity: 1;
+}
+
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 16px;
+  border-radius: 8px;
+  opacity: 0.7;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.lightbox-nav:hover:not(:disabled) {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.lightbox-nav:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.lightbox-prev {
+  left: 20px;
+}
+
+.lightbox-next {
+  right: 20px;
+}
+
+.lightbox-content {
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lightbox-content img {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.lightbox-info {
+  margin-top: 16px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  text-align: center;
+}
+
+.lightbox-filename {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.6;
 }
 </style>
