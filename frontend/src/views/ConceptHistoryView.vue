@@ -510,7 +510,6 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 1px solid var(--border-color);
 }
 
 .modal-header h2 {
