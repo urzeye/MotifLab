@@ -198,8 +198,20 @@
 
       <div class="image-grid">
         <div v-for="image in generatedImages" :key="image.index" class="image-card">
-          <div v-if="image.url && image.success" class="image-preview">
+          <div
+            v-if="image.url && image.success"
+            class="image-preview"
+            @click="openPreview(image)"
+          >
             <img :src="image.url" :alt="image.title" />
+            <div class="image-overlay">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                <line x1="11" y1="8" x2="11" y2="14"></line>
+                <line x1="8" y1="11" x2="14" y2="11"></line>
+              </svg>
+            </div>
           </div>
           <div v-else-if="image.status === 'generating'" class="image-placeholder">
             <div class="spinner"></div>
@@ -215,6 +227,52 @@
           <div class="image-footer">
             <span class="image-title">{{ image.title || `图 ${image.index}` }}</span>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div v-if="previewImage" class="preview-modal" @click="closePreview">
+      <div class="preview-content" @click.stop>
+        <button class="preview-close" @click="closePreview">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        <img :src="previewImage.url" :alt="previewImage.title" />
+        <div class="preview-info">
+          <h3>{{ previewImage.title }}</h3>
+          <div class="preview-actions">
+            <button class="btn btn-secondary btn-sm" @click="downloadImage(previewImage)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              下载
+            </button>
+          </div>
+        </div>
+        <div class="preview-nav">
+          <button
+            class="nav-btn prev"
+            @click="navigatePreview(-1)"
+            :disabled="!canNavigate(-1)"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+          <button
+            class="nav-btn next"
+            @click="navigatePreview(1)"
+            :disabled="!canNavigate(1)"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
@@ -261,6 +319,9 @@ const mapResult = ref<any>(null)
 const designResult = ref<any>(null)
 const generatedImages = ref<any[]>([])
 const generateProgress = ref({ current: 0, total: 0, success: 0 })
+
+// Image preview state
+const previewImage = ref<any>(null)
 
 // Steps definition
 const steps = ref([
@@ -469,6 +530,39 @@ const resetAndStartNew = () => {
   generatedImages.value = []
   generateProgress.value = { current: 0, total: 0, success: 0 }
   steps.value.forEach(s => s.error = false)
+}
+
+// Image preview methods
+const openPreview = (image: any) => {
+  previewImage.value = image
+  document.body.style.overflow = 'hidden'
+}
+
+const closePreview = () => {
+  previewImage.value = null
+  document.body.style.overflow = ''
+}
+
+const canNavigate = (direction: number) => {
+  if (!previewImage.value) return false
+  const successImages = generatedImages.value.filter(img => img.url && img.success)
+  const currentIndex = successImages.findIndex(img => img.index === previewImage.value.index)
+  const nextIndex = currentIndex + direction
+  return nextIndex >= 0 && nextIndex < successImages.length
+}
+
+const navigatePreview = (direction: number) => {
+  if (!canNavigate(direction)) return
+  const successImages = generatedImages.value.filter(img => img.url && img.success)
+  const currentIndex = successImages.findIndex(img => img.index === previewImage.value.index)
+  previewImage.value = successImages[currentIndex + direction]
+}
+
+const downloadImage = (image: any) => {
+  const link = document.createElement('a')
+  link.href = image.url
+  link.download = `${image.title || 'concept'}.png`
+  link.click()
 }
 
 onMounted(() => {
@@ -1090,5 +1184,138 @@ onMounted(() => {
   .image-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+/* Image overlay on hover */
+.image-preview {
+  cursor: pointer;
+  position: relative;
+}
+
+.image-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  color: white;
+}
+
+.image-preview:hover .image-overlay {
+  opacity: 1;
+}
+
+/* Preview Modal */
+.preview-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.preview-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.preview-content > img {
+  max-width: 100%;
+  max-height: 75vh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+}
+
+.preview-close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 8px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.preview-close:hover {
+  opacity: 1;
+}
+
+.preview-info {
+  margin-top: 16px;
+  text-align: center;
+  color: white;
+}
+
+.preview-info h3 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.preview-nav {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  padding: 0 20px;
+}
+
+.nav-btn {
+  pointer-events: auto;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.nav-btn.prev {
+  margin-left: -80px;
+}
+
+.nav-btn.next {
+  margin-right: -80px;
 }
 </style>
