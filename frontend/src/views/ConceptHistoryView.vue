@@ -598,7 +598,7 @@ onMounted(() => {
   padding: 16px;
   background: #f8f9fa;
   border-radius: 8px;
-  max-height: 300px;
+  max-height: 60vh;
   overflow-y: auto;
   white-space: pre-wrap;
   font-size: 14px;
