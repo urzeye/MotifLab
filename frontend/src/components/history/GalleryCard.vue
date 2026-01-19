@@ -4,8 +4,8 @@
     <!-- 封面区域 -->
     <div class="card-cover" @click="$emit('preview', record.id)">
       <img
-        v-if="record.thumbnail && record.task_id"
-        :src="`/api/images/${record.task_id}/${record.thumbnail}`"
+        v-if="thumbnailUrl"
+        :src="thumbnailUrl"
         alt="cover"
         loading="lazy"
         decoding="async"
@@ -20,8 +20,13 @@
           预览
         </button>
         <button class="overlay-btn primary" @click.stop="$emit('edit', record.id)">
-          编辑
+          {{ record.recordType === 'concept' ? '查看' : '编辑' }}
         </button>
+      </div>
+
+      <!-- 类型标识 -->
+      <div class="type-badge" :class="record.recordType">
+        {{ typeLabel }}
       </div>
 
       <!-- 状态标识 -->
@@ -65,11 +70,12 @@ import { computed } from 'vue'
 interface Record {
   id: string
   title: string
-  status: 'draft' | 'completed' | 'generating'
+  status: 'draft' | 'completed' | 'generating' | 'error' | 'in_progress'
   page_count: number
   updated_at: string
   thumbnail?: string
   task_id?: string
+  recordType?: 'xiaohongshu' | 'concept'  // 记录来源类型
 }
 
 // 定义 Props
@@ -91,9 +97,33 @@ const statusText = computed(() => {
   const map: Record<string, string> = {
     draft: '草稿',
     completed: '已完成',
-    generating: '生成中'
+    generating: '生成中',
+    error: '出错',
+    in_progress: '进行中'
   }
   return map[props.record.status] || props.record.status
+})
+
+/**
+ * 获取缩略图 URL
+ * 根据记录类型返回不同的路径
+ */
+const thumbnailUrl = computed(() => {
+  if (!props.record.thumbnail || !props.record.task_id) return ''
+
+  if (props.record.recordType === 'concept') {
+    // 概念可视化图片路径
+    return `/output/concepts/${props.record.task_id}/${props.record.thumbnail}`
+  }
+  // 小红书图文路径
+  return `/api/images/${props.record.task_id}/${props.record.thumbnail}`
+})
+
+/**
+ * 获取类型标签
+ */
+const typeLabel = computed(() => {
+  return props.record.recordType === 'concept' ? '概念图' : '图文'
 })
 
 /**
@@ -210,6 +240,28 @@ const formattedDate = computed(() => {
   color: white;
 }
 
+/* 类型标识 */
+.type-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  backdrop-filter: blur(4px);
+}
+
+.type-badge.concept {
+  background: rgba(114, 46, 209, 0.85);
+}
+
+.type-badge.xiaohongshu {
+  background: rgba(255, 36, 66, 0.85);
+}
+
 /* 状态标识 */
 .status-badge {
   position: absolute;
@@ -232,8 +284,13 @@ const formattedDate = computed(() => {
   background: rgba(0, 0, 0, 0.5);
 }
 
-.status-badge.generating {
+.status-badge.generating,
+.status-badge.in_progress {
   background: rgba(24, 144, 255, 0.9);
+}
+
+.status-badge.error {
+  background: rgba(255, 77, 79, 0.9);
 }
 
 /* 底部区域 */

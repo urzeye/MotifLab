@@ -131,7 +131,11 @@ import {
   type HistoryRecord,
   regenerateImage as apiRegenerateImage,
   updateHistory,
-  scanAllTasks
+  scanAllTasks,
+  // 概念可视化 API
+  getConceptHistoryList,
+  deleteConceptHistory,
+  type ConceptHistoryRecord
 } from '../api'
 import { useGeneratorStore } from '../stores/generator'
 
@@ -145,8 +149,21 @@ const router = useRouter()
 const route = useRoute()
 const store = useGeneratorStore()
 
+// 统一记录类型（整合小红书和概念可视化）
+interface UnifiedRecord {
+  id: string
+  title: string
+  created_at: string
+  updated_at: string
+  status: string
+  thumbnail: string | null
+  page_count: number
+  task_id: string | null
+  recordType: 'xiaohongshu' | 'concept'
+}
+
 // 数据状态
-const records = ref<HistoryRecord[]>([])
+const records = ref<UnifiedRecord[]>([])
 const loading = ref(false)
 const stats = ref<any>(null)
 const currentTab = ref('all')
@@ -161,32 +178,123 @@ const showOutlineModal = ref(false)
 const isScanning = ref(false)
 
 /**
- * 加载历史记录列表
+ * 将小红书记录转换为统一格式
+ */
+function convertXiaohongshuRecord(record: HistoryRecord): UnifiedRecord {
+  return {
+    id: record.id,
+    title: record.title,
+    created_at: record.created_at,
+    updated_at: record.updated_at,
+    status: record.status,
+    thumbnail: record.thumbnail,
+    page_count: record.page_count,
+    task_id: record.task_id,
+    recordType: 'xiaohongshu'
+  }
+}
+
+/**
+ * 将概念可视化记录转换为统一格式
+ */
+function convertConceptRecord(record: ConceptHistoryRecord): UnifiedRecord {
+  return {
+    id: record.id,
+    title: record.title,
+    created_at: record.created_at,
+    updated_at: record.updated_at,
+    status: record.status,
+    thumbnail: record.thumbnail,
+    page_count: record.image_count || 0,
+    task_id: record.task_id,
+    recordType: 'concept'
+  }
+}
+
+/**
+ * 加载历史记录列表（整合小红书和概念可视化）
  */
 async function loadData() {
   loading.value = true
   try {
-    let statusFilter = currentTab.value === 'all' ? undefined : currentTab.value
-    const res = await getHistoryList(currentPage.value, 12, statusFilter)
-    if (res.success) {
-      records.value = res.records
-      totalPages.value = res.total_pages
+    const statusFilter = currentTab.value === 'all' ? undefined : currentTab.value
+
+    // 并行请求两种历史记录
+    const [xiaohongshuRes, conceptRes] = await Promise.all([
+      getHistoryList(1, 100, statusFilter),  // 获取更多以便合并排序
+      getConceptHistoryList(1, 100, statusFilter)
+    ])
+
+    // 合并记录
+    const allRecords: UnifiedRecord[] = []
+
+    if (xiaohongshuRes.success && xiaohongshuRes.records) {
+      allRecords.push(...xiaohongshuRes.records.map(convertXiaohongshuRecord))
     }
+
+    if (conceptRes.success && conceptRes.data?.records) {
+      allRecords.push(...conceptRes.data.records.map(convertConceptRecord))
+    }
+
+    // 按更新时间倒序排序
+    allRecords.sort((a, b) => {
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    })
+
+    // 简单的前端分页
+    const pageSize = 12
+    const start = (currentPage.value - 1) * pageSize
+    const end = start + pageSize
+
+    records.value = allRecords.slice(start, end)
+    totalPages.value = Math.ceil(allRecords.length / pageSize)
   } catch(e) {
-    console.error(e)
+    console.error('加载历史记录失败:', e)
   } finally {
     loading.value = false
   }
 }
 
 /**
- * 加载统计数据
+ * 加载统计数据（合并小红书和概念可视化）
  */
 async function loadStats() {
   try {
-    const res = await getHistoryStats()
-    if (res.success) stats.value = res
-  } catch(e) {}
+    // 并行获取两种记录用于统计
+    const [xiaohongshuRes, conceptRes] = await Promise.all([
+      getHistoryList(1, 100),
+      getConceptHistoryList(1, 100)
+    ])
+
+    let total = 0
+    let completed = 0
+    let draft = 0
+
+    // 统计小红书记录
+    if (xiaohongshuRes.success && xiaohongshuRes.records) {
+      xiaohongshuRes.records.forEach(r => {
+        total++
+        if (r.status === 'completed') completed++
+        else if (r.status === 'draft') draft++
+      })
+    }
+
+    // 统计概念可视化记录
+    if (conceptRes.success && conceptRes.data?.records) {
+      conceptRes.data.records.forEach(r => {
+        total++
+        if (r.status === 'completed') completed++
+        else if (r.status === 'draft' || r.status === 'in_progress') draft++
+      })
+    }
+
+    stats.value = {
+      total,
+      by_status: { completed, draft }
+    }
+  } catch(e) {
+    console.error('加载统计数据失败:', e)
+  }
 }
 
 /**
@@ -199,7 +307,7 @@ function switchTab(tab: string) {
 }
 
 /**
- * 搜索历史记录
+ * 搜索历史记录（搜索所有记录的标题）
  */
 async function handleSearch() {
   if (!searchKeyword.value.trim()) {
@@ -208,20 +316,63 @@ async function handleSearch() {
   }
   loading.value = true
   try {
-    const res = await searchHistory(searchKeyword.value)
-    if (res.success) {
-      records.value = res.records
-      totalPages.value = 1
+    const keyword = searchKeyword.value.toLowerCase()
+
+    // 获取所有记录然后在前端过滤
+    const [xiaohongshuRes, conceptRes] = await Promise.all([
+      getHistoryList(1, 100),
+      getConceptHistoryList(1, 100)
+    ])
+
+    const allRecords: UnifiedRecord[] = []
+
+    if (xiaohongshuRes.success && xiaohongshuRes.records) {
+      allRecords.push(...xiaohongshuRes.records.map(convertXiaohongshuRecord))
     }
-  } catch(e) {} finally {
+
+    if (conceptRes.success && conceptRes.data?.records) {
+      allRecords.push(...conceptRes.data.records.map(convertConceptRecord))
+    }
+
+    // 按标题搜索
+    const filtered = allRecords.filter(r =>
+      r.title.toLowerCase().includes(keyword)
+    )
+
+    // 按更新时间排序
+    filtered.sort((a, b) =>
+      new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    )
+
+    records.value = filtered
+    totalPages.value = 1
+  } catch(e) {
+    console.error('搜索失败:', e)
+  } finally {
     loading.value = false
   }
 }
 
 /**
- * 加载记录并跳转到编辑页
+ * 根据记录 ID 查找统一记录
+ */
+function findUnifiedRecord(id: string): UnifiedRecord | undefined {
+  return records.value.find(r => r.id === id)
+}
+
+/**
+ * 加载记录并跳转到编辑/查看页
  */
 async function loadRecord(id: string) {
+  const unifiedRecord = findUnifiedRecord(id)
+
+  if (unifiedRecord?.recordType === 'concept') {
+    // 概念可视化记录：跳转到概念历史详情页
+    router.push(`/concept/history?view=${id}`)
+    return
+  }
+
+  // 小红书记录：原有逻辑
   const res = await getHistory(id)
   if (res.success && res.record) {
     store.setTopic(res.record.title)
@@ -244,9 +395,18 @@ async function loadRecord(id: string) {
 }
 
 /**
- * 查看图片
+ * 查看图片/预览
  */
 async function viewImages(id: string) {
+  const unifiedRecord = findUnifiedRecord(id)
+
+  if (unifiedRecord?.recordType === 'concept') {
+    // 概念可视化记录：跳转到概念历史详情页
+    router.push(`/concept/history?view=${id}`)
+    return
+  }
+
+  // 小红书记录：打开图片查看器
   const res = await getHistory(id)
   if (res.success) viewingRecord.value = res.record
 }
@@ -263,11 +423,18 @@ function closeGallery() {
  * 确认删除
  */
 async function confirmDelete(record: any) {
-  if(confirm('确定删除吗？')) {
+  if (!confirm('确定删除吗？')) return
+
+  if (record.recordType === 'concept') {
+    // 删除概念可视化记录
+    await deleteConceptHistory(record.id)
+  } else {
+    // 删除小红书记录
     await deleteHistory(record.id)
-    loadData()
-    loadStats()
   }
+
+  loadData()
+  loadStats()
 }
 
 /**
