@@ -1,6 +1,7 @@
 """Google GenAI 图片生成器"""
 import logging
 import base64
+import requests
 from typing import Dict, Any, Optional
 from google import genai
 from google.genai import types
@@ -352,6 +353,72 @@ class GoogleGenAIGenerator(ImageGeneratorBase):
         logger.info(f"Google GenAI 生成图片: model={model}, aspect_ratio={aspect_ratio}")
         logger.debug(f"  prompt 长度: {len(prompt)} 字符, 有参考图: {reference_image is not None}")
 
+        # Imagen 模型使用不同的 API 端点 (:predict)
+        if "imagen" in model.lower():
+            return self._generate_with_imagen(prompt, aspect_ratio, model)
+
+        # Gemini 模型使用 generateContent API
+        return self._generate_with_gemini(prompt, aspect_ratio, temperature, model, reference_image)
+
+    def _generate_with_imagen(
+        self,
+        prompt: str,
+        aspect_ratio: str,
+        model: str
+    ) -> bytes:
+        """使用 Imagen API (:predict 端点) 生成图片"""
+        logger.info(f"使用 Imagen API: model={model}")
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:predict"
+        params = {"key": self.api_key}
+
+        data = {
+            "instances": [{"prompt": prompt}],
+            "parameters": {
+                "sampleCount": 1,
+                "aspectRatio": aspect_ratio
+            }
+        }
+
+        try:
+            resp = requests.post(url, params=params, json=data, timeout=120)
+
+            if resp.status_code != 200:
+                error_msg = parse_genai_error(Exception(resp.text))
+                raise ValueError(error_msg)
+
+            result = resp.json()
+
+            if "predictions" in result and result["predictions"]:
+                img_b64 = result["predictions"][0].get("bytesBase64Encoded")
+                if img_b64:
+                    image_data = base64.b64decode(img_b64)
+                    logger.info(f"✅ Imagen 图片生成成功: {len(image_data)} bytes")
+                    return image_data
+
+            raise ValueError(
+                "❌ Imagen API 返回为空\n\n"
+                "【可能原因】\n"
+                "1. 提示词触发了安全过滤\n"
+                "2. API 响应格式异常\n\n"
+                "【解决方案】\n"
+                "修改提示词，避免敏感内容后重试"
+            )
+
+        except requests.exceptions.Timeout:
+            raise ValueError("⏱️ Imagen API 请求超时，请稍后重试")
+        except requests.exceptions.RequestException as e:
+            raise ValueError(f"🌐 网络错误: {str(e)}")
+
+    def _generate_with_gemini(
+        self,
+        prompt: str,
+        aspect_ratio: str,
+        temperature: float,
+        model: str,
+        reference_image: Optional[bytes]
+    ) -> bytes:
+        """使用 Gemini generateContent API 生成图片"""
         # 构建 parts 列表
         parts = []
 
@@ -393,14 +460,10 @@ class GoogleGenAIGenerator(ImageGeneratorBase):
 
         image_config_kwargs = {}
 
-        # gemini-2.0-flash-exp-image-generation 不支持 aspect_ratio
-        # 只有 Imagen 或其他特定模型支持
-        if "imagen" in model.lower() or self.is_vertexai:
-            image_config_kwargs["aspect_ratio"] = aspect_ratio
-
         # 只有在 Vertex AI 模式下才支持 output_mime_type
         if self.is_vertexai:
             image_config_kwargs["output_mime_type"] = "image/png"
+            image_config_kwargs["aspect_ratio"] = aspect_ratio
 
         # 构建生成配置
         config_kwargs = {
