@@ -516,6 +516,7 @@ onMounted(() => {
 .modal-header h2 {
   margin: 0;
   font-size: 20px;
+  color: #1a1a1a;
 }
 
 .close-btn {
@@ -542,7 +543,7 @@ onMounted(() => {
 .article-section h3 {
   font-size: 16px;
   margin: 0 0 16px;
-  color: var(--text-main);
+  color: #1a1a1a;
 }
 
 .images-grid {
