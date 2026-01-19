@@ -493,4 +493,28 @@ def create_concept_blueprint():
             logger.exception(f"删除历史记录失败: {e}")
             return jsonify({"success": False, "error": str(e)}), 500
 
+    @bp.route('/history/repair', methods=['POST'])
+    def repair_history():
+        """
+        修复历史记录的图片信息
+
+        扫描输出目录，补充缺失的 image_count、thumbnail 和 generate.results
+
+        Response:
+        {
+            "success": true,
+            "data": {
+                "repaired": 2,
+                "failed": 1
+            }
+        }
+        """
+        try:
+            service = get_concept_history_service()
+            result = service.repair_all_records()
+            return jsonify({"success": True, "data": result})
+        except Exception as e:
+            logger.exception(f"修复历史记录失败: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
+
     return bp

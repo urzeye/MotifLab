@@ -328,6 +328,84 @@ class ConceptHistoryService:
                 return self.get_record(idx_record["id"])
         return None
 
+    def repair_record_images(self, record_id: str) -> bool:
+        """
+        修复记录的图片信息
+
+        扫描输出目录，填充 image_count、thumbnail 和 pipeline_data.generate.results
+
+        Args:
+            record_id: 记录 ID
+
+        Returns:
+            bool: 修复是否成功
+        """
+        record = self.get_record(record_id)
+        if not record:
+            return False
+
+        task_id = record.get("task_id")
+        if not task_id:
+            return False
+
+        # 查找图片目录
+        project_root = Path(__file__).parent.parent.parent
+        task_dir = project_root / "output" / "concepts" / task_id
+
+        if not task_dir.exists():
+            logger.warning(f"图片目录不存在: {task_dir}")
+            return False
+
+        # 扫描 PNG 文件
+        images = sorted([f.name for f in task_dir.glob("*.png")])
+        if not images:
+            logger.warning(f"目录中没有图片: {task_dir}")
+            return False
+
+        # 构建 generate.results
+        results = []
+        for img_name in images:
+            results.append({
+                "output_path": f"output/concepts/{task_id}/{img_name}",
+                "filename": img_name
+            })
+
+        # 更新记录
+        self.update_record(
+            record_id,
+            thumbnail=images[0],
+            image_count=len(images),
+            status=ConceptRecordStatus.COMPLETED,
+            pipeline_data={"generate": {"results": results}}
+        )
+
+        logger.info(f"修复记录图片信息: {record_id}, 找到 {len(images)} 张图片")
+        return True
+
+    def repair_all_records(self) -> Dict:
+        """
+        修复所有缺失图片信息的记录
+
+        Returns:
+            Dict: 修复结果统计
+        """
+        index = self._load_index()
+        repaired = 0
+        failed = 0
+
+        for idx_record in index.get("records", []):
+            record_id = idx_record["id"]
+            record = self.get_record(record_id)
+
+            # 检查是否需要修复
+            if record and record.get("image_count", 0) == 0 and record.get("task_id"):
+                if self.repair_record_images(record_id):
+                    repaired += 1
+                else:
+                    failed += 1
+
+        return {"repaired": repaired, "failed": failed}
+
 
 # 单例实例
 _service_instance = None
