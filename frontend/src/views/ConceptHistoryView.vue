@@ -566,6 +566,7 @@ onMounted(() => {
   padding: 12px;
   background: #f8f9fa;
   border-radius: 8px;
+  color: #1a1a1a;
 }
 
 .concepts-list {
@@ -578,17 +579,19 @@ onMounted(() => {
   padding: 12px;
   background: #f8f9fa;
   border-radius: 8px;
+  color: #1a1a1a;
 }
 
 .concept-name {
   font-weight: 600;
   display: block;
   margin-bottom: 4px;
+  color: #1a1a1a;
 }
 
 .concept-desc {
   font-size: 13px;
-  color: var(--text-sub);
+  color: #666;
 }
 
 .article-content {
@@ -600,5 +603,6 @@ onMounted(() => {
   white-space: pre-wrap;
   font-size: 14px;
   line-height: 1.6;
+  color: #333;
 }
 </style>
