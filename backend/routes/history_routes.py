@@ -13,6 +13,7 @@ import os
 import io
 import zipfile
 import logging
+import requests
 from flask import Blueprint, request, jsonify, send_file
 from backend.services.history import get_history_service
 
@@ -420,6 +421,10 @@ def create_history_blueprint():
         """
         下载历史记录的所有图片为 ZIP 文件
 
+        支持两种存储模式：
+        - local: 从本地 history/{task_id}/ 目录读取
+        - supabase: 从 Supabase Storage 下载
+
         路径参数：
         - record_id: 记录 ID
 
@@ -438,22 +443,39 @@ def create_history_blueprint():
                 }), 404
 
             task_id = record.get('images', {}).get('task_id')
+            images = record.get('images', {}).get('generated', [])
+
             if not task_id:
                 return jsonify({
                     "success": False,
                     "error": "该记录没有关联的任务图片"
                 }), 404
 
-            # 获取任务目录
-            task_dir = os.path.join(history_service.history_dir, task_id)
-            if not os.path.exists(task_dir):
+            if not images:
                 return jsonify({
                     "success": False,
-                    "error": f"任务目录不存在：{task_id}"
+                    "error": "该记录没有已生成的图片"
                 }), 404
 
-            # 创建内存中的 ZIP 文件
-            zip_buffer = _create_images_zip(task_dir)
+            # 根据存储模式选择下载方式
+            if history_service.is_supabase_mode:
+                # Supabase 模式：从 Storage 下载
+                zip_buffer = _create_images_zip_from_supabase(task_id, images)
+            else:
+                # 本地模式：从本地目录读取
+                task_dir = os.path.join(history_service.history_dir, task_id)
+                if not os.path.exists(task_dir):
+                    return jsonify({
+                        "success": False,
+                        "error": f"任务目录不存在：{task_id}"
+                    }), 404
+                zip_buffer = _create_images_zip(task_dir)
+
+            if zip_buffer is None:
+                return jsonify({
+                    "success": False,
+                    "error": "无法获取图片文件，可能图片已被删除"
+                }), 404
 
             # 生成安全的下载文件名
             title = record.get('title', 'images')
@@ -469,6 +491,7 @@ def create_history_blueprint():
 
         except Exception as e:
             error_msg = str(e)
+            logger.error(f"下载失败: {error_msg}")
             return jsonify({
                 "success": False,
                 "error": f"下载失败。\n错误详情: {error_msg}"
@@ -509,6 +532,55 @@ def _create_images_zip(task_dir: str) -> io.BytesIO:
                 zf.write(file_path, archive_name)
 
     # 将指针移到开始位置
+    memory_file.seek(0)
+    return memory_file
+
+
+def _create_images_zip_from_supabase(task_id: str, images: list) -> io.BytesIO:
+    """
+    从 Supabase Storage 下载图片并创建 ZIP 文件
+
+    Args:
+        task_id: 任务 ID
+        images: 图片文件名列表
+
+    Returns:
+        io.BytesIO: 内存中的 ZIP 文件，如果没有成功下载任何图片则返回 None
+    """
+    from backend.utils.supabase_client import SUPABASE_URL, STORAGE_BUCKET
+
+    memory_file = io.BytesIO()
+    downloaded_count = 0
+
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for i, filename in enumerate(images):
+            # 跳过缩略图
+            if filename.startswith('thumb_'):
+                continue
+
+            # 构造 Supabase Storage URL
+            url = f"{SUPABASE_URL}/storage/v1/object/public/{STORAGE_BUCKET}/{task_id}/{filename}"
+
+            try:
+                resp = requests.get(url, timeout=30)
+                if resp.status_code == 200:
+                    # 生成归档文件名
+                    try:
+                        index = int(filename.split('.')[0])
+                        archive_name = f"page_{index + 1}.png"
+                    except ValueError:
+                        archive_name = filename
+
+                    zf.writestr(archive_name, resp.content)
+                    downloaded_count += 1
+                else:
+                    logger.warning(f"无法下载图片 {filename}: HTTP {resp.status_code}")
+            except Exception as e:
+                logger.error(f"下载图片失败 {filename}: {e}")
+
+    if downloaded_count == 0:
+        return None
+
     memory_file.seek(0)
     return memory_file
 
