@@ -81,6 +81,13 @@ class TextChatClient:
         if not images:
             return text
 
+        # 检查API是否支持图片（DeepSeek API不支持image_url）
+        # 如果base_url包含deepseek.com，则不发送图片，而是在文本中说明
+        if "deepseek.com" in self.base_url:
+            # DeepSeek API不支持图片，将图片信息添加到文本提示中
+            image_info = f"\n\n注意：用户上传了 {len(images)} 张参考图片，但由于当前API限制，无法直接发送图片数据。请根据以下描述生成内容：用户提供了视觉参考材料，请生成与视觉内容相关的文本。"
+            return text + image_info
+
         content = [{"type": "text", "text": text}]
 
         for img in images:
