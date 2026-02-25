@@ -1,12 +1,26 @@
 """Image API 图片生成器"""
 import logging
 import base64
+import os
 import requests
 from typing import Dict, Any, Optional, List, Union
 from .base import ImageGeneratorBase
 from ..utils.image_compressor import compress_image
 
 logger = logging.getLogger(__name__)
+
+
+def _get_timeout(env_key: str, default: int) -> int:
+    """读取整型超时配置，非法值回退默认值"""
+    try:
+        value = int(os.getenv(env_key, str(default)))
+        return value if value > 0 else default
+    except Exception:
+        return default
+
+
+IMAGE_API_TIMEOUT = _get_timeout("IMAGE_API_TIMEOUT", 300)
+IMAGE_DOWNLOAD_TIMEOUT = _get_timeout("IMAGE_DOWNLOAD_TIMEOUT", 60)
 
 
 class ImageApiGenerator(ImageGeneratorBase):
@@ -202,7 +216,7 @@ class ImageApiGenerator(ImageGeneratorBase):
         api_url = f"{self.base_url}{self.endpoint_type}"
         logger.debug(f"  发送请求到: {api_url}")
         def _post_once() -> requests.Response:
-            return requests.post(api_url, headers=headers, json=payload, timeout=300)
+            return requests.post(api_url, headers=headers, json=payload, timeout=IMAGE_API_TIMEOUT)
 
         response = _post_once()
 
@@ -349,7 +363,7 @@ class ImageApiGenerator(ImageGeneratorBase):
         api_url = f"{self.base_url}{self.endpoint_type}"
         logger.info(f"Chat API 生成图片: {api_url}, model={model}")
 
-        response = requests.post(api_url, headers=headers, json=payload, timeout=300)
+        response = requests.post(api_url, headers=headers, json=payload, timeout=IMAGE_API_TIMEOUT)
 
         if response.status_code != 200:
             error_detail = response.text[:500]
@@ -431,7 +445,7 @@ class ImageApiGenerator(ImageGeneratorBase):
         """下载图片并返回二进制数据"""
         logger.info(f"下载图片: {url[:100]}...")
         try:
-            response = requests.get(url, timeout=60)
+            response = requests.get(url, timeout=IMAGE_DOWNLOAD_TIMEOUT)
             if response.status_code == 200:
                 logger.info(f"✅ 图片下载成功: {len(response.content)} bytes")
                 return response.content

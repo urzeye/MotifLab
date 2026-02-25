@@ -1,11 +1,25 @@
 """OpenAI 兼容接口图片生成器"""
 import logging
 import base64
+import os
 from typing import Dict, Any
 import requests
 from .base import ImageGeneratorBase
 
 logger = logging.getLogger(__name__)
+
+
+def _get_timeout(env_key: str, default: int) -> int:
+    """读取整型超时配置，非法值回退默认值"""
+    try:
+        value = int(os.getenv(env_key, str(default)))
+        return value if value > 0 else default
+    except Exception:
+        return default
+
+
+IMAGE_GEN_TIMEOUT = _get_timeout("IMAGE_GEN_TIMEOUT", 300)
+IMAGE_DOWNLOAD_TIMEOUT = _get_timeout("IMAGE_DOWNLOAD_TIMEOUT", 60)
 
 
 class OpenAICompatibleGenerator(ImageGeneratorBase):
@@ -113,7 +127,7 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
         if quality and model.startswith('dall-e'):
             payload["quality"] = quality
 
-        response = requests.post(url, headers=headers, json=payload, timeout=300)
+        response = requests.post(url, headers=headers, json=payload, timeout=IMAGE_GEN_TIMEOUT)
 
         if response.status_code != 200:
             error_detail = response.text[:500]
@@ -158,7 +172,7 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
         # 处理URL格式
         elif "url" in image_data:
             logger.debug(f"  下载图片 URL...")
-            img_response = requests.get(image_data["url"], timeout=60)
+            img_response = requests.get(image_data["url"], timeout=IMAGE_DOWNLOAD_TIMEOUT)
             if img_response.status_code == 200:
                 logger.info(f"✅ OpenAI Images API 图片生成成功: {len(img_response.content)} bytes")
                 return img_response.content
@@ -213,7 +227,7 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
             "temperature": 1.0
         }
 
-        response = requests.post(url, headers=headers, json=payload, timeout=300)
+        response = requests.post(url, headers=headers, json=payload, timeout=IMAGE_GEN_TIMEOUT)
 
         if response.status_code != 200:
             error_detail = response.text[:500]
@@ -301,7 +315,7 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
         """下载图片并返回二进制数据"""
         logger.info(f"下载图片: {url[:100]}...")
         try:
-            response = requests.get(url, timeout=60)
+            response = requests.get(url, timeout=IMAGE_DOWNLOAD_TIMEOUT)
             if response.status_code == 200:
                 logger.info(f"✅ 图片下载成功: {len(response.content)} bytes")
                 return response.content
