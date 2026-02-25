@@ -53,6 +53,8 @@ class Config:
     PORT = 12398
     CORS_ORIGINS = ['http://localhost:5173', 'http://localhost:3000']
     OUTPUT_DIR = 'output'
+    # 允许多张较大参考图上传（例如 5 * 20MB）并留有协议开销余量
+    MAX_CONTENT_LENGTH = 512 * 1024 * 1024
 
     _configs: Dict[str, Any] = {}
 

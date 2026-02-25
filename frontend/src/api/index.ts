@@ -94,6 +94,7 @@ export interface Page {
   index: number
   type: 'cover' | 'content' | 'summary'
   content: string
+  user_image?: string // 页面级参考图（Base64）
 }
 
 export interface OutlineResponse {

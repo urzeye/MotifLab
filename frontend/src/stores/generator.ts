@@ -293,6 +293,8 @@ export const useGeneratorStore = defineStore('generator', {
       this.progress.current = 0
       this.progress.total = this.outline.pages.length
       this.progress.status = 'generating'
+      // 清空上一轮生成的标题/文案/标签，避免显示陈旧内容
+      this.clearContent()
       // 为每个页面创建对应的图片占位对象
       this.images = this.outline.pages.map(page => ({
         index: page.index,
