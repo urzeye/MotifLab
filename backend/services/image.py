@@ -4,6 +4,7 @@ import os
 import uuid
 import time
 import threading
+import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, Any, Generator, List, Optional, Tuple
 from backend.config import Config
@@ -206,6 +207,11 @@ class ImageService:
                     user_topic=user_topic if user_topic else "未提供"
                 )
 
+            prompt_fingerprint = hashlib.sha1(prompt.encode('utf-8')).hexdigest()[:12]
+            logger.debug(
+                f"  prompt[{index}] sha1={prompt_fingerprint} preview={prompt[:120].replace(chr(10), ' ')}"
+            )
+
             # 调用生成器生成图片
             if self.provider_config.get('type') == 'google_genai':
                 logger.debug(f"  使用 Google GenAI 生成器")
@@ -216,6 +222,25 @@ class ImageService:
                     model=self.provider_config.get('model', 'gemini-3-pro-image-preview'),
                     reference_image=reference_image,
                 )
+            elif self.provider_config.get('type') == 'dashscope':
+                logger.debug(f"  使用 DashScope SDK 生成器")
+
+                reference_images = []
+                if user_images:
+                    reference_images.extend(user_images)
+                if reference_image:
+                    reference_images.append(reference_image)
+
+                image_data = self.generator.generate_image(
+                    prompt=prompt,
+                    model=self.provider_config.get('model'),
+                    size=self.provider_config.get('size'),
+                    negative_prompt=self.provider_config.get('negative_prompt'),
+                    prompt_extend=self.provider_config.get('prompt_extend', True),
+                    watermark=self.provider_config.get('watermark', False),
+                    n=self.provider_config.get('n', 1),
+                    reference_images=reference_images if reference_images else None,
+                )
             elif self.provider_config.get('type') == 'image_api':
                 logger.debug(f"  使用 Image API 生成器")
                 # Image API 支持多张参考图片
@@ -223,8 +248,15 @@ class ImageService:
                 reference_images = []
                 if user_images:
                     reference_images.extend(user_images)
+
+                base_url = (self.provider_config.get('base_url') or '').lower()
                 if reference_image:
-                    reference_images.append(reference_image)
+                    # SiliconFlow：内容页如果强制使用封面作为参考图，容易导致每页都“像封面”。
+                    # 仅当用户显式提供了参考图时，才把封面也拼进去增强风格一致性。
+                    if 'siliconflow.cn' in base_url and not user_images:
+                        pass
+                    else:
+                        reference_images.append(reference_image)
 
                 image_data = self.generator.generate_image(
                     prompt=prompt,
@@ -242,9 +274,11 @@ class ImageService:
                     quality=self.provider_config.get('quality', 'standard'),
                 )
 
-            # 保存图片（使用当前任务目录）
+            # 保存图片（避免依赖全局 current_task_dir，按 task_id 推导目录，防止并发/重试时目录丢失）
             filename = f"{index}.png"
-            self._save_image(image_data, filename, self.current_task_dir)
+            task_dir = os.path.join(self.history_root_dir, task_id)
+            os.makedirs(task_dir, exist_ok=True)
+            self._save_image(image_data, filename, task_dir)
             logger.info(f"✅ 图片 [{index}] 生成成功: {filename}")
 
             return (index, True, filename, None, image_data)
@@ -402,6 +436,13 @@ class ImageService:
         if other_pages:
             # 检查是否启用高并发模式
             high_concurrency = self.provider_config.get('high_concurrency', False)
+
+            provider_type = (self.provider_config.get('type') or '').lower()
+            base_url = (self.provider_config.get('base_url') or '').lower()
+            if high_concurrency and provider_type == 'image_api' and 'siliconflow.cn' in base_url:
+                high_concurrency = False
+            if high_concurrency and provider_type == 'dashscope':
+                high_concurrency = False
 
             if high_concurrency:
                 # 高并发模式：并行生成

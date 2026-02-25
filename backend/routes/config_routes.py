@@ -298,6 +298,9 @@ def _test_provider_connection(provider_type: str, config: dict) -> dict:
     elif provider_type == 'image_api':
         return _test_image_api(config)
 
+    elif provider_type == 'dashscope':
+        return _test_dashscope(config)
+
     else:
         raise ValueError(f"不支持的类型: {provider_type}")
 
@@ -395,6 +398,39 @@ def _test_openai_compatible(config: dict, test_prompt: str) -> dict:
     result_text = result['choices'][0]['message']['content']
 
     return _check_response(result_text)
+
+
+def _test_dashscope(config: dict) -> dict:
+    """测试 DashScope SDK 图片生成服务"""
+    from dashscope import MultiModalConversation
+    import dashscope
+
+    if config.get('base_url'):
+        dashscope.base_http_api_url = config['base_url']
+
+    response = MultiModalConversation.call(
+        api_key=config['api_key'],
+        model=config.get('model') or 'qwen-image-max',
+        messages=[
+            {
+                "role": "user",
+                "content": [{"text": "画一只小猫"}],
+            }
+        ],
+        result_format='message',
+        stream=False,
+        watermark=False,
+        prompt_extend=True,
+        size='768*768',
+    )
+
+    if response.status_code == 200:
+        return {
+            "success": True,
+            "message": "连接成功！仅代表连接稳定，不确定是否可以稳定支持图片生成"
+        }
+
+    raise Exception(f"HTTP {response.status_code}: {getattr(response, 'message', '')}")
 
 
 def _test_image_api(config: dict) -> dict:
