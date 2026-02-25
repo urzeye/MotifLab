@@ -364,7 +364,12 @@ def _test_openai_compatible(config: dict, test_prompt: str) -> dict:
     """测试 OpenAI 兼容接口"""
     import requests
 
-    base_url = config['base_url'].rstrip('/').rstrip('/v1') if config.get('base_url') else 'https://api.openai.com'
+    if config.get('base_url'):
+        base_url = config['base_url'].rstrip('/')
+        if base_url.endswith('/v1'):
+            base_url = base_url[:-3]
+    else:
+        base_url = 'https://api.openai.com'
     url = f"{base_url}/v1/chat/completions"
 
     payload = {
@@ -396,7 +401,12 @@ def _test_image_api(config: dict) -> dict:
     """测试图片 API 连接"""
     import requests
 
-    base_url = config['base_url'].rstrip('/').rstrip('/v1') if config.get('base_url') else 'https://api.openai.com'
+    if config.get('base_url'):
+        base_url = config['base_url'].rstrip('/')
+        if base_url.endswith('/v1'):
+            base_url = base_url[:-3]
+    else:
+        base_url = 'https://api.openai.com'
     url = f"{base_url}/v1/models"
 
     response = requests.get(

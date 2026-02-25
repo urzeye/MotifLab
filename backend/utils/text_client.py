@@ -48,7 +48,9 @@ class TextChatClient:
                 "解决方案：在系统设置页面编辑文本生成服务商，填写 API Key"
             )
 
-        self.base_url = (base_url or "https://api.openai.com").rstrip('/').rstrip('/v1')
+        self.base_url = (base_url or "https://api.openai.com").rstrip('/')
+        if self.base_url.endswith('/v1'):
+            self.base_url = self.base_url[:-3]
 
         # 支持自定义端点路径
         endpoint = endpoint_type or '/v1/chat/completions'
