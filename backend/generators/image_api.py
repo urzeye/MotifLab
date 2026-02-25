@@ -19,6 +19,8 @@ class ImageApiGenerator(ImageGeneratorBase):
         self.model = config.get('model', 'default-model')
         self.default_aspect_ratio = config.get('default_aspect_ratio', '3:4')
         self.image_size = config.get('image_size', '4K')
+        # 添加对 SiliconFlow API 的 size 参数支持
+        self.size = config.get('size', '1024x1024')  # SiliconFlow API 需要的尺寸格式
 
         # 支持自定义端点路径
         endpoint_type = config.get('endpoint_type', '/v1/images/generations')
@@ -111,7 +113,8 @@ class ImageApiGenerator(ImageGeneratorBase):
             "prompt": prompt,
             "response_format": "b64_json",
             "aspect_ratio": aspect_ratio,
-            "image_size": self.image_size
+            "image_size": self.image_size,
+            "size": self.size  # SiliconFlow API 需要的 size 参数
         }
 
         # 收集所有参考图片
