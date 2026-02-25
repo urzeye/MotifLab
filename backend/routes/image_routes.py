@@ -15,6 +15,7 @@ import base64
 import logging
 from flask import Blueprint, request, jsonify, Response, send_file
 from backend.services.image import get_image_service
+from backend.middleware import is_auth_enabled
 from .utils import log_request, log_error
 
 logger = logging.getLogger(__name__)
@@ -450,7 +451,9 @@ def create_image_blueprint():
         """
         return jsonify({
             "success": True,
-            "message": "服务正常运行"
+            "message": "服务正常运行",
+            "auth_required": is_auth_enabled(),
+            "rate_limit": os.environ.get('REDINK_RATE_LIMIT', '60 per minute')
         }), 200
 
     return image_bp

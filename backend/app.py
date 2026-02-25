@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -19,6 +20,7 @@ else:
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from backend.config import Config
+from backend.middleware import authenticate_request, is_auth_enabled
 from backend.routes import register_routes
 
 
@@ -74,9 +76,39 @@ def create_app():
         r"/api/*": {
             "origins": Config.CORS_ORIGINS,
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type"],
+            "allow_headers": ["Content-Type", "Authorization"],
         }
     })
+
+    # API 访问认证（可选）
+    if is_auth_enabled():
+        logger.warning("🔒 已启用 API 访问令牌认证（REDINK_AUTH_TOKEN）")
+    else:
+        logger.info("🔓 未启用 API 访问令牌认证（REDINK_AUTH_TOKEN 未设置）")
+
+    @app.before_request
+    def api_auth_guard():
+        from flask import request
+        if not request.path.startswith('/api/'):
+            return None
+        # 健康检查保持公开，方便外部探活
+        return authenticate_request(exempt_paths={'/api/health'})
+
+    # 全局限流（可选）
+    try:
+        from flask_limiter import Limiter
+        from flask_limiter.util import get_remote_address
+
+        limiter = Limiter(
+            get_remote_address,
+            app=app,
+            default_limits=[os.environ.get('REDINK_RATE_LIMIT', '60 per minute')],
+            storage_uri="memory://",
+        )
+        app.limiter = limiter
+        logger.info(f"🚦 已启用全局限流: {os.environ.get('REDINK_RATE_LIMIT', '60 per minute')}")
+    except Exception as e:
+        logger.warning(f"⚠️ 限流组件初始化失败，已跳过: {e}")
 
     # 注册所有 API 路由
     register_routes(app)
