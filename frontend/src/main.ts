@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
+import { getHealth, getAccessToken, setAccessToken, clearAccessToken, verifyAccessToken } from './api'
 
 // Styles
 import './assets/css/variables.css'
@@ -10,9 +11,51 @@ import './assets/css/components.css'
 import './assets/css/home.css'
 import './assets/css/history.css'
 
-const app = createApp(App)
+async function ensureApiAccess(): Promise<boolean> {
+  const health = await getHealth()
+  if (!health.success || !health.auth_required) {
+    return true
+  }
 
-app.use(createPinia())
-app.use(router)
+  let token = getAccessToken()
 
-app.mount('#app')
+  for (let i = 0; i < 3; i++) {
+    if (!token) {
+      token = (window.prompt('请输入访问令牌:') || '').trim()
+    }
+
+    if (!token) {
+      alert('需要访问令牌才能使用本系统。')
+      continue
+    }
+
+    setAccessToken(token)
+    const ok = await verifyAccessToken()
+    if (ok) {
+      return true
+    }
+
+    clearAccessToken()
+    token = ''
+    alert('访问令牌无效，请重试。')
+  }
+
+  document.body.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#333;">
+      认证失败，无法进入系统。
+    </div>
+  `
+  return false
+}
+
+async function bootstrap() {
+  const canEnter = await ensureApiAccess()
+  if (!canEnter) return
+
+  const app = createApp(App)
+  app.use(createPinia())
+  app.use(router)
+  app.mount('#app')
+}
+
+bootstrap()

@@ -1,6 +1,42 @@
 import axios from 'axios'
 
 const API_BASE_URL = '/api'
+const ACCESS_TOKEN_KEY = 'redink_access_token'
+
+let accessToken = localStorage.getItem(ACCESS_TOKEN_KEY) || ''
+
+function getAuthHeaders(): Record<string, string> {
+  if (!accessToken) return {}
+  return { Authorization: `Bearer ${accessToken}` }
+}
+
+export function getAccessToken(): string {
+  return accessToken
+}
+
+export function setAccessToken(token: string) {
+  accessToken = token.trim()
+  if (accessToken) {
+    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
+  } else {
+    localStorage.removeItem(ACCESS_TOKEN_KEY)
+  }
+}
+
+export function clearAccessToken() {
+  accessToken = ''
+  localStorage.removeItem(ACCESS_TOKEN_KEY)
+}
+
+axios.interceptors.request.use((config) => {
+  if (accessToken) {
+    config.headers = config.headers || {}
+    if (!('Authorization' in config.headers)) {
+      ;(config.headers as any).Authorization = `Bearer ${accessToken}`
+    }
+  }
+  return config
+})
 
 // ==================== 通用工具函数 ====================
 
@@ -41,7 +77,7 @@ async function handleSSEStream(
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(body)
     })
 
@@ -183,6 +219,36 @@ export interface ContentResponse {
   copywriting?: string
   tags?: string[]
   error?: string
+}
+
+export interface HealthResponse {
+  success: boolean
+  message?: string
+  auth_required?: boolean
+  rate_limit?: string
+}
+
+export async function getHealth(): Promise<HealthResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      headers: { ...getAuthHeaders() }
+    })
+    if (!response.ok) {
+      return { success: false, message: `HTTP ${response.status}` }
+    }
+    return await response.json()
+  } catch (error: any) {
+    return { success: false, message: error?.message || 'health check failed' }
+  }
+}
+
+export async function verifyAccessToken(): Promise<boolean> {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/config`, { timeout: 5000 })
+    return response.data?.success === true
+  } catch {
+    return false
+  }
 }
 
 // ==================== 大纲生成 API ====================
