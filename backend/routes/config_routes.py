@@ -405,24 +405,40 @@ def _test_dashscope(config: dict) -> dict:
     from dashscope import MultiModalConversation
     import dashscope
 
-    if config.get('base_url'):
-        dashscope.base_http_api_url = config['base_url']
+    base_url = (config.get('base_url') or '').strip().rstrip('/')
+    if base_url:
+        marker = '/api/v1'
+        idx = base_url.find(marker)
+        if idx != -1:
+            base_url = base_url[:idx + len(marker)]
+        elif base_url.endswith('/api'):
+            base_url = base_url + '/v1'
+        else:
+            base_url = base_url + '/api/v1'
 
-    response = MultiModalConversation.call(
-        api_key=config['api_key'],
-        model=config.get('model') or 'qwen-image-max',
-        messages=[
-            {
-                "role": "user",
-                "content": [{"text": "画一只小猫"}],
-            }
-        ],
-        result_format='message',
-        stream=False,
-        watermark=False,
-        prompt_extend=True,
-        size='768*768',
-    )
+    old_base_url = getattr(dashscope, 'base_http_api_url', None)
+    if base_url:
+        dashscope.base_http_api_url = base_url
+
+    try:
+        response = MultiModalConversation.call(
+            api_key=config['api_key'],
+            model=config.get('model') or 'qwen-image-max',
+            messages=[
+                {
+                    "role": "user",
+                    "content": [{"text": "画一只小猫"}],
+                }
+            ],
+            result_format='message',
+            stream=False,
+            watermark=False,
+            prompt_extend=True,
+            size='1328*1328',
+        )
+    finally:
+        if base_url:
+            dashscope.base_http_api_url = old_base_url
 
     if response.status_code == 200:
         return {
