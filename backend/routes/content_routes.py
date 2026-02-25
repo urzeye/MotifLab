@@ -9,6 +9,7 @@ import time
 import logging
 from flask import Blueprint, request, jsonify
 from backend.services.content import get_content_service
+from backend.services.history import get_history_service
 from .utils import log_request, log_error
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ def create_content_blueprint():
         请求格式（application/json）：
         - topic: 主题文本
         - outline: 大纲内容
+        - record_id: 历史记录 ID（可选，传入后会自动回写 content）
 
         返回：
         - success: 是否成功
@@ -39,8 +41,13 @@ def create_content_blueprint():
             data = request.get_json()
             topic = data.get('topic', '')
             outline = data.get('outline', '')
+            record_id = data.get('record_id')
 
-            log_request('/content', {'topic': topic[:50] if topic else '', 'outline_length': len(outline)})
+            log_request('/content', {
+                'topic': topic[:50] if topic else '',
+                'outline_length': len(outline),
+                'record_id': record_id
+            })
 
             # 验证必填参数
             if not topic:
@@ -65,6 +72,21 @@ def create_content_blueprint():
             # 记录结果
             elapsed = time.time() - start_time
             if result["success"]:
+                # 可选：生成成功后回写到历史记录（只后端落库，不依赖前端展示）
+                if record_id:
+                    try:
+                        history_service = get_history_service()
+                        content_payload = {
+                            "titles": result.get("titles", []),
+                            "copywriting": result.get("copywriting", ""),
+                            "tags": result.get("tags", [])
+                        }
+                        updated = history_service.update_record(record_id, content=content_payload)
+                        if not updated:
+                            logger.warning(f"内容回写历史记录失败: record_id={record_id}")
+                    except Exception as history_error:
+                        logger.warning(f"内容回写历史记录异常（已忽略）: record_id={record_id}, error={history_error}")
+
                 logger.info(f"✅ 内容生成成功，耗时 {elapsed:.2f}s")
                 return jsonify(result), 200
             else:

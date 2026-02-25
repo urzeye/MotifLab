@@ -36,6 +36,44 @@ class RecordStatus:
     ERROR = "error"          # 错误：生成过程中出现错误
 
 
+def _default_content() -> Dict[str, Any]:
+    """默认内容结构（用于标题/文案/标签）"""
+    return {
+        "titles": [],
+        "copywriting": "",
+        "tags": []
+    }
+
+
+def _normalize_content(content: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """规范化 content 字段，保证结构稳定"""
+    if not isinstance(content, dict):
+        return _default_content()
+
+    titles = content.get("titles", [])
+    copywriting = content.get("copywriting", "")
+    tags = content.get("tags", [])
+
+    if isinstance(titles, str):
+        titles = [titles]
+    elif not isinstance(titles, list):
+        titles = []
+
+    if not isinstance(copywriting, str):
+        copywriting = str(copywriting) if copywriting is not None else ""
+
+    if isinstance(tags, str):
+        tags = [t.strip() for t in tags.split(",") if t.strip()]
+    elif not isinstance(tags, list):
+        tags = []
+
+    return {
+        "titles": titles,
+        "copywriting": copywriting,
+        "tags": tags
+    }
+
+
 class HistoryService:
     def __init__(self):
         """
@@ -114,7 +152,8 @@ class HistoryService:
         self,
         topic: str,
         outline: Dict,
-        task_id: Optional[str] = None
+        task_id: Optional[str] = None,
+        content: Optional[Dict] = None
     ) -> str:
         """
         创建新的历史记录
@@ -125,6 +164,7 @@ class HistoryService:
             topic: 绘本主题/标题
             outline: 大纲内容，包含 pages 数组等信息
             task_id: 关联的生成任务 ID（可选）
+            content: 生成的内容（可选），包含 titles/copywriting/tags
 
         Returns:
             str: 新创建的记录 ID（UUID 格式）
@@ -133,12 +173,19 @@ class HistoryService:
             新建 -> draft（草稿状态）
         """
         if self.is_supabase_mode:
-            return self._create_record_supabase(topic, outline, task_id)
-        return self._create_record_local(topic, outline, task_id)
+            return self._create_record_supabase(topic, outline, task_id, content)
+        return self._create_record_local(topic, outline, task_id, content)
 
-    def _create_record_supabase(self, topic: str, outline: Dict, task_id: Optional[str]) -> str:
+    def _create_record_supabase(
+        self,
+        topic: str,
+        outline: Dict,
+        task_id: Optional[str],
+        content: Optional[Dict] = None
+    ) -> str:
         """Supabase 模式：创建历史记录"""
         from backend.utils.supabase_client import create_history_record as sb_create
+        from backend.utils.supabase_client import update_history_record as sb_update
 
         page_count = len(outline.get("pages", []))
         result = sb_create(
@@ -154,6 +201,16 @@ class HistoryService:
 
         if result.get("success") and result.get("record"):
             record_id = result["record"].get("id")
+
+            # 尝试单独写入 content 字段（兼容未迁移该列的旧表结构）
+            if content is not None:
+                content_result = sb_update(record_id, {"content": _normalize_content(content)})
+                if not content_result.get("success"):
+                    logger.warning(
+                        f"Supabase 历史记录 content 写入失败（已忽略，不影响主流程）: "
+                        f"record_id={record_id}, error={content_result.get('error', 'unknown')}"
+                    )
+
             logger.info(f"Supabase 创建历史记录成功: {record_id}")
             return record_id
         else:
@@ -161,7 +218,13 @@ class HistoryService:
             logger.error(f"Supabase 创建历史记录失败: {error}")
             raise Exception(f"创建历史记录失败: {error}")
 
-    def _create_record_local(self, topic: str, outline: Dict, task_id: Optional[str]) -> str:
+    def _create_record_local(
+        self,
+        topic: str,
+        outline: Dict,
+        task_id: Optional[str],
+        content: Optional[Dict] = None
+    ) -> str:
         """本地模式：创建历史记录"""
         # 生成唯一记录 ID
         record_id = str(uuid.uuid4())
@@ -174,6 +237,7 @@ class HistoryService:
             "created_at": now,
             "updated_at": now,
             "outline": outline,  # 保存完整的大纲数据
+            "content": _normalize_content(content),
             "images": {
                 "task_id": task_id,
                 "generated": []  # 初始无生成图片
@@ -247,7 +311,10 @@ class HistoryService:
 
         try:
             with open(record_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                record = json.load(f)
+                # 兼容旧记录：补齐 content 结构
+                record["content"] = _normalize_content(record.get("content"))
+                return record
         except Exception:
             return None
 
@@ -263,6 +330,7 @@ class HistoryService:
                 "task_id": record.get("task_id"),
                 "generated": record.get("images", [])
             },
+            "content": _normalize_content(record.get("content")),
             "status": record.get("status"),
             "thumbnail": record.get("thumbnail")
         }
@@ -290,7 +358,8 @@ class HistoryService:
         outline: Optional[Dict] = None,
         images: Optional[Dict] = None,
         status: Optional[str] = None,
-        thumbnail: Optional[str] = None
+        thumbnail: Optional[str] = None,
+        content: Optional[Dict] = None
     ) -> bool:
         """
         更新历史记录
@@ -304,6 +373,7 @@ class HistoryService:
             images: 图片信息（可选，包含 task_id 和 generated 列表）
             status: 状态（可选）
             thumbnail: 缩略图文件名（可选）
+            content: 生成内容（可选，包含 titles/copywriting/tags）
 
         Returns:
             bool: 更新是否成功，记录不存在时返回 False
@@ -317,8 +387,8 @@ class HistoryService:
             partial -> completed: 剩余图片生成完成
         """
         if self.is_supabase_mode:
-            return self._update_record_supabase(record_id, outline, images, status, thumbnail)
-        return self._update_record_local(record_id, outline, images, status, thumbnail)
+            return self._update_record_supabase(record_id, outline, images, status, thumbnail, content)
+        return self._update_record_local(record_id, outline, images, status, thumbnail, content)
 
     def _update_record_supabase(
         self,
@@ -326,7 +396,8 @@ class HistoryService:
         outline: Optional[Dict] = None,
         images: Optional[Dict] = None,
         status: Optional[str] = None,
-        thumbnail: Optional[str] = None
+        thumbnail: Optional[str] = None,
+        content: Optional[Dict] = None
     ) -> bool:
         """Supabase 模式：更新历史记录"""
         from backend.utils.supabase_client import update_history_record as sb_update
@@ -344,12 +415,30 @@ class HistoryService:
             data["status"] = status
         if thumbnail is not None:
             data["thumbnail"] = thumbnail
+        if content is not None:
+            data["content"] = _normalize_content(content)
 
         if not data:
             return True  # 没有要更新的数据
 
         result = sb_update(record_id, data)
-        return result.get("success", False)
+        if result.get("success", False):
+            return True
+
+        # 兼容旧 Supabase 表结构：若 content 列不存在，退化为不写 content
+        if content is not None and "content" in data:
+            fallback_data = dict(data)
+            fallback_data.pop("content", None)
+            if fallback_data:
+                fallback_result = sb_update(record_id, fallback_data)
+                if fallback_result.get("success", False):
+                    logger.warning(
+                        f"Supabase history_records 可能不支持 content 列，已跳过 content 字段: "
+                        f"record_id={record_id}"
+                    )
+                    return True
+
+        return False
 
     def _update_record_local(
         self,
@@ -357,7 +446,8 @@ class HistoryService:
         outline: Optional[Dict] = None,
         images: Optional[Dict] = None,
         status: Optional[str] = None,
-        thumbnail: Optional[str] = None
+        thumbnail: Optional[str] = None,
+        content: Optional[Dict] = None
     ) -> bool:
         """本地模式：更新历史记录"""
         # 获取现有记录
@@ -384,6 +474,10 @@ class HistoryService:
         # 更新缩略图
         if thumbnail is not None:
             record["thumbnail"] = thumbnail
+
+        # 更新内容（标题/文案/标签）
+        if content is not None:
+            record["content"] = _normalize_content(content)
 
         # 保存完整记录
         record_path = self._get_record_path(record_id)
