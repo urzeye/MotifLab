@@ -267,6 +267,10 @@ const previewUrl = computed(() => {
     return `${baseUrl}/v1beta/models/${props.formData.model || '{model}'}:generateImages`
   }
 
+  if (props.formData.type === 'dashscope') {
+    return `${baseUrl}`
+  }
+
   const endpoint = props.formData.endpoint_type || '/v1/images/generations'
   return `${baseUrl}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`
 })

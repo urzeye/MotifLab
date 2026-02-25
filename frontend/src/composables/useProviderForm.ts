@@ -115,6 +115,11 @@ export const imageProviderPresets: Record<string, {
     model: 'jimeng-2.0-pro',
     endpoint: '/v1/chat/completions'
   },
+  dashscope: {
+    label: '阿里百炼 DashScope SDK',
+    base_url: 'https://dashscope.aliyuncs.com',
+    model: 'qwen-image-max'
+  },
   image_api: {
     label: '自定义 OpenAI 兼容',
     base_url: '',
