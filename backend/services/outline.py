@@ -2,9 +2,8 @@ import logging
 import os
 import re
 import base64
-import yaml
-from pathlib import Path
 from typing import Dict, List, Any, Optional
+from backend.config import Config
 from backend.utils.text_client import get_text_chat_client
 
 logger = logging.getLogger(__name__)
@@ -13,7 +12,24 @@ logger = logging.getLogger(__name__)
 class OutlineService:
     def __init__(self):
         logger.debug("初始化 OutlineService...")
-        self.text_config = self._load_text_config()
+        # 使用全局配置管理器加载文本配置
+        self.text_config = {
+            'active_provider': Config.get_active_text_provider(),
+            'providers': {}
+        }
+        # 获取当前激活的提供商配置
+        try:
+            active_provider_name = Config.get_active_text_provider()
+            provider_config = Config.get_text_provider_config(active_provider_name)
+            self.text_config['providers'][active_provider_name] = provider_config
+        except Exception as e:
+            logger.error(f"获取文本服务商配置失败: {e}")
+            raise ValueError(
+                f"无法获取文本生成服务配置。\n"
+                f"错误详情: {str(e)}\n"
+                "解决方案：请检查系统设置中的文本生成服务商配置是否正确"
+            )
+
         self.client = self._get_client()
         self.prompt_template = self._load_prompt_template()
         logger.info(f"OutlineService 初始化完成，使用服务商: {self.text_config.get('active_provider')}")
