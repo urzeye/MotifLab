@@ -66,7 +66,8 @@
             :class="{ 'regenerating': regeneratingImages.has(idx) }"
           >
             <img
-              :src="`/api/images/${record.images.task_id}/${img}`"
+              :src="getImageUrl(img, record.images.task_id)"
+              @error="handleImageError(img)"
               loading="lazy"
               decoding="async"
             />
@@ -148,6 +149,23 @@ defineEmits<{
 
 // 标题展开状态
 const titleExpanded = ref(false)
+// 记录加载失败的缩略图，失败后回退原图
+const failedThumbs = ref(new Set<string>())
+
+function getImageUrl(filename: string, taskId: string) {
+  const baseUrl = `/api/images/${taskId}/${filename}`
+  if (failedThumbs.value.has(filename)) {
+    return `${baseUrl}?thumbnail=false&retry=${Date.now()}`
+  }
+  return baseUrl
+}
+
+function handleImageError(filename: string) {
+  if (!failedThumbs.value.has(filename)) {
+    console.warn(`缩略图加载失败，尝试加载原图: ${filename}`)
+    failedThumbs.value.add(filename)
+  }
+}
 
 // 格式化日期
 const formattedDate = computed(() => {
