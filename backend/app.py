@@ -4,13 +4,6 @@ from pathlib import Path
 
 # 加载 .env 环境变量（必须在其他模块导入之前）
 from dotenv import load_dotenv
-load_dotenv(Path(__file__).parent.parent / '.env')
-
-from flask import Flask, send_from_directory
-from flask_cors import CORS
-from dotenv import load_dotenv
-from backend.config import Config
-from backend.routes import register_routes
 
 # 加载 .env 文件（如果存在）
 # 优先查找项目根目录的 .env 文件
@@ -22,6 +15,11 @@ else:
     # 如果项目根目录没有，尝试加载当前目录的 .env（Docker 挂载的情况）
     load_dotenv()  # 默认会查找当前工作目录的 .env
     logging.getLogger(__name__).debug(f"ℹ️  项目根目录 .env 文件不存在: {env_path}，尝试从工作目录加载")
+
+from flask import Flask, send_from_directory
+from flask_cors import CORS
+from backend.config import Config
+from backend.routes import register_routes
 
 
 def setup_logging():
