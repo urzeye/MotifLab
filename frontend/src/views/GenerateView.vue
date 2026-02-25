@@ -41,7 +41,7 @@
         <div v-for="image in store.images" :key="image.index" class="image-card">
           <!-- 图片展示区域 -->
           <div v-if="image.url && image.status === 'done'" class="image-preview">
-            <img :src="image.url" :alt="`第 ${image.index + 1} 页`" />
+            <img :src="resolveImageUrl(image)" @error="handleImageError(image)" :alt="`第 ${image.index + 1} 页`" />
             <!-- 重新生成按钮（悬停显示） -->
             <div class="image-overlay">
               <button
@@ -99,7 +99,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGeneratorStore } from '../stores/generator'
-import { generateImagesPost, regenerateImage as apiRegenerateImage, retryFailedImages as apiRetryFailed, createHistory, updateHistory, getImageUrl } from '../api'
+import { generateImagesPost, regenerateImage as apiRegenerateImage, retryFailedImages as apiRetryFailed, createHistory, updateHistory } from '../api'
 
 const router = useRouter()
 const store = useGeneratorStore()
@@ -129,6 +129,28 @@ const getStatusText = (status: string) => {
 }
 
 // 重试单张图片（异步并发执行，不阻塞）
+// 记录加载失败的缩略图索引，失败后回退原图
+const failedThumbs = ref(new Set<number>())
+
+function resolveImageUrl(image: { index: number; url?: string }) {
+  const rawUrl = image.url || ""
+  if (!rawUrl) return rawUrl
+
+  if (failedThumbs.value.has(image.index)) {
+    const sep = rawUrl.includes("?") ? "&" : "?"
+    return rawUrl + sep + "thumbnail=false&retry=" + Date.now()
+  }
+
+  return rawUrl
+}
+
+function handleImageError(image: { index: number }) {
+  if (!failedThumbs.value.has(image.index)) {
+    console.warn("第 " + (image.index + 1) + " 页缩略图加载失败，尝试加载原图")
+    failedThumbs.value.add(image.index)
+  }
+}
+
 function retrySingleImage(index: number) {
   if (!store.taskId) return
 
