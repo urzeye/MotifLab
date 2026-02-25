@@ -102,7 +102,14 @@ function saveState(state: GeneratorState) {
     const toSave = {
       stage: state.stage,                    // 当前阶段
       topic: state.topic,                    // 用户输入的主题
-      outline: state.outline,                // 大纲数据
+      outline: {
+        raw: state.outline.raw,
+        // 不持久化页面级 Base64 图片，避免超过 localStorage 配额
+        pages: state.outline.pages.map(page => {
+          const { user_image, ...rest } = page
+          return rest
+        })
+      },
       progress: state.progress,              // 生成进度
       images: state.images,                  // 生成的图片结果
       taskId: state.taskId,                  // 任务ID
@@ -187,6 +194,18 @@ export const useGeneratorStore = defineStore('generator', {
       this.outline.pages = pages
       this.stage = 'outline'
       this.outlineStatus = 'done'  // 设置大纲为已完成状态
+    },
+
+    /**
+     * 设置页面级参考图（Base64）
+     * @param index 页面索引
+     * @param imageBase64 Base64 数据；undefined 表示移除
+     */
+    setPageImage(index: number, imageBase64: string | undefined) {
+      const page = this.outline.pages.find(p => p.index === index)
+      if (page) {
+        page.user_image = imageBase64
+      }
     },
 
     /**

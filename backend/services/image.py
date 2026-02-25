@@ -1,6 +1,7 @@
 """图片生成服务"""
 import logging
 import os
+import base64
 import uuid
 import time
 import threading
@@ -186,6 +187,20 @@ class ImageService:
         index = page["index"]
         page_type = page["type"]
         page_content = page["content"]
+        page_specific_image_data = None
+
+        # 页面级参考图（Base64）优先于封面参考图
+        if page.get("user_image"):
+            try:
+                image_b64 = page["user_image"]
+                if "," in image_b64:
+                    image_b64 = image_b64.split(",", 1)[1]
+                page_specific_image_data = base64.b64decode(image_b64)
+                if page_specific_image_data:
+                    page_specific_image_data = compress_image(page_specific_image_data, max_size_kb=200)
+            except Exception as e:
+                logger.warning(f"解析页面级参考图失败，已忽略: index={index}, error={e}")
+                page_specific_image_data = None
 
         try:
             logger.debug(f"生成图片 [{index}]: type={page_type}")
@@ -212,6 +227,11 @@ class ImageService:
                 f"  prompt[{index}] sha1={prompt_fingerprint} preview={prompt[:120].replace(chr(10), ' ')}"
             )
 
+            if page_specific_image_data:
+                prompt += "\n\n【参考图要求】请基于我提供的页面参考图，保持主体构图和视角一致，并结合页面内容优化细节。"
+
+            primary_reference_image = page_specific_image_data if page_specific_image_data else reference_image
+
             # 调用生成器生成图片
             if self.provider_config.get('type') == 'google_genai':
                 logger.debug(f"  使用 Google GenAI 生成器")
@@ -220,20 +240,20 @@ class ImageService:
                     aspect_ratio=self.provider_config.get('default_aspect_ratio', '3:4'),
                     temperature=self.provider_config.get('temperature', 1.0),
                     model=self.provider_config.get('model', 'gemini-3-pro-image-preview'),
-                    reference_image=reference_image,
+                    reference_image=primary_reference_image,
                 )
             elif self.provider_config.get('type') == 'dashscope':
                 # DashScope：通过 use_style_transfer 开关控制是否启用图像编辑模式
                 # 默认关闭，使用统一的文生图模式保证分辨率一致性
                 use_style_transfer = self.provider_config.get('use_style_transfer', False)
 
-                if use_style_transfer and reference_image is not None:
+                if use_style_transfer and primary_reference_image is not None:
                     logger.debug(f"  使用 DashScope 图像编辑生成器 (风格迁移模式)")
                     # 动态创建图像编辑生成器
                     edit_generator = ImageGeneratorFactory.create('dashscope_edit', self.provider_config)
                     image_data = edit_generator.generate_image(
                         prompt=prompt,
-                        reference_image=reference_image,
+                        reference_image=primary_reference_image,
                         model=self.provider_config.get('edit_model', 'wan2.5-i2i-preview'),
                         size=self.provider_config.get('size'),
                         negative_prompt=self.provider_config.get('negative_prompt'),
@@ -259,6 +279,8 @@ class ImageService:
                 # Image API 支持多张参考图片
                 # 组合参考图片：用户上传的图片 + 封面图
                 reference_images = []
+                if page_specific_image_data:
+                    reference_images.append(page_specific_image_data)
                 if user_images:
                     reference_images.extend(user_images)
 

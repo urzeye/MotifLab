@@ -39,6 +39,9 @@
           </div>
           
           <div class="card-controls">
+            <button class="icon-btn" @click="triggerUpload(page.index)" title="上传参考图">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+            </button>
             <div class="drag-handle" title="拖拽排序">
                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>
             </div>
@@ -46,6 +49,19 @@
                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
           </div>
+        </div>
+
+        <input
+          type="file"
+          :ref="el => setFileInputRef(el, page.index)"
+          style="display: none"
+          accept="image/*"
+          @change="handleImageUpload($event, page.index)"
+        />
+
+        <div v-if="page.user_image" class="reference-image-preview">
+          <img :src="getPageImageSrc(page.user_image)" alt="参考图预览" />
+          <button class="remove-btn" @click.stop="store.setPageImage(page.index, undefined)" title="移除参考图">×</button>
         </div>
 
         <textarea
@@ -84,6 +100,46 @@ const dragOverIndex = ref<number | null>(null)
 const draggedIndex = ref<number | null>(null)
 // 保存状态指示
 const isSaving = ref(false)
+const fileInputs = ref<Record<number, HTMLInputElement>>({})
+
+const setFileInputRef = (el: any, index: number) => {
+  if (el) {
+    fileInputs.value[index] = el as HTMLInputElement
+  } else {
+    delete fileInputs.value[index]
+  }
+}
+
+const triggerUpload = (index: number) => {
+  fileInputs.value[index]?.click()
+}
+
+const getPageImageSrc = (base64: string) => {
+  if (base64.startsWith('data:image')) {
+    return base64
+  }
+  return `data:image/png;base64,${base64}`
+}
+
+const handleImageUpload = (event: Event, index: number) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  if (file.size > 20 * 1024 * 1024) {
+    alert('图片大小不能超过 20MB')
+    input.value = ''
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const result = e.target?.result as string
+    store.setPageImage(index, result)
+  }
+  reader.readAsDataURL(file)
+  input.value = ''
+}
 
 const getPageTypeName = (type: string) => {
   const names = {
@@ -267,6 +323,45 @@ watch(
 </script>
 
 <style scoped>
+/* 页面级参考图预览 */
+.reference-image-preview {
+  margin-bottom: 12px;
+  position: relative;
+  width: 80px;
+  height: 106px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+}
+
+.reference-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remove-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  line-height: 1;
+}
+
+.remove-btn:hover {
+  background: rgba(239, 68, 68, 0.9);
+}
+
 /* 保存状态指示器 */
 .save-indicator {
   margin-left: 12px;
