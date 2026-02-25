@@ -174,6 +174,7 @@ export interface HistoryDetail {
   updated_at: string
   outline: { raw: string; pages: Page[] }
   images: { task_id: string | null; generated: string[] }
+  content?: { titles: string[]; copywriting: string; tags: string[] }
   status: string
   thumbnail: string | null
 }
@@ -183,6 +184,7 @@ export interface UpdateHistoryParams {
   images?: { task_id: string | null; generated: string[] }
   status?: string
   thumbnail?: string
+  content?: { titles: string[]; copywriting: string; tags: string[] }
 }
 
 export interface VibeSurfStatus {
@@ -354,10 +356,15 @@ export async function generateImagesPost(
 export async function createHistory(
   topic: string,
   outline: { raw: string; pages: Page[] },
-  taskId?: string
+  taskId?: string,
+  content?: { titles: string[]; copywriting: string; tags: string[] }
 ): Promise<{ success: boolean; record_id?: string; error?: string }> {
   try {
-    const response = await axios.post(`${API_BASE_URL}/history`, { topic, outline, task_id: taskId }, { timeout: 10000 })
+    const response = await axios.post(
+      `${API_BASE_URL}/history`,
+      { topic, outline, task_id: taskId, content },
+      { timeout: 10000 }
+    )
     return response.data
   } catch (error) {
     return handleAxiosError(error, '创建历史记录失败')
@@ -501,8 +508,16 @@ export async function testConnection(config: {
 
 // ==================== 内容生成 API ====================
 
-export async function generateContent(topic: string, outline: string): Promise<ContentResponse> {
-  const response = await axios.post<ContentResponse>(`${API_BASE_URL}/content`, { topic, outline })
+export async function generateContent(
+  topic: string,
+  outline: string,
+  recordId?: string
+): Promise<ContentResponse> {
+  const response = await axios.post<ContentResponse>(`${API_BASE_URL}/content`, {
+    topic,
+    outline,
+    record_id: recordId
+  })
   return response.data
 }
 
