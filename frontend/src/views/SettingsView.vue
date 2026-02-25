@@ -11,6 +11,60 @@
     </div>
 
     <div v-else class="settings-container">
+      <!-- 访问安全配置 -->
+      <div class="card">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">访问安全</h2>
+            <p class="section-desc">配置前端访问令牌（仅保存在当前浏览器）</p>
+          </div>
+          <button class="btn btn-small" @click="refreshAuthStatus" :disabled="authChecking">
+            {{ authChecking ? '检测中...' : '刷新状态' }}
+          </button>
+        </div>
+
+        <div class="security-status">
+          <span class="status-pill" :class="authRequired ? 'required' : 'optional'">
+            {{ authRequired ? '服务端已开启令牌认证' : '服务端未开启令牌认证' }}
+          </span>
+          <span v-if="rateLimit" class="status-pill optional">
+            限流：{{ rateLimit }}
+          </span>
+        </div>
+
+        <label class="token-label" for="access-token-input">访问令牌</label>
+        <div class="token-row">
+          <input
+            id="access-token-input"
+            v-model="accessTokenInput"
+            class="token-input"
+            :type="showToken ? 'text' : 'password'"
+            placeholder="输入 REDINK_AUTH_TOKEN"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button class="btn btn-small" @click="showToken = !showToken">
+            {{ showToken ? '隐藏' : '显示' }}
+          </button>
+        </div>
+        <p class="security-hint">
+          说明：这里不会修改服务端环境变量，只是设置浏览器请求头里的 `Authorization: Bearer ...`。
+        </p>
+
+        <div class="token-actions">
+          <button class="btn btn-primary" @click="saveAccessTokenSetting" :disabled="authChecking">
+            保存并验证
+          </button>
+          <button class="btn" @click="clearAccessTokenSetting" :disabled="authChecking">
+            清除本地令牌
+          </button>
+        </div>
+
+        <p v-if="tokenMessage" class="token-message" :class="tokenMessageType">
+          {{ tokenMessage }}
+        </p>
+      </div>
+
       <!-- 文本生成配置 -->
       <div class="card">
         <div class="section-header">
@@ -96,7 +150,14 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
+import {
+  getHealth,
+  getAccessToken,
+  setAccessToken,
+  clearAccessToken,
+  verifyAccessToken
+} from '../api'
 import ProviderTable from '../components/settings/ProviderTable.vue'
 import ProviderModal from '../components/settings/ProviderModal.vue'
 import ImageProviderModal from '../components/settings/ImageProviderModal.vue'
@@ -105,6 +166,79 @@ import {
   textTypeOptions,
   imageTypeOptions
 } from '../composables/useProviderForm'
+
+const accessTokenInput = ref(getAccessToken())
+const showToken = ref(false)
+const authChecking = ref(false)
+const authRequired = ref(false)
+const rateLimit = ref('')
+const tokenMessage = ref('')
+const tokenMessageType = ref<'ok' | 'error'>('ok')
+
+async function refreshAuthStatus() {
+  authChecking.value = true
+  try {
+    const health = await getHealth()
+    authRequired.value = !!health.auth_required
+    rateLimit.value = health.rate_limit || ''
+    if (!health.success) {
+      tokenMessageType.value = 'error'
+      tokenMessage.value = `健康检查失败：${health.message || '未知错误'}`
+    } else {
+      tokenMessage.value = ''
+    }
+  } finally {
+    authChecking.value = false
+  }
+}
+
+async function saveAccessTokenSetting() {
+  const token = accessTokenInput.value.trim()
+
+  if (!token) {
+    if (authRequired.value) {
+      tokenMessageType.value = 'error'
+      tokenMessage.value = '服务端已开启令牌认证，请输入有效令牌。'
+      return
+    }
+    clearAccessToken()
+    tokenMessageType.value = 'ok'
+    tokenMessage.value = '服务端未开启认证，已清除本地令牌。'
+    return
+  }
+
+  setAccessToken(token)
+
+  if (!authRequired.value) {
+    tokenMessageType.value = 'ok'
+    tokenMessage.value = '令牌已保存。当前服务端未开启令牌认证。'
+    return
+  }
+
+  authChecking.value = true
+  try {
+    const ok = await verifyAccessToken()
+    if (ok) {
+      tokenMessageType.value = 'ok'
+      tokenMessage.value = '令牌验证通过，后续请求将自动携带该令牌。'
+      return
+    }
+
+    clearAccessToken()
+    accessTokenInput.value = ''
+    tokenMessageType.value = 'error'
+    tokenMessage.value = '令牌验证失败，已清除本地令牌。请检查后重试。'
+  } finally {
+    authChecking.value = false
+  }
+}
+
+function clearAccessTokenSetting() {
+  clearAccessToken()
+  accessTokenInput.value = ''
+  tokenMessageType.value = 'ok'
+  tokenMessage.value = '本地令牌已清除。'
+}
 
 /**
  * 系统设置页面
@@ -162,8 +296,9 @@ const {
   updateImageForm
 } = useProviderForm()
 
-onMounted(() => {
-  loadConfig()
+onMounted(async () => {
+  await Promise.all([loadConfig(), refreshAuthStatus()])
+  accessTokenInput.value = getAccessToken()
 })
 </script>
 
@@ -171,6 +306,87 @@ onMounted(() => {
 .settings-container {
   max-width: 900px;
   margin: 0 auto;
+}
+
+.security-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  border: 1px solid transparent;
+}
+
+.status-pill.required {
+  color: #9f1239;
+  background: #ffe4e6;
+  border-color: #fecdd3;
+}
+
+.status-pill.optional {
+  color: #334155;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.token-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: var(--small-size);
+  color: var(--text-sub);
+}
+
+.token-row {
+  display: flex;
+  gap: 10px;
+}
+
+.token-input {
+  flex: 1;
+  height: 40px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  font-size: 14px;
+  background: var(--bg-elevated);
+  color: var(--text-main);
+}
+
+.token-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.security-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.token-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+}
+
+.token-message {
+  margin: 12px 0 0;
+  font-size: 13px;
+}
+
+.token-message.ok {
+  color: #166534;
+}
+
+.token-message.error {
+  color: #b91c1c;
 }
 
 .section-header {
