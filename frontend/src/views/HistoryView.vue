@@ -103,6 +103,7 @@
       :regeneratingImages="regeneratingImages"
       @close="closeGallery"
       @showOutline="showOutlineModal = true"
+      @showContent="showContentModal = true"
       @regenerate="regenerateHistoryImage"
       @downloadAll="downloadAllImages"
       @download="downloadImage"
@@ -115,6 +116,70 @@
       :pages="viewingRecord.outline.pages"
       @close="showOutlineModal = false"
     />
+
+    <!-- 文案查看模态框 -->
+    <div
+      v-if="showContentModal && viewingRecord"
+      class="content-modal-overlay"
+      @click="showContentModal = false"
+    >
+      <div class="content-modal-card" @click.stop>
+        <div class="content-modal-header">
+          <h3>生成的标题与文案</h3>
+          <button class="content-modal-close" @click="showContentModal = false">×</button>
+        </div>
+
+        <div class="content-modal-body">
+          <div
+            v-if="
+              !viewingRecord.content ||
+              (
+                (!viewingRecord.content.titles || viewingRecord.content.titles.length === 0) &&
+                !viewingRecord.content.copywriting &&
+                (!viewingRecord.content.tags || viewingRecord.content.tags.length === 0)
+              )
+            "
+            class="content-empty-tip"
+          >
+            暂无生成内容，请先在结果页生成标题、文案和标签。
+          </div>
+
+          <template v-else>
+            <section v-if="viewingRecord.content.titles?.length" class="content-section">
+              <h4>标题建议</h4>
+              <div class="content-title-list">
+                <div
+                  v-for="(title, idx) in viewingRecord.content.titles"
+                  :key="`${viewingRecord.id}-title-${idx}`"
+                  class="content-title-item"
+                >
+                  <span class="content-title-badge">{{ idx === 0 ? '推荐' : `备选${idx}` }}</span>
+                  <span>{{ title }}</span>
+                </div>
+              </div>
+            </section>
+
+            <section v-if="viewingRecord.content.copywriting" class="content-section">
+              <h4>正文文案</h4>
+              <div class="content-copywriting-box">{{ viewingRecord.content.copywriting }}</div>
+            </section>
+
+            <section v-if="viewingRecord.content.tags?.length" class="content-section">
+              <h4>话题标签</h4>
+              <div class="content-tag-list">
+                <span
+                  v-for="tag in viewingRecord.content.tags"
+                  :key="`${viewingRecord.id}-tag-${tag}`"
+                  class="content-tag"
+                >
+                  #{{ tag }}
+                </span>
+              </div>
+            </section>
+          </template>
+        </div>
+      </div>
+    </div>
 
   </div>
 </template>
@@ -175,6 +240,7 @@ const totalPages = ref(1)
 const viewingRecord = ref<any>(null)
 const regeneratingImages = ref<Set<number>>(new Set())
 const showOutlineModal = ref(false)
+const showContentModal = ref(false)
 const isScanning = ref(false)
 
 /**
@@ -378,6 +444,15 @@ async function loadRecord(id: string) {
     store.setTopic(res.record.title)
     store.setOutline(res.record.outline.raw, res.record.outline.pages)
     store.setRecordId(res.record.id)
+    if (res.record.content) {
+      store.setContent(
+        res.record.content.titles || [],
+        res.record.content.copywriting || '',
+        res.record.content.tags || []
+      )
+    } else {
+      store.clearContent()
+    }
     if (res.record.images.generated.length > 0) {
       store.taskId = res.record.images.task_id
       store.images = res.record.outline.pages.map((page, idx) => {
@@ -417,6 +492,7 @@ async function viewImages(id: string) {
 function closeGallery() {
   viewingRecord.value = null
   showOutlineModal.value = false
+  showContentModal.value = false
 }
 
 /**
@@ -679,5 +755,120 @@ onMounted(async () => {
 .empty-state-large .empty-tips {
   margin-top: 10px;
   color: var(--text-placeholder);
+}
+
+/* 历史文案弹窗 */
+.content-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.content-modal-card {
+  width: 100%;
+  max-width: 720px;
+  max-height: 86vh;
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.content-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.content-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-sub);
+}
+
+.content-modal-body {
+  padding: 18px 20px 20px;
+  overflow-y: auto;
+}
+
+.content-empty-tip {
+  text-align: center;
+  color: var(--text-sub);
+  padding: 28px 12px;
+}
+
+.content-section + .content-section {
+  margin-top: 18px;
+}
+
+.content-section h4 {
+  margin: 0 0 10px;
+  color: var(--text-main);
+  font-size: 15px;
+}
+
+.content-title-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.content-title-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: #f8f9fb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.content-title-badge {
+  flex-shrink: 0;
+  background: #e8eaef;
+  color: #687180;
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.content-copywriting-box {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  background: #f8f9fb;
+  border-radius: 8px;
+  padding: 12px;
+  color: var(--text-main);
+  font-size: 14px;
+}
+
+.content-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.content-tag {
+  font-size: 13px;
+  color: var(--primary);
+  background: var(--primary-light);
+  border-radius: 999px;
+  padding: 4px 10px;
 }
 </style>
