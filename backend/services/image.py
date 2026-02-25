@@ -22,7 +22,7 @@ class ImageService:
     """图片生成服务类"""
 
     # 并发配置
-    MAX_CONCURRENT = 1  # 最大并发数（降低以避免 API 速率限制）
+    MAX_CONCURRENT = max(1, int(os.getenv('GEMINI_MAX_CONCURRENT', '1')))  # 默认保持 1，允许环境变量覆盖
     AUTO_RETRY_COUNT = 1  # 不自动重试，超时后让用户手动重试
     REQUEST_DELAY = 35  # 请求间隔（秒），避免触发速率限制
 
@@ -448,7 +448,10 @@ class ImageService:
         # ==================== 第二阶段：生成其他页面 ====================
         if other_pages:
             # 检查是否启用高并发模式
-            high_concurrency = self.provider_config.get('high_concurrency', False)
+            if 'high_concurrency' in self.provider_config:
+                high_concurrency = bool(self.provider_config.get('high_concurrency'))
+            else:
+                high_concurrency = os.getenv('GEMINI_HIGH_CONCURRENCY', 'false').lower() == 'true'
 
             provider_type = (self.provider_config.get('type') or '').lower()
             base_url = (self.provider_config.get('base_url') or '').lower()
