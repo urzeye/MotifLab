@@ -149,6 +149,12 @@ function handleImageUpload(event: Event) {
 
   const files = Array.from(target.files)
   files.forEach((file) => {
+    // 单张图片限制 20MB
+    if (file.size > 20 * 1024 * 1024) {
+      alert(`图片 ${file.name} 大小不能超过 20MB`)
+      return
+    }
+
     // 限制最多 5 张图片
     if (uploadedImages.value.length >= 5) {
       return
