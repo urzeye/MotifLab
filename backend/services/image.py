@@ -24,7 +24,7 @@ class ImageService:
 
     # 并发配置
     MAX_CONCURRENT = max(1, int(os.getenv('GEMINI_MAX_CONCURRENT', '1')))  # 默认保持 1，允许环境变量覆盖
-    AUTO_RETRY_COUNT = 1  # 不自动重试，超时后让用户手动重试
+    AUTO_RETRY_COUNT = max(0, int(os.getenv('IMAGE_RETRY_COUNT', '1')))  # 默认 1，允许环境变量覆盖
     REQUEST_DELAY = 35  # 请求间隔（秒），避免触发速率限制
 
     def __init__(self, provider_name: str = None):
