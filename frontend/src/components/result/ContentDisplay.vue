@@ -134,11 +134,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useGeneratorStore } from '../../stores/generator'
 import { generateContent } from '../../api'
 
 const store = useGeneratorStore()
+
+onMounted(() => {
+  if (store.content.status === 'idle') {
+    handleGenerate()
+  }
+})
 
 const loading = ref(false)
 const copiedTitles = ref(false)
