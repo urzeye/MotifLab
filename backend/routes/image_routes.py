@@ -73,17 +73,61 @@ def create_image_blueprint():
 
             def generate():
                 """SSE 事件生成器"""
-                for event in image_service.generate_images(
-                    pages, task_id, full_outline,
-                    user_images=user_images if user_images else None,
-                    user_topic=user_topic
-                ):
-                    event_type = event["event"]
-                    event_data = event["data"]
+                completed_indices = set()
+                failed_indices = set()
+                sent_finish = False
 
-                    # 格式化为 SSE 格式
-                    yield f"event: {event_type}\n"
-                    yield f"data: {json.dumps(event_data, ensure_ascii=False)}\n\n"
+                try:
+                    for event in image_service.generate_images(
+                        pages, task_id, full_outline,
+                        user_images=user_images if user_images else None,
+                        user_topic=user_topic
+                    ):
+                        event_type = event["event"]
+                        event_data = event["data"]
+
+                        if event_type == "complete":
+                            index = event_data.get("index")
+                            if isinstance(index, int) and index >= 0:
+                                completed_indices.add(index)
+                        elif event_type == "error":
+                            index = event_data.get("index")
+                            if isinstance(index, int) and index >= 0:
+                                failed_indices.add(index)
+                        elif event_type == "finish":
+                            sent_finish = True
+
+                        # 格式化为 SSE 格式
+                        yield f"event: {event_type}\n"
+                        yield f"data: {json.dumps(event_data, ensure_ascii=False)}\n\n"
+                except Exception as e:
+                    logger.error(f"图片 SSE 流异常中断: {e}", exc_info=True)
+
+                    error_data = {
+                        "index": -1,
+                        "status": "error",
+                        "message": f"服务器内部错误: {str(e)}",
+                        "retryable": True,
+                        "phase": "system"
+                    }
+                    yield "event: error\n"
+                    yield f"data: {json.dumps(error_data, ensure_ascii=False)}\n\n"
+
+                    if not sent_finish:
+                        total = len(pages) if pages else 0
+                        completed = len(completed_indices)
+                        failed = max(len(failed_indices), total - completed)
+                        finish_data = {
+                            "success": False,
+                            "task_id": task_id,
+                            "images": [],
+                            "total": total,
+                            "completed": completed,
+                            "failed": failed,
+                            "failed_indices": sorted(failed_indices)
+                        }
+                        yield "event: finish\n"
+                        yield f"data: {json.dumps(finish_data, ensure_ascii=False)}\n\n"
 
             return Response(
                 generate(),
