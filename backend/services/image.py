@@ -5,7 +5,7 @@ import uuid
 import time
 import threading
 import hashlib
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 from typing import Dict, Any, Generator, List, Optional, Tuple
 from backend.config import Config
 from backend.generators.factory import ImageGeneratorFactory
@@ -301,6 +301,27 @@ class ImageService:
             logger.error(f"❌ 图片 [{index}] 生成失败: {error_msg[:200]}")
             return (index, False, None, error_msg, None)
 
+    def _generate_with_heartbeat(
+        self,
+        *args,
+        **kwargs
+    ) -> Generator[Dict[str, Any], None, Tuple[int, bool, Optional[str], Optional[str], Optional[bytes]]]:
+        """
+        执行单图生成，并在长耗时阶段持续发出心跳事件，避免 SSE 连接空闲超时。
+        """
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(self._generate_single_image, *args, **kwargs)
+            while True:
+                try:
+                    return future.result(timeout=2.0)
+                except TimeoutError:
+                    yield {
+                        "event": "ping",
+                        "data": {
+                            "message": "generating..."
+                        }
+                    }
+
     def generate_images(
         self,
         pages: list,
@@ -391,7 +412,7 @@ class ImageService:
             }
 
             # 生成封面（使用用户上传的图片作为参考）
-            index, success, filename, error, cover_image_bytes = self._generate_single_image(
+            index, success, filename, error, cover_image_bytes = yield from self._generate_with_heartbeat(
                 cover_page, task_id, reference_image=None, full_outline=full_outline,
                 user_images=compressed_user_images, user_topic=user_topic
             )
@@ -594,8 +615,8 @@ class ImageService:
                         }
                     }
 
-                    # 生成单张图片
-                    index, success, filename, error, _ = self._generate_single_image(
+                    # 生成单张图片（带心跳保活）
+                    index, success, filename, error, _ = yield from self._generate_with_heartbeat(
                         page,
                         task_id,
                         cover_image_data,
