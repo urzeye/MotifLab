@@ -4,6 +4,7 @@ import re
 import yaml
 from pathlib import Path
 from typing import Dict, Any, Optional
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
@@ -34,17 +35,39 @@ def _get_project_root() -> Path:
 def _resolve_env_vars(value: Any) -> Any:
     """递归解析配置值中的环境变量占位符 ${VAR_NAME}"""
     if isinstance(value, str):
-        pattern = r'\$\{([^}]+)\}'
-        matches = re.findall(pattern, value)
-        for var_name in matches:
-            env_value = os.getenv(var_name, '')
-            value = value.replace(f'${{{var_name}}}', env_value)
-        return value
+        pattern = re.compile(r'\$\{([^}]+)\}')
+
+        def _replace(match: re.Match[str]) -> str:
+            var_name = match.group(1)
+            env_value = os.getenv(var_name)
+            # 未设置时保留占位符，后续由校验阶段给出明确错误
+            return env_value if env_value is not None else match.group(0)
+
+        return pattern.sub(_replace, value)
     elif isinstance(value, dict):
         return {k: _resolve_env_vars(v) for k, v in value.items()}
     elif isinstance(value, list):
         return [_resolve_env_vars(item) for item in value]
     return value
+
+
+def _contains_unresolved_env_var(value: Any) -> bool:
+    """判断字符串中是否仍包含未解析的 ${VAR_NAME} 占位符"""
+    return isinstance(value, str) and bool(re.search(r'\$\{[^}]+\}', value))
+
+
+def _load_dotenv_file():
+    """加载 .env（优先项目根目录，其次当前工作目录）"""
+    env_path = _get_project_root() / '.env'
+    if env_path.exists():
+        load_dotenv(env_path)
+        logger.debug(f"已加载 .env 文件: {env_path}")
+    else:
+        load_dotenv()
+        logger.debug(f"项目根目录未找到 .env: {env_path}，已尝试从工作目录加载")
+
+
+_load_dotenv_file()
 
 
 class Config:
@@ -122,11 +145,15 @@ class Config:
 
         provider_config = providers[provider_name].copy()
 
-        if not provider_config.get('api_key'):
+        api_key = provider_config.get('api_key')
+        if not api_key or _contains_unresolved_env_var(api_key):
             raise ValueError(f"服务商 {provider_name} 未配置 API Key")
 
         provider_type = provider_config.get('type', provider_name)
-        if provider_type in ['openai', 'openai_compatible', 'image_api'] and not provider_config.get('base_url'):
+        base_url = provider_config.get('base_url')
+        if provider_type in ['openai', 'openai_compatible', 'image_api'] and (
+            not base_url or _contains_unresolved_env_var(base_url)
+        ):
             raise ValueError(f"服务商 {provider_name} 类型为 {provider_type}，需要配置 base_url")
 
         return provider_config
