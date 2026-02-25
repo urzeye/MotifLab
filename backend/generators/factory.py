@@ -5,6 +5,7 @@ from .google_genai import GoogleGenAIGenerator
 from .openai_compatible import OpenAICompatibleGenerator
 from .image_api import ImageApiGenerator
 from .dashscope_sdk import DashScopeSdkGenerator
+from .dashscope_edit import DashScopeImageEditGenerator
 
 
 class ImageGeneratorFactory:
@@ -17,6 +18,7 @@ class ImageGeneratorFactory:
         'openai_compatible': OpenAICompatibleGenerator,
         'image_api': ImageApiGenerator,
         'dashscope': DashScopeSdkGenerator,
+        'dashscope_edit': DashScopeImageEditGenerator,
     }
 
     @classmethod

@@ -223,24 +223,37 @@ class ImageService:
                     reference_image=reference_image,
                 )
             elif self.provider_config.get('type') == 'dashscope':
-                logger.debug(f"  使用 DashScope SDK 生成器")
+                # DashScope：通过 use_style_transfer 开关控制是否启用图像编辑模式
+                # 默认关闭，使用统一的文生图模式保证分辨率一致性
+                use_style_transfer = self.provider_config.get('use_style_transfer', False)
 
-                reference_images = []
-                if user_images:
-                    reference_images.extend(user_images)
-                if reference_image:
-                    reference_images.append(reference_image)
-
-                image_data = self.generator.generate_image(
-                    prompt=prompt,
-                    model=self.provider_config.get('model'),
-                    size=self.provider_config.get('size'),
-                    negative_prompt=self.provider_config.get('negative_prompt'),
-                    prompt_extend=self.provider_config.get('prompt_extend', True),
-                    watermark=self.provider_config.get('watermark', False),
-                    n=self.provider_config.get('n', 1),
-                    reference_images=reference_images if reference_images else None,
-                )
+                if use_style_transfer and reference_image is not None:
+                    logger.debug(f"  使用 DashScope 图像编辑生成器 (风格迁移模式)")
+                    # 动态创建图像编辑生成器
+                    edit_generator = ImageGeneratorFactory.create('dashscope_edit', self.provider_config)
+                    image_data = edit_generator.generate_image(
+                        prompt=prompt,
+                        reference_image=reference_image,
+                        model=self.provider_config.get('edit_model', 'wan2.5-i2i-preview'),
+                        size=self.provider_config.get('size'),
+                        negative_prompt=self.provider_config.get('negative_prompt'),
+                        prompt_extend=self.provider_config.get('prompt_extend', True),
+                        watermark=self.provider_config.get('watermark', False),
+                        n=1,
+                        style_transfer=True,
+                    )
+                else:
+                    logger.debug(f"  使用 DashScope SDK 生成器 (文生图模式)")
+                    image_data = self.generator.generate_image(
+                        prompt=prompt,
+                        model=self.provider_config.get('model'),
+                        size=self.provider_config.get('size'),
+                        negative_prompt=self.provider_config.get('negative_prompt'),
+                        prompt_extend=self.provider_config.get('prompt_extend', True),
+                        watermark=self.provider_config.get('watermark', False),
+                        n=self.provider_config.get('n', 1),
+                        reference_images=None,
+                    )
             elif self.provider_config.get('type') == 'image_api':
                 logger.debug(f"  使用 Image API 生成器")
                 # Image API 支持多张参考图片
