@@ -173,6 +173,59 @@ providers:
 - **关闭（默认）**：图片逐张生成，适合有速率限制的 API
 - **开启**：图片并行生成（最多15张同时），速度更快
 
+### 切换到 Supabase 存储（可选）
+
+默认使用 YAML + 本地历史记录存储。若要切换到 Supabase，请按以下步骤：
+
+1. 创建 Supabase 表结构
+
+在 Supabase SQL Editor 依次执行：
+- `backend/migrations/create_history_records.sql`
+- `backend/migrations/create_xiaohongshu_posts.sql`
+
+> `create_history_records.sql` 已包含 `app_configs` 表（用于配置存储）。
+
+2. 创建 Storage Bucket
+
+- 在 Supabase Storage 创建 bucket：`renderink-images`
+- 建议设置为 public（便于图片直链访问）
+
+3. 配置环境变量（`.env`）
+
+```env
+SUPABASE_URL=https://<your-project>.supabase.co
+SUPABASE_KEY=<your-service-role-key>
+
+# 配置存储切换（text/image/firecrawl 配置存到 Supabase）
+CONFIG_STORAGE_MODE=supabase
+CONFIG_SUPABASE_TABLE=app_configs
+
+# 历史记录存储切换
+HISTORY_STORAGE_MODE=supabase
+```
+
+4. （可选）迁移本地 history 数据到 Supabase
+
+```bash
+uv run python -m backend.migrations.migrate_local_to_supabase
+```
+
+5. 重启后端服务
+
+```bash
+uv run python backend/app.py
+```
+
+6. 验证是否生效
+
+- 后端启动日志出现：`配置存储模式: supabase (SupabaseConfigStore)`
+- Supabase 的 `app_configs` 表出现配置数据
+- 生成历史后，`history_records` 和 `renderink-images` 有新增记录
+
+说明：
+- `.env` 用于系统级配置（Supabase、限流、认证等）
+- 模型 `api_key/base_url/model` 仍建议通过设置页或 YAML 配置管理
+
 ---
 
 ## 注意事项
