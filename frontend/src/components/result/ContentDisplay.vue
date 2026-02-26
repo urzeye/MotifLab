@@ -26,6 +26,19 @@
 
     <!-- 生成结果 -->
     <div v-else-if="content.status === 'done'" class="result-section">
+      <div class="result-actions">
+        <button class="copy-btn" @click="copyFullContent" :class="{ copied: copiedFullContent }">
+          <svg v-if="!copiedFullContent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          {{ copiedFullContent ? '已复制全文' : '复制全文' }}
+        </button>
+      </div>
+
       <!-- 标题区域 -->
       <div class="content-card">
         <div class="card-header">
@@ -152,6 +165,7 @@ const copiedCopywriting = ref(false)
 const copiedTags = ref(false)
 const copiedTitleIndex = ref<number | null>(null)
 const copiedTagIndex = ref<number | null>(null)
+const copiedFullContent = ref(false)
 
 const content = computed(() => store.content)
 
@@ -159,6 +173,31 @@ const content = computed(() => store.content)
 const formattedCopywriting = computed(() => {
   if (!content.value.copywriting) return []
   return content.value.copywriting.split('\n').filter(p => p.trim())
+})
+
+const fullContentText = computed(() => {
+  const lines: string[] = []
+
+  if (content.value.titles.length > 0) {
+    lines.push('【标题】')
+    content.value.titles.forEach((title, index) => {
+      lines.push(`${index === 0 ? '推荐' : `备选${index}`}：${title}`)
+    })
+  }
+
+  if (content.value.copywriting) {
+    if (lines.length > 0) lines.push('')
+    lines.push('【正文】')
+    lines.push(content.value.copywriting)
+  }
+
+  if (content.value.tags.length > 0) {
+    if (lines.length > 0) lines.push('')
+    lines.push('【话题标签】')
+    lines.push(content.value.tags.map(t => `#${t}`).join(' '))
+  }
+
+  return lines.join('\n')
 })
 
 // 生成内容
@@ -241,6 +280,14 @@ async function copyTags() {
   }
 }
 
+// 复制全文（标题+正文+标签）
+async function copyFullContent() {
+  if (await copyToClipboard(fullContentText.value)) {
+    copiedFullContent.value = true
+    setTimeout(() => copiedFullContent.value = false, 2000)
+  }
+}
+
 // 复制单个标签
 async function copyTag(tag: string, index: number) {
   if (await copyToClipboard(`#${tag}`)) {
@@ -253,6 +300,12 @@ async function copyTag(tag: string, index: number) {
 <style scoped>
 .content-display {
   margin-top: 32px;
+}
+
+.result-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
 }
 
 .generate-section {

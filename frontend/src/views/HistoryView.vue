@@ -145,8 +145,40 @@
           </div>
 
           <template v-else>
+            <div class="content-copy-actions">
+              <button
+                class="btn btn-small content-copy-btn"
+                @click="copyHistoryContent(getHistoryFullContentText(viewingRecord), '全文')"
+              >
+                复制全文
+              </button>
+              <button
+                v-if="viewingRecord.content.titles?.length"
+                class="btn btn-small content-copy-btn"
+                @click="copyHistoryContent(getHistoryTitlesText(viewingRecord), '标题')"
+              >
+                复制标题
+              </button>
+              <button
+                v-if="viewingRecord.content.copywriting"
+                class="btn btn-small content-copy-btn"
+                @click="copyHistoryContent(viewingRecord.content.copywriting, '正文')"
+              >
+                复制正文
+              </button>
+              <button
+                v-if="viewingRecord.content.tags?.length"
+                class="btn btn-small content-copy-btn"
+                @click="copyHistoryContent(getHistoryTagsText(viewingRecord), '标签')"
+              >
+                复制标签
+              </button>
+            </div>
+
             <section v-if="viewingRecord.content.titles?.length" class="content-section">
-              <h4>标题建议</h4>
+              <div class="content-section-head">
+                <h4>标题建议</h4>
+              </div>
               <div class="content-title-list">
                 <div
                   v-for="(title, idx) in viewingRecord.content.titles"
@@ -160,12 +192,16 @@
             </section>
 
             <section v-if="viewingRecord.content.copywriting" class="content-section">
-              <h4>正文文案</h4>
+              <div class="content-section-head">
+                <h4>正文文案</h4>
+              </div>
               <div class="content-copywriting-box">{{ viewingRecord.content.copywriting }}</div>
             </section>
 
             <section v-if="viewingRecord.content.tags?.length" class="content-section">
-              <h4>话题标签</h4>
+              <div class="content-section-head">
+                <h4>话题标签</h4>
+              </div>
               <div class="content-tag-list">
                 <span
                   v-for="tag in viewingRecord.content.tags"
@@ -495,6 +531,71 @@ function closeGallery() {
   showContentModal.value = false
 }
 
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.select()
+    try {
+      document.execCommand('copy')
+      return true
+    } catch {
+      return false
+    } finally {
+      document.body.removeChild(textarea)
+    }
+  }
+}
+
+function getHistoryTitlesText(record: any): string {
+  const titles: string[] = record?.content?.titles || []
+  return titles.map((title, index) => `${index === 0 ? '推荐' : `备选${index}`}：${title}`).join('\n')
+}
+
+function getHistoryTagsText(record: any): string {
+  const tags: string[] = record?.content?.tags || []
+  return tags.map(tag => `#${tag}`).join(' ')
+}
+
+function getHistoryFullContentText(record: any): string {
+  const lines: string[] = []
+  const titlesText = getHistoryTitlesText(record)
+  const copywriting = (record?.content?.copywriting || '').trim()
+  const tagsText = getHistoryTagsText(record)
+
+  if (titlesText) {
+    lines.push('【标题】')
+    lines.push(titlesText)
+  }
+  if (copywriting) {
+    if (lines.length > 0) lines.push('')
+    lines.push('【正文】')
+    lines.push(copywriting)
+  }
+  if (tagsText) {
+    if (lines.length > 0) lines.push('')
+    lines.push('【话题标签】')
+    lines.push(tagsText)
+  }
+  return lines.join('\n')
+}
+
+async function copyHistoryContent(text: string, label: string) {
+  if (!text || !text.trim()) {
+    alert(`暂无${label}可复制`)
+    return
+  }
+
+  const success = await copyToClipboard(text)
+  alert(success ? `${label}已复制到剪贴板` : '复制失败，请手动复制')
+}
+
 /**
  * 确认删除
  */
@@ -817,8 +918,26 @@ onMounted(async () => {
   margin-top: 18px;
 }
 
+.content-copy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.content-copy-btn {
+  padding: 6px 12px;
+}
+
+.content-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
 .content-section h4 {
-  margin: 0 0 10px;
+  margin: 0;
   color: var(--text-main);
   font-size: 15px;
 }
