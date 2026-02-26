@@ -1,7 +1,7 @@
 # 图片生成服务配置（示例）
 # 说明：
 # 1) 复制为 image_providers.yaml 后使用，或直接通过 Web 设置页维护。
-# 2) API Key 支持直接明文，或使用 ${ENV_VAR} 从 .env / 环境变量读取。
+# 2) 模型 API Key 建议直接写在此文件（或通过设置页维护），不建议放在 .env。
 # 3) active_provider 必须是 providers 中存在的名称。
 
 active_provider: default
@@ -9,7 +9,7 @@ active_provider: default
 providers:
   default:
     type: image_api
-    api_key: ${OPENAI_API_KEY}
+    api_key: "your-image-api-key"
     base_url: https://api.openai.com
     model: gpt-image-1
     endpoint_type: /v1/images/generations
@@ -21,13 +21,13 @@ providers:
 
   # gemini:
   #   type: google_genai
-  #   api_key: ${GEMINI_IMAGE_API_KEY}
+  #   api_key: "your-gemini-image-api-key"
   #   model: imagen-3.0-generate-002
   #   high_concurrency: false
 
   # dashscope:
   #   type: dashscope
-  #   api_key: ${DASHSCOPE_API_KEY}
+  #   api_key: "your-dashscope-api-key"
   #   base_url: https://dashscope.aliyuncs.com
   #   model: qwen-image-max
   #   size: 1104*1472
@@ -41,7 +41,7 @@ providers:
 
   # modelscope:
   #   type: modelscope
-  #   api_key: ${MODELSCOPE_API_KEY}
+  #   api_key: "your-modelscope-api-key"
   #   base_url: https://api-inference.modelscope.cn
   #   model: Tongyi-MAI/Z-Image-Turbo
   #   polling_interval: 2
@@ -50,7 +50,7 @@ providers:
 
   # replicate:
   #   type: replicate
-  #   api_key: ${REPLICATE_API_KEY}
+  #   api_key: "your-replicate-api-key"
   #   model: prunaai/z-image-turbo:0870559624690b3709350177b9d521d84e54d297026d725358b8f73193429e91
   #   default_aspect_ratio: "3:4"
   #   steps: 9
@@ -59,7 +59,7 @@ providers:
 
   # siliconflow:
   #   type: image_api
-  #   api_key: ${SILICONFLOW_API_KEY}
+  #   api_key: "your-siliconflow-api-key"
   #   base_url: https://api.siliconflow.cn
   #   model: Qwen/Qwen-Image
   #   text_model: Qwen/Qwen-Image
@@ -73,7 +73,7 @@ providers:
 
   # jimeng:
   #   type: image_api
-  #   api_key: ${JIMENG_API_KEY}
+  #   api_key: "your-jimeng-api-key"
   #   base_url: https://api.jimeng.jianying.com
   #   model: jimeng-2.0-pro
   #   endpoint_type: /v1/chat/completions

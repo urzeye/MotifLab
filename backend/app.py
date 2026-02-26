@@ -3,20 +3,6 @@ import os
 import sys
 from pathlib import Path
 
-# 加载 .env 环境变量（必须在其他模块导入之前）
-from dotenv import load_dotenv
-
-# 加载 .env 文件（如果存在）
-# 优先查找项目根目录的 .env 文件
-env_path = Path(__file__).parent.parent / '.env'
-if env_path.exists():
-    load_dotenv(env_path)
-    logging.getLogger(__name__).info(f"✅ 已加载 .env 文件: {env_path}")
-else:
-    # 如果项目根目录没有，尝试加载当前目录的 .env（Docker 挂载的情况）
-    load_dotenv()  # 默认会查找当前工作目录的 .env
-    logging.getLogger(__name__).debug(f"ℹ️  项目根目录 .env 文件不存在: {env_path}，尝试从工作目录加载")
-
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from backend.config import Config
@@ -156,54 +142,40 @@ def create_app():
 
 def _validate_config_on_startup(logger):
     """启动时验证配置"""
-    from pathlib import Path
-    import yaml
+    logger.info("📋 检查配置存储...")
+    try:
+        storage_mode = Config.get_config_storage_mode()
+    except Exception:
+        storage_mode = "yaml"
+    logger.info(f"📦 配置存储模式: {storage_mode}")
 
-    logger.info("📋 检查配置文件...")
+    try:
+        text_config = Config.load_text_providers_config()
+        active = text_config.get("active_provider", "未设置")
+        providers = list((text_config.get("providers") or {}).keys())
+        logger.info(f"✅ 文本生成配置: 激活={active}, 可用服务商={providers}")
+        if active in (text_config.get("providers") or {}):
+            provider = text_config["providers"][active]
+            if not provider.get("api_key"):
+                logger.warning(f"⚠️  文本服务商 [{active}] 未配置 API Key")
+            else:
+                logger.info(f"✅ 文本服务商 [{active}] API Key 已配置")
+    except Exception as e:
+        logger.error(f"❌ 读取文本配置失败: {e}")
 
-    # 检查 text_providers.yaml
-    text_config_path = Path(__file__).parent.parent / 'text_providers.yaml'
-    if text_config_path.exists():
-        try:
-            with open(text_config_path, 'r', encoding='utf-8') as f:
-                text_config = yaml.safe_load(f) or {}
-            active = text_config.get('active_provider', '未设置')
-            providers = list(text_config.get('providers', {}).keys())
-            logger.info(f"✅ 文本生成配置: 激活={active}, 可用服务商={providers}")
-
-            # 检查激活的服务商是否有 API Key
-            if active in text_config.get('providers', {}):
-                provider = text_config['providers'][active]
-                if not provider.get('api_key'):
-                    logger.warning(f"⚠️  文本服务商 [{active}] 未配置 API Key")
-                else:
-                    logger.info(f"✅ 文本服务商 [{active}] API Key 已配置")
-        except Exception as e:
-            logger.error(f"❌ 读取 text_providers.yaml 失败: {e}")
-    else:
-        logger.warning("⚠️  text_providers.yaml 不存在，将使用默认配置")
-
-    # 检查 image_providers.yaml
-    image_config_path = Path(__file__).parent.parent / 'image_providers.yaml'
-    if image_config_path.exists():
-        try:
-            with open(image_config_path, 'r', encoding='utf-8') as f:
-                image_config = yaml.safe_load(f) or {}
-            active = image_config.get('active_provider', '未设置')
-            providers = list(image_config.get('providers', {}).keys())
-            logger.info(f"✅ 图片生成配置: 激活={active}, 可用服务商={providers}")
-
-            # 检查激活的服务商是否有 API Key
-            if active in image_config.get('providers', {}):
-                provider = image_config['providers'][active]
-                if not provider.get('api_key'):
-                    logger.warning(f"⚠️  图片服务商 [{active}] 未配置 API Key")
-                else:
-                    logger.info(f"✅ 图片服务商 [{active}] API Key 已配置")
-        except Exception as e:
-            logger.error(f"❌ 读取 image_providers.yaml 失败: {e}")
-    else:
-        logger.warning("⚠️  image_providers.yaml 不存在，将使用默认配置")
+    try:
+        image_config = Config.load_image_providers_config()
+        active = image_config.get("active_provider", "未设置")
+        providers = list((image_config.get("providers") or {}).keys())
+        logger.info(f"✅ 图片生成配置: 激活={active}, 可用服务商={providers}")
+        if active in (image_config.get("providers") or {}):
+            provider = image_config["providers"][active]
+            if not provider.get("api_key"):
+                logger.warning(f"⚠️  图片服务商 [{active}] 未配置 API Key")
+            else:
+                logger.info(f"✅ 图片服务商 [{active}] API Key 已配置")
+    except Exception as e:
+        logger.error(f"❌ 读取图片配置失败: {e}")
 
     logger.info("✅ 配置检查完成")
 
