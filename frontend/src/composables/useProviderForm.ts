@@ -10,6 +10,7 @@ export interface Provider {
   endpoint_type?: string
   high_concurrency?: boolean
   short_prompt?: boolean
+  use_size_tag?: boolean
 }
 
 export interface ProviderConfig {
@@ -27,6 +28,7 @@ export interface ProviderForm {
   endpoint_type: string
   high_concurrency?: boolean
   short_prompt?: boolean
+  use_size_tag?: boolean
   _has_api_key: boolean
 }
 
@@ -144,6 +146,7 @@ function createEmptyForm(isImage: boolean): ProviderForm {
     endpoint_type: isImage ? '/v1/images/generations' : '/v1/chat/completions',
     high_concurrency: false,
     short_prompt: false,
+    use_size_tag: isImage ? true : undefined,
     _has_api_key: false
   }
 }
@@ -180,6 +183,7 @@ function createProviderHandler(
       endpoint_type: provider.endpoint_type || (isImage ? '/v1/images/generations' : '/v1/chat/completions'),
       high_concurrency: provider.high_concurrency || false,
       short_prompt: provider.short_prompt || false,
+      use_size_tag: isImage ? (provider.use_size_tag ?? true) : undefined,
       _has_api_key: !!provider.api_key_masked
     }
     showModal.value = true
@@ -206,7 +210,10 @@ function createProviderHandler(
     if (isImage) {
       data.high_concurrency = form.value.high_concurrency
       data.short_prompt = form.value.short_prompt
-      if (form.value.type === 'image_api') data.endpoint_type = form.value.endpoint_type || '/v1/images/generations'
+      if (form.value.type === 'image_api') {
+        data.endpoint_type = form.value.endpoint_type || '/v1/images/generations'
+        data.use_size_tag = form.value.use_size_tag ?? true
+      }
     } else {
       if (form.value.type === 'openai_compatible') data.endpoint_type = form.value.endpoint_type
     }
