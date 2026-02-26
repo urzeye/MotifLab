@@ -22,8 +22,10 @@
         ref="composerRef"
         v-model="topic"
         :loading="loading"
+        :firecrawl-enabled="firecrawlEnabled"
         @generate="handleGenerate"
         @imagesChange="handleImagesChange"
+        @urlContentChange="handleUrlContentChange"
       />
     </div>
 
@@ -49,10 +51,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGeneratorStore } from '../stores/generator'
-import { generateOutline, createHistory } from '../api'
+import { generateOutline, createHistory, getFirecrawlStatus, type ScrapeResult } from '../api'
 
 // 引入组件
 import ShowcaseBackground from '../components/home/ShowcaseBackground.vue'
@@ -69,12 +71,24 @@ const composerRef = ref<InstanceType<typeof ComposerInput> | null>(null)
 
 // 上传的图片文件
 const uploadedImageFiles = ref<File[]>([])
+// Firecrawl 状态
+const firecrawlEnabled = ref(false)
+const urlContent = ref<ScrapeResult | null>(null)
+
+async function checkFirecrawlStatus() {
+  const result = await getFirecrawlStatus()
+  firecrawlEnabled.value = result.success && !!result.enabled && !!result.configured
+}
 
 /**
  * 处理图片变化
  */
 function handleImagesChange(images: File[]) {
   uploadedImageFiles.value = images
+}
+
+function handleUrlContentChange(content: ScrapeResult | null) {
+  urlContent.value = content
 }
 
 /**
@@ -88,10 +102,12 @@ async function handleGenerate() {
 
   try {
     const imageFiles = uploadedImageFiles.value
+    const sourceContent = urlContent.value?.success ? urlContent.value.data?.content : undefined
 
     const result = await generateOutline(
       topic.value.trim(),
-      imageFiles.length > 0 ? imageFiles : undefined
+      imageFiles.length > 0 ? imageFiles : undefined,
+      sourceContent
     )
 
     if (result.success && result.pages) {
@@ -133,7 +149,9 @@ async function handleGenerate() {
 
       // 清理 ComposerInput 的预览
       composerRef.value?.clearPreviews()
+      composerRef.value?.clearUrlState?.()
       uploadedImageFiles.value = []
+      urlContent.value = null
 
       router.push('/redbook/outline')
     } else {
@@ -145,6 +163,10 @@ async function handleGenerate() {
     loading.value = false
   }
 }
+
+onMounted(() => {
+  checkFirecrawlStatus()
+})
 </script>
 
 <style scoped>

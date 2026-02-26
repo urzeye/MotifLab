@@ -6,6 +6,7 @@ API 路由模块
 - image_routes: 图片生成/获取相关 API
 - history_routes: 历史记录 CRUD API
 - config_routes: 配置管理 API
+- firecrawl_routes: 网页抓取与引用 API
 - content_routes: 内容生成相关 API（标题、文案、标签）
 - publish_routes: 发布相关 API（xiaohongshu-mcp 集成）
 - pipeline_routes: 统一流水线 API（新架构）
@@ -31,6 +32,7 @@ def create_api_blueprint():
     from .image_routes import create_image_blueprint
     from .history_routes import create_history_blueprint
     from .config_routes import create_config_blueprint
+    from .firecrawl_routes import create_firecrawl_blueprint
     from .content_routes import create_content_blueprint
     from .publish_routes import create_publish_blueprint
     from .pipeline_routes import create_pipeline_blueprint
@@ -46,6 +48,7 @@ def create_api_blueprint():
     api_bp.register_blueprint(create_image_blueprint())
     api_bp.register_blueprint(create_history_blueprint())
     api_bp.register_blueprint(create_config_blueprint())
+    api_bp.register_blueprint(create_firecrawl_blueprint())
     api_bp.register_blueprint(create_content_blueprint())
     api_bp.register_blueprint(create_publish_blueprint())
 
