@@ -12,6 +12,7 @@ API 路由模块
 - pipeline_routes: 统一流水线 API（新架构）
 - knowledge_routes: 知识库管理 API
 - concept_routes: 概念可视化 API
+- template_routes: 模板市集 API
 
 所有路由都注册到统一的 /api 前缀下
 """
@@ -38,6 +39,7 @@ def create_api_blueprint():
     from .pipeline_routes import create_pipeline_blueprint
     from .knowledge_routes import create_knowledge_blueprint
     from .concept_routes import create_concept_blueprint
+    from .template_routes import create_template_blueprint
 
     # 创建主 API 蓝图
     api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -56,6 +58,7 @@ def create_api_blueprint():
     api_bp.register_blueprint(create_pipeline_blueprint())
     api_bp.register_blueprint(create_knowledge_blueprint())
     api_bp.register_blueprint(create_concept_blueprint())
+    api_bp.register_blueprint(create_template_blueprint())
 
     return api_bp
 

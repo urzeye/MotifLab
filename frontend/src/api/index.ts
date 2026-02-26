@@ -250,6 +250,48 @@ export interface ScrapeResult {
   error?: string
 }
 
+export interface TemplateItem {
+  id: string
+  title: string
+  description: string
+  category: string
+  coverImage: string
+  fullImage: string
+  tags: string[]
+  prompt: string
+  usageCount: number
+  isHot: boolean
+  isNew: boolean
+  createdAt?: string
+  stylePrompt?: string
+}
+
+export interface TemplateCategory {
+  name: string
+  count: number
+}
+
+export interface TemplatesResponse {
+  success: boolean
+  templates: TemplateItem[]
+  total: number
+  q?: string
+  category?: string
+  error?: string
+}
+
+export interface TemplateCategoriesResponse {
+  success: boolean
+  categories: TemplateCategory[]
+  error?: string
+}
+
+export interface TemplateDetailResponse {
+  success: boolean
+  template?: TemplateItem
+  error?: string
+}
+
 export async function getHealth(): Promise<HealthResponse> {
   try {
     const response = await fetch(`${API_BASE_URL}/health`, {
@@ -291,6 +333,37 @@ export async function scrapeUrl(url: string): Promise<ScrapeResult> {
     return response.data
   } catch (error) {
     return handleAxiosError(error, '抓取网页失败')
+  }
+}
+
+export async function getTemplates(params?: {
+  q?: string
+  category?: string
+  limit?: number
+}): Promise<TemplatesResponse> {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/templates`, { params, timeout: 10000 })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '获取模板列表失败', { templates: [], total: 0 })
+  }
+}
+
+export async function getTemplateCategories(): Promise<TemplateCategoriesResponse> {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/templates/categories`, { timeout: 10000 })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '获取模板分类失败', { categories: [] })
+  }
+}
+
+export async function getTemplateDetail(templateId: string): Promise<TemplateDetailResponse> {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/templates/${templateId}`, { timeout: 10000 })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '获取模板详情失败')
   }
 }
 
