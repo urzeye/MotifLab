@@ -1,15 +1,22 @@
 <template>
   <!-- 图片画廊模态框 -->
-  <div v-if="visible && record" class="modal-fullscreen" @click="$emit('close')">
-    <div class="modal-body" @click.stop>
+  <div
+    v-if="visible && record"
+    class="modal-fullscreen"
+    @click="$emit('close')"
+  >
+    <div
+      class="modal-body"
+      @click.stop
+    >
       <!-- 头部区域 -->
       <div class="modal-header">
-        <div style="flex: 1;">
+        <div style="flex: 1">
           <!-- 标题区域 -->
           <div class="title-section">
             <h3
               class="modal-title"
-              :class="{ 'collapsed': !titleExpanded && record.title.length > 80 }"
+              :class="{ collapsed: !titleExpanded && record.title.length > 80 }"
             >
               {{ record.title }}
             </h3>
@@ -18,51 +25,116 @@
               class="title-expand-btn"
               @click="titleExpanded = !titleExpanded"
             >
-              {{ titleExpanded ? '收起' : '展开' }}
+              {{ titleExpanded ? "收起" : "展开" }}
             </button>
           </div>
 
           <div class="modal-meta">
-            <span>{{ record.outline.pages.length }} 张图片 · {{ formattedDate }}</span>
+            <span
+              >{{ record.outline.pages.length }} 张图片 ·
+              {{ formattedDate }}</span
+            >
             <button
               class="view-outline-btn"
               @click="$emit('showOutline')"
               title="查看完整大纲"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                ></path>
                 <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <line
+                  x1="16"
+                  y1="13"
+                  x2="8"
+                  y2="13"
+                ></line>
+                <line
+                  x1="16"
+                  y1="17"
+                  x2="8"
+                  y2="17"
+                ></line>
               </svg>
               查看大纲
             </button>
-            <button
-              class="view-outline-btn"
-              @click="$emit('showContent')"
-              title="查看生成文案"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
-              </svg>
-              查看文案
-            </button>
+            <n-tooltip trigger="hover">
+              <template #trigger>
+                <button
+                  class="view-outline-btn"
+                  @click="$emit('showContent')"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                    ></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line
+                      x1="16"
+                      y1="13"
+                      x2="8"
+                      y2="13"
+                    ></line>
+                    <line
+                      x1="16"
+                      y1="17"
+                      x2="8"
+                      y2="17"
+                    ></line>
+                  </svg>
+                  查看文案
+                </button>
+              </template>
+              查看生成文案
+            </n-tooltip>
           </div>
         </div>
 
         <div class="header-actions">
-          <button class="btn download-btn" @click="$emit('downloadAll')">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button
+            class="btn download-btn"
+            @click="$emit('downloadAll')"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
+              <line
+                x1="12"
+                y1="15"
+                x2="12"
+                y2="3"
+              ></line>
             </svg>
             打包下载
           </button>
-          <button class="close-icon" @click="$emit('close')">×</button>
+          <button
+            class="close-icon"
+            @click="$emit('close')"
+          >
+            ×
+          </button>
         </div>
       </div>
 
@@ -76,7 +148,7 @@
           <div
             class="modal-img-preview"
             v-if="img"
-            :class="{ 'regenerating': regeneratingImages.has(idx) }"
+            :class="{ regenerating: regeneratingImages.has(idx) }"
           >
             <img
               :src="getImageUrl(img, record.images.task_id)"
@@ -90,15 +162,28 @@
                 @click="$emit('regenerate', idx)"
                 :disabled="regeneratingImages.has(idx)"
               >
-                <svg class="regenerate-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg
+                  class="regenerate-icon"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
                   <path d="M23 4v6h-6"></path>
                   <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                 </svg>
-                {{ regeneratingImages.has(idx) ? '重绘中...' : '重新生成' }}
+                {{ regeneratingImages.has(idx) ? "重绘中..." : "重新生成" }}
               </button>
             </div>
           </div>
-          <div class="placeholder" v-else>Waiting...</div>
+          <div
+            class="placeholder"
+            v-else
+          >
+            Waiting...
+          </div>
 
           <div class="img-footer">
             <span>Page {{ idx + 1 }}</span>
@@ -117,7 +202,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed } from "vue";
 
 /**
  * 图片画廊模态框组件
@@ -131,67 +216,67 @@ import { ref, computed } from 'vue'
 
 // 定义记录类型
 interface ViewingRecord {
-  id: string
-  title: string
-  updated_at: string
+  id: string;
+  title: string;
+  updated_at: string;
   outline: {
-    raw: string
-    pages: Array<{ type: string; content: string }>
-  }
+    raw: string;
+    pages: Array<{ type: string; content: string }>;
+  };
   images: {
-    task_id: string
-    generated: string[]
-  }
+    task_id: string;
+    generated: string[];
+  };
   content?: {
-    titles: string[]
-    copywriting: string
-    tags: string[]
-  }
+    titles: string[];
+    copywriting: string;
+    tags: string[];
+  };
 }
 
 // 定义 Props
 const props = defineProps<{
-  visible: boolean
-  record: ViewingRecord | null
-  regeneratingImages: Set<number>
-}>()
+  visible: boolean;
+  record: ViewingRecord | null;
+  regeneratingImages: Set<number>;
+}>();
 
 // 定义 Emits
 defineEmits<{
-  (e: 'close'): void
-  (e: 'showOutline'): void
-  (e: 'showContent'): void
-  (e: 'downloadAll'): void
-  (e: 'download', filename: string, index: number): void
-  (e: 'regenerate', index: number): void
-}>()
+  (e: "close"): void;
+  (e: "showOutline"): void;
+  (e: "showContent"): void;
+  (e: "downloadAll"): void;
+  (e: "download", filename: string, index: number): void;
+  (e: "regenerate", index: number): void;
+}>();
 
 // 标题展开状态
-const titleExpanded = ref(false)
+const titleExpanded = ref(false);
 // 记录加载失败的缩略图，失败后回退原图
-const failedThumbs = ref(new Set<string>())
+const failedThumbs = ref(new Set<string>());
 
 function getImageUrl(filename: string, taskId: string) {
-  const baseUrl = `/api/images/${taskId}/${filename}`
+  const baseUrl = `/api/images/${taskId}/${filename}`;
   if (failedThumbs.value.has(filename)) {
-    return `${baseUrl}?thumbnail=false&retry=${Date.now()}`
+    return `${baseUrl}?thumbnail=false&retry=${Date.now()}`;
   }
-  return baseUrl
+  return baseUrl;
 }
 
 function handleImageError(filename: string) {
   if (!failedThumbs.value.has(filename)) {
-    console.warn(`缩略图加载失败，尝试加载原图: ${filename}`)
-    failedThumbs.value.add(filename)
+    console.warn(`缩略图加载失败，尝试加载原图: ${filename}`);
+    failedThumbs.value.add(filename);
   }
 }
 
 // 格式化日期
 const formattedDate = computed(() => {
-  if (!props.record) return ''
-  const d = new Date(props.record.updated_at)
-  return `${d.getMonth() + 1}/${d.getDate()}`
-})
+  if (!props.record) return "";
+  const d = new Date(props.record.updated_at);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+});
 </script>
 
 <style scoped>
@@ -417,7 +502,10 @@ const formattedDate = computed(() => {
   cursor: pointer;
   font-size: 13px;
   color: #333;
-  transition: background-color 0.2s, color 0.2s, transform 0.1s;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    transform 0.1s;
   will-change: transform;
 }
 

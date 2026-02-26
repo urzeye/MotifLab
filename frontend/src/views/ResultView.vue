@@ -128,29 +128,33 @@
               >Page {{ image.index + 1 }}</span
             >
             <div style="display: flex; gap: 8px">
-              <button
-                class="image-action-btn"
-                title="重新生成此图"
-                @click="handleRegenerate(image)"
-                :disabled="regeneratingIndex === image.index"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M23 4v6h-6"></path>
-                  <path d="M1 20v-6h6"></path>
-                  <path
-                    d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
-                  ></path>
-                </svg>
-              </button>
+              <n-tooltip trigger="hover">
+                <template #trigger>
+                  <button
+                    class="image-action-btn"
+                    @click="handleRegenerate(image)"
+                    :disabled="regeneratingIndex === image.index"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M23 4v6h-6"></path>
+                      <path d="M1 20v-6h6"></path>
+                      <path
+                        d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
+                      ></path>
+                    </svg>
+                  </button>
+                </template>
+                重新生成此图
+              </n-tooltip>
               <button
                 class="image-action-btn download-btn"
                 @click="downloadOne(image)"
@@ -263,10 +267,12 @@ import {
   updateHistory,
 } from "../api";
 import ContentDisplay from "../components/result/ContentDisplay.vue";
+import { useMessage, NTooltip } from "naive-ui";
 
 const router = useRouter();
 const route = useRoute();
 const store = useGeneratorStore();
+const message = useMessage();
 const regeneratingIndex = ref<number | null>(null);
 
 const viewImage = (url: string) => {
@@ -379,7 +385,7 @@ const handleRegenerate = async (image: any) => {
       (p) => p.index === image.index,
     );
     if (!pageContent) {
-      alert("无法找到对应页面的内容");
+      message.warning("无法找到对应页面的内容");
       return;
     }
 
@@ -421,10 +427,10 @@ const handleRegenerate = async (image: any) => {
         }
       }
     } else {
-      alert("重绘失败: " + (result.error || "未知错误"));
+      message.error("重绘失败: " + (result.error || "未知错误"));
     }
   } catch (e: any) {
-    alert("重绘失败: " + e.message);
+    message.error("重绘失败: " + e.message);
   } finally {
     regeneratingIndex.value = null;
   }
@@ -445,7 +451,7 @@ function resolveRouteRecordId() {
 async function hydrateFromHistoryRecord(recordId: string) {
   const res = await getHistory(recordId);
   if (!res.success || !res.record) {
-    alert("无法加载结果页：历史记录不存在或已被删除");
+    message.error("无法加载结果页：历史记录不存在或已被删除");
     router.push("/history");
     return;
   }

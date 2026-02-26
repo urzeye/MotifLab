@@ -120,109 +120,119 @@
               </svg>
             </button>
 
-            <button
-              class="icon-btn"
-              @click="triggerUpload(page.index)"
-              title="上传参考图"
-              :disabled="isPageLoading(page.index)"
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <rect
-                  x="3"
-                  y="3"
-                  width="18"
-                  height="18"
-                  rx="2"
-                ></rect>
-                <circle
-                  cx="8.5"
-                  cy="8.5"
-                  r="1.5"
-                ></circle>
-                <polyline points="21 15 16 10 5 21"></polyline>
-              </svg>
-            </button>
+            <n-tooltip trigger="hover">
+              <template #trigger>
+                <button
+                  class="icon-btn"
+                  @click="triggerUpload(page.index)"
+                  :disabled="isPageLoading(page.index)"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect
+                      x="3"
+                      y="3"
+                      width="18"
+                      height="18"
+                      rx="2"
+                    ></rect>
+                    <circle
+                      cx="8.5"
+                      cy="8.5"
+                      r="1.5"
+                    ></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                </button>
+              </template>
+              上传参考图
+            </n-tooltip>
 
-            <div
-              class="drag-handle"
-              title="拖拽排序"
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <circle
-                  cx="9"
-                  cy="12"
-                  r="1"
-                ></circle>
-                <circle
-                  cx="9"
-                  cy="5"
-                  r="1"
-                ></circle>
-                <circle
-                  cx="9"
-                  cy="19"
-                  r="1"
-                ></circle>
-                <circle
-                  cx="15"
-                  cy="12"
-                  r="1"
-                ></circle>
-                <circle
-                  cx="15"
-                  cy="5"
-                  r="1"
-                ></circle>
-                <circle
-                  cx="15"
-                  cy="19"
-                  r="1"
-                ></circle>
-              </svg>
-            </div>
+            <n-tooltip trigger="hover">
+              <template #trigger>
+                <div class="drag-handle">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle
+                      cx="9"
+                      cy="12"
+                      r="1"
+                    ></circle>
+                    <circle
+                      cx="9"
+                      cy="5"
+                      r="1"
+                    ></circle>
+                    <circle
+                      cx="9"
+                      cy="19"
+                      r="1"
+                    ></circle>
+                    <circle
+                      cx="15"
+                      cy="12"
+                      r="1"
+                    ></circle>
+                    <circle
+                      cx="15"
+                      cy="5"
+                      r="1"
+                    ></circle>
+                    <circle
+                      cx="15"
+                      cy="19"
+                      r="1"
+                    ></circle>
+                  </svg>
+                </div>
+              </template>
+              拖拽排序
+            </n-tooltip>
 
-            <button
-              class="icon-btn danger"
-              @click="deletePage(idx)"
-              title="删除此页"
-              :disabled="isPageLoading(page.index)"
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <line
-                  x1="18"
-                  y1="6"
-                  x2="6"
-                  y2="18"
-                ></line>
-                <line
-                  x1="6"
-                  y1="6"
-                  x2="18"
-                  y2="18"
-                ></line>
-              </svg>
-            </button>
+            <n-tooltip trigger="hover">
+              <template #trigger>
+                <button
+                  class="icon-btn danger"
+                  @click="deletePage(idx)"
+                  :disabled="isPageLoading(page.index)"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <line
+                      x1="18"
+                      y1="6"
+                      x2="6"
+                      y2="18"
+                    ></line>
+                    <line
+                      x1="6"
+                      y1="6"
+                      x2="18"
+                      y2="18"
+                    ></line>
+                  </svg>
+                </button>
+              </template>
+              删除此页
+            </n-tooltip>
           </div>
         </div>
 
@@ -242,13 +252,17 @@
             :src="getPageImageSrc(page.user_image)"
             alt="参考图预览"
           />
-          <button
-            class="remove-btn"
-            @click.stop="store.setPageImage(page.index, undefined)"
-            title="移除参考图"
-          >
-            ×
-          </button>
+          <n-tooltip trigger="hover">
+            <template #trigger>
+              <button
+                class="remove-btn"
+                @click.stop="store.setPageImage(page.index, undefined)"
+              >
+                ×
+              </button>
+            </template>
+            移除参考图
+          </n-tooltip>
         </div>
 
         <div class="content-panel">
@@ -355,6 +369,7 @@
 import { ref, nextTick, watch, onMounted, onUnmounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useGeneratorStore } from "../stores/generator";
+import { useMessage, NTooltip } from "naive-ui";
 import {
   updateHistory,
   createHistory,
@@ -364,6 +379,7 @@ import {
 
 const router = useRouter();
 const store = useGeneratorStore();
+const message = useMessage();
 
 const dragOverIndex = ref<number | null>(null);
 const draggedIndex = ref<number | null>(null);
@@ -421,7 +437,7 @@ const handleImageUpload = (event: Event, index: number) => {
   if (!file) return;
 
   if (file.size > 20 * 1024 * 1024) {
-    alert("图片大小不能超过 20MB");
+    message.error("图片大小不能超过 20MB");
     input.value = "";
     return;
   }
@@ -471,8 +487,10 @@ const onDrop = (_e: DragEvent, index: number) => {
 };
 
 const deletePage = (index: number) => {
+  // Use a confirmation dialog to delete page
   if (confirm("确定要删除这一页吗？")) {
     store.deletePage(index);
+    message.success("页面已删除");
   }
 };
 
@@ -1111,8 +1129,12 @@ watch(
   font-size: 17px;
   font-weight: 700;
   letter-spacing: 0.03em;
-  color: #fff;
-  background: linear-gradient(135deg, #ff5f6d, #ff3f5c);
+  color: var(--text-on-primary, #fff);
+  background: linear-gradient(
+    135deg,
+    var(--color-error-hover, #ff5f6d),
+    var(--color-error, #ff3f5c)
+  );
   box-shadow: 0 6px 14px var(--color-primary-shadow);
 }
 
@@ -1196,11 +1218,11 @@ watch(
 }
 
 .icon-btn.mode-btn:hover {
-  color: #ff5f6d;
+  color: var(--color-error-hover, #ff5f6d);
 }
 
 .icon-btn.danger:hover {
-  color: #ef4444;
+  color: var(--color-error, #ef4444);
 }
 
 .reference-image-preview {
@@ -1233,7 +1255,7 @@ watch(
   justify-content: center;
   cursor: pointer;
   background: rgba(0, 0, 0, 0.58);
-  color: #fff;
+  color: var(--text-on-primary, #fff);
   line-height: 1;
 }
 

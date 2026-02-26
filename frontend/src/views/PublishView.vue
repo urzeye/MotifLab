@@ -9,7 +9,10 @@
         <button
           class="btn"
           @click="goBack"
-          style="background: white; border: 1px solid var(--border-color)"
+          style="
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+          "
         >
           返回结果
         </button>
@@ -373,9 +376,11 @@ import {
   type LoginStatus,
   type PublishProgressEvent,
 } from "../api";
+import { useMessage } from "naive-ui";
 
 const router = useRouter();
 const store = useGeneratorStore();
+const message = useMessage();
 
 // 状态
 const vibeSurfStatus = ref<VibeSurfStatus | null>(null);
@@ -453,10 +458,10 @@ const openLogin = async () => {
   try {
     const result = await openXiaohongshuLogin();
     if (!result.success) {
-      alert("打开登录页面失败: " + result.error);
+      message.error("打开登录页面失败: " + result.error);
     }
   } catch (e: any) {
-    alert("打开登录页面失败: " + e.message);
+    message.error("打开登录页面失败: " + e.message);
   } finally {
     openingLogin.value = false;
   }

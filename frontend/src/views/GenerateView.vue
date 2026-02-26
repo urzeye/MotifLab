@@ -4,52 +4,97 @@
       <div>
         <h1 class="page-title">生成结果</h1>
         <p class="page-subtitle">
-          <span v-if="isGenerating">正在生成第 {{ store.progress.current + 1 }} / {{ store.progress.total }} 页</span>
-          <span v-else-if="hasFailedImages">{{ failedCount }} 张图片生成失败，可点击重试</span>
+          <span v-if="isGenerating"
+            >正在生成第 {{ store.progress.current + 1 }} /
+            {{ store.progress.total }} 页</span
+          >
+          <span v-else-if="hasFailedImages"
+            >{{ failedCount }} 张图片生成失败，可点击重试</span
+          >
           <span v-else>全部 {{ store.progress.total }} 张图片生成完成</span>
         </p>
       </div>
-      <div style="display: flex; gap: 10px;">
+      <div style="display: flex; gap: 10px">
         <button
           v-if="hasFailedImages && !isGenerating"
           class="btn btn-primary"
           @click="retryAllFailed"
           :disabled="isRetrying"
         >
-          {{ isRetrying ? '补全中...' : '一键补全失败图片' }}
+          {{ isRetrying ? "补全中..." : "一键补全失败图片" }}
         </button>
-        <button class="btn" @click="router.push('/redbook/outline')" style="border:1px solid var(--border-color)">
+        <button
+          class="btn"
+          @click="router.push('/redbook/outline')"
+          style="border: 1px solid var(--border-color)"
+        >
           返回大纲
         </button>
       </div>
     </div>
 
     <div class="card">
-      <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: 600;">生成进度</span>
-        <span style="color: var(--primary); font-weight: 600;">{{ Math.round(progressPercent) }}%</span>
+      <div
+        style="
+          margin-bottom: 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        "
+      >
+        <span style="font-weight: 600">生成进度</span>
+        <span style="color: var(--primary); font-weight: 600"
+          >{{ Math.round(progressPercent) }}%</span
+        >
       </div>
       <div class="progress-container">
-        <div class="progress-bar" :style="{ width: progressPercent + '%' }" />
+        <div
+          class="progress-bar"
+          :style="{ width: progressPercent + '%' }"
+        />
       </div>
 
-      <div v-if="error" class="error-msg">
+      <div
+        v-if="error"
+        class="error-msg"
+      >
         {{ error }}
       </div>
 
-      <div class="grid-cols-4" style="margin-top: 40px;">
-        <div v-for="image in store.images" :key="image.index" class="image-card">
+      <div
+        class="grid-cols-4"
+        style="margin-top: 40px"
+      >
+        <div
+          v-for="image in store.images"
+          :key="image.index"
+          class="image-card"
+        >
           <!-- 图片展示区域 -->
-          <div v-if="image.url && image.status === 'done'" class="image-preview">
-            <img :src="resolveImageUrl(image)" @error="handleImageError(image)" :alt="`第 ${image.index + 1} 页`" />
+          <div
+            v-if="image.url && image.status === 'done'"
+            class="image-preview"
+          >
+            <img
+              :src="resolveImageUrl(image)"
+              @error="handleImageError(image)"
+              :alt="`第 ${image.index + 1} 页`"
+            />
             <!-- 重新生成按钮（悬停显示） -->
             <div class="image-overlay">
               <button
                 class="overlay-btn"
                 @click="regenerateImage(image.index)"
-                :disabled="image.status === 'retrying'"
+                :disabled="false"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
                   <path d="M23 4v6h-6"></path>
                   <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                 </svg>
@@ -59,13 +104,23 @@
           </div>
 
           <!-- 生成中/重试中状态 -->
-          <div v-else-if="image.status === 'generating' || image.status === 'retrying'" class="image-placeholder">
+          <div
+            v-else-if="
+              image.status === 'generating' || image.status === 'retrying'
+            "
+            class="image-placeholder"
+          >
             <div class="spinner"></div>
-            <div class="status-text">{{ image.status === 'retrying' ? '重试中...' : '生成中...' }}</div>
+            <div class="status-text">
+              {{ image.status === "retrying" ? "重试中..." : "生成中..." }}
+            </div>
           </div>
 
           <!-- 失败状态 -->
-          <div v-else-if="image.status === 'error'" class="image-placeholder error-placeholder">
+          <div
+            v-else-if="image.status === 'error'"
+            class="image-placeholder error-placeholder"
+          >
             <div class="error-icon">!</div>
             <div class="status-text">生成失败</div>
             <button
@@ -78,14 +133,20 @@
           </div>
 
           <!-- 等待中状态 -->
-          <div v-else class="image-placeholder">
+          <div
+            v-else
+            class="image-placeholder"
+          >
             <div class="status-text">等待中</div>
           </div>
 
           <!-- 底部信息栏 -->
           <div class="image-footer">
             <span class="page-label">Page {{ image.index + 1 }}</span>
-            <span class="status-badge" :class="image.status">
+            <span
+              class="status-badge"
+              :class="image.status"
+            >
               {{ getStatusText(image.status) }}
             </span>
           </div>
@@ -96,108 +157,118 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useGeneratorStore } from '../stores/generator'
-import { generateImagesPost, regenerateImage as apiRegenerateImage, retryFailedImages as apiRetryFailed, createHistory, updateHistory } from '../api'
+import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { useGeneratorStore } from "../stores/generator";
+import {
+  generateImagesPost,
+  regenerateImage as apiRegenerateImage,
+  retryFailedImages as apiRetryFailed,
+  createHistory,
+  updateHistory,
+} from "../api";
 
-const router = useRouter()
-const store = useGeneratorStore()
+const router = useRouter();
+const store = useGeneratorStore();
 
-const error = ref('')
-const isRetrying = ref(false)
+const error = ref("");
+const isRetrying = ref(false);
 
-const isGenerating = computed(() => store.progress.status === 'generating')
+const isGenerating = computed(() => store.progress.status === "generating");
 
 const progressPercent = computed(() => {
-  if (store.progress.total === 0) return 0
-  return (store.progress.current / store.progress.total) * 100
-})
+  if (store.progress.total === 0) return 0;
+  return (store.progress.current / store.progress.total) * 100;
+});
 
-const hasFailedImages = computed(() => store.images.some(img => img.status === 'error'))
+const hasFailedImages = computed(() =>
+  store.images.some((img) => img.status === "error"),
+);
 
-const failedCount = computed(() => store.images.filter(img => img.status === 'error').length)
+const failedCount = computed(
+  () => store.images.filter((img) => img.status === "error").length,
+);
 
 const getStatusText = (status: string) => {
   const texts: Record<string, string> = {
-    generating: '生成中',
-    done: '已完成',
-    error: '失败',
-    retrying: '重试中'
-  }
-  return texts[status] || '等待中'
-}
+    generating: "生成中",
+    done: "已完成",
+    error: "失败",
+    retrying: "重试中",
+  };
+  return texts[status] || "等待中";
+};
 
 // 重试单张图片（异步并发执行，不阻塞）
 // 记录加载失败的缩略图索引，失败后回退原图
-const failedThumbs = ref(new Set<number>())
+const failedThumbs = ref(new Set<number>());
 
 function resolveImageUrl(image: { index: number; url?: string }) {
-  const rawUrl = image.url || ""
-  if (!rawUrl) return rawUrl
+  const rawUrl = image.url || "";
+  if (!rawUrl) return rawUrl;
 
   if (failedThumbs.value.has(image.index)) {
-    const sep = rawUrl.includes("?") ? "&" : "?"
-    return rawUrl + sep + "thumbnail=false&retry=" + Date.now()
+    const sep = rawUrl.includes("?") ? "&" : "?";
+    return rawUrl + sep + "thumbnail=false&retry=" + Date.now();
   }
 
-  return rawUrl
+  return rawUrl;
 }
 
 function handleImageError(image: { index: number }) {
   if (!failedThumbs.value.has(image.index)) {
-    console.warn("第 " + (image.index + 1) + " 页缩略图加载失败，尝试加载原图")
-    failedThumbs.value.add(image.index)
+    console.warn("第 " + (image.index + 1) + " 页缩略图加载失败，尝试加载原图");
+    failedThumbs.value.add(image.index);
   }
 }
 
 function retrySingleImage(index: number) {
-  if (!store.taskId) return
+  if (!store.taskId) return;
 
-  const page = store.outline.pages.find(p => p.index === index)
-  if (!page) return
+  const page = store.outline.pages.find((p) => p.index === index);
+  if (!page) return;
 
   // 立即设置为重试状态
-  store.setImageRetrying(index)
+  store.setImageRetrying(index);
 
   // 构建上下文信息
   const context = {
-    fullOutline: store.outline.raw || '',
-    userTopic: store.topic || ''
-  }
+    fullOutline: store.outline.raw || "",
+    userTopic: store.topic || "",
+  };
 
   // 异步执行重绘，不阻塞
   apiRegenerateImage(store.taskId, page, true, context)
-    .then(result => {
+    .then((result) => {
       if (result.success && result.image_url) {
-        store.updateImage(index, result.image_url)
+        store.updateImage(index, result.image_url);
       } else {
-        store.updateProgress(index, 'error', undefined, result.error)
+        store.updateProgress(index, "error", undefined, result.error);
       }
     })
-    .catch(e => {
-      store.updateProgress(index, 'error', undefined, String(e))
-    })
+    .catch((e) => {
+      store.updateProgress(index, "error", undefined, String(e));
+    });
 }
 
 // 重新生成图片（成功的也可以重新生成，立即返回不等待）
 function regenerateImage(index: number) {
-  retrySingleImage(index)
+  retrySingleImage(index);
 }
 
 // 批量重试所有失败的图片
 async function retryAllFailed() {
-  if (!store.taskId) return
+  if (!store.taskId) return;
 
-  const failedPages = store.getFailedPages()
-  if (failedPages.length === 0) return
+  const failedPages = store.getFailedPages();
+  if (failedPages.length === 0) return;
 
-  isRetrying.value = true
+  isRetrying.value = true;
 
   // 设置所有失败的图片为重试状态
-  failedPages.forEach(page => {
-    store.setImageRetrying(page.index)
-  })
+  failedPages.forEach((page) => {
+    store.setImageRetrying(page.index);
+  });
 
   try {
     await apiRetryFailed(
@@ -208,34 +279,34 @@ async function retryAllFailed() {
       // onComplete
       (event) => {
         if (event.image_url) {
-          store.updateImage(event.index, event.image_url)
+          store.updateImage(event.index, event.image_url);
         }
       },
       // onError
       (event) => {
-        store.updateProgress(event.index, 'error', undefined, event.message)
+        store.updateProgress(event.index, "error", undefined, event.message);
       },
       // onFinish
       () => {
-        isRetrying.value = false
+        isRetrying.value = false;
       },
       // onStreamError
       (err) => {
-        console.error('重试失败:', err)
-        isRetrying.value = false
-        error.value = '重试失败: ' + err.message
-      }
-    )
+        console.error("重试失败:", err);
+        isRetrying.value = false;
+        error.value = "重试失败: " + err.message;
+      },
+    );
   } catch (e) {
-    isRetrying.value = false
-    error.value = '重试失败: ' + String(e)
+    isRetrying.value = false;
+    error.value = "重试失败: " + String(e);
   }
 }
 
 onMounted(async () => {
   if (store.outline.pages.length === 0) {
-    router.push('/')
-    return
+    router.push("/");
+    return;
   }
 
   // 历史记录处理逻辑：
@@ -245,129 +316,132 @@ onMounted(async () => {
     // 情况1：recordId 已存在（正常流程）
     // 更新历史记录状态为 generating，表示图片生成已开始
     try {
-      await updateHistory(store.recordId, { status: 'generating' })
-      console.log('历史记录状态已更新为 generating:', store.recordId)
+      await updateHistory(store.recordId, { status: "generating" });
+      console.log("历史记录状态已更新为 generating:", store.recordId);
     } catch (e) {
       // 更新失败不阻断生成流程，仅记录错误
-      console.error('更新历史记录状态失败:', e)
+      console.error("更新历史记录状态失败:", e);
     }
   } else {
     // 情况2：recordId 不存在（异常情况）
     // 这种情况不应该发生，但作为兜底逻辑，尝试创建历史记录
-    console.warn('警告: recordId 不存在，尝试创建历史记录作为兜底')
+    console.warn("警告: recordId 不存在，尝试创建历史记录作为兜底");
     try {
       const result = await createHistory(store.topic, {
         raw: store.outline.raw,
-        pages: store.outline.pages
-      })
+        pages: store.outline.pages,
+      });
       if (result.success && result.record_id) {
-        store.setRecordId(result.record_id)
-        console.log('兜底创建历史记录成功:', store.recordId)
+        store.setRecordId(result.record_id);
+        console.log("兜底创建历史记录成功:", store.recordId);
       }
     } catch (e) {
       // 创建失败也不阻断生成流程，仅记录错误
-      console.error('兜底创建历史记录失败:', e)
+      console.error("兜底创建历史记录失败:", e);
     }
   }
 
-  store.startGeneration()
-  const pagesToGenerate = store.outline.pages.filter(page => {
-    const existing = store.images.find(img => img.index === page.index)
-    return !existing || existing.status !== 'done' || !existing.url
-  })
+  store.startGeneration();
+  const pagesToGenerate = store.outline.pages.filter((page) => {
+    const existing = store.images.find((img) => img.index === page.index);
+    return !existing || existing.status !== "done" || !existing.url;
+  });
 
   // 所有页面都已生成时，直接进入结果页
   if (pagesToGenerate.length === 0) {
     if (!store.taskId) {
-      store.taskId = `task_${Date.now()}_existing`
+      store.taskId = `task_${Date.now()}_existing`;
     }
-    store.finishGeneration(store.taskId)
-    router.push('/redbook/result')
-    return
+    store.finishGeneration(store.taskId);
+    router.push("/redbook/result");
+    return;
   }
 
   generateImagesPost(
     pagesToGenerate,
     store.taskId,
-    store.outline.raw,  // 传入完整大纲文本
+    store.outline.raw, // 传入完整大纲文本
     // onProgress
     (event) => {
-      console.log('Progress:', event)
+      console.log("Progress:", event);
     },
     // onComplete
     (event) => {
-      console.log('Complete:', event)
+      console.log("Complete:", event);
       if (event.image_url) {
-        store.updateProgress(event.index, 'done', event.image_url)
+        store.updateProgress(event.index, "done", event.image_url);
       }
     },
     // onError
     (event) => {
-      console.error('Error:', event)
-      store.updateProgress(event.index, 'error', undefined, event.message)
+      console.error("Error:", event);
+      store.updateProgress(event.index, "error", undefined, event.message);
     },
     // onFinish
     async (event) => {
-      console.log('Finish:', event)
-      store.finishGeneration(event.task_id)
+      console.log("Finish:", event);
+      store.finishGeneration(event.task_id);
 
       // 更新历史记录
       if (store.recordId) {
         try {
           // 构建完整列表：保留已完成图片，未完成位置保持空字符串
-          const generatedImages = store.outline.pages.map(p => {
-            const img = store.images.find(i => i.index === p.index)
-            if (img && img.status === 'done' && img.url) {
-              return img.url.split('/').pop()?.split('?')[0] || ''
+          const generatedImages = store.outline.pages.map((p) => {
+            const img = store.images.find((i) => i.index === p.index);
+            if (img && img.status === "done" && img.url) {
+              return img.url.split("/").pop()?.split("?")[0] || "";
             }
-            return ''
-          })
-          const completedCount = generatedImages.filter(name => name !== '').length
+            return "";
+          });
+          const completedCount = generatedImages.filter(
+            (name) => name !== "",
+          ).length;
 
           // 确定状态
-          let status = 'completed'
+          let status = "completed";
           if (hasFailedImages.value) {
-            status = completedCount > 0 ? 'partial' : 'draft'
+            status = completedCount > 0 ? "partial" : "draft";
           }
 
           // 优先使用第一页图片作为缩略图
-          const firstPage = store.images.find(img => img.index === 0)
-          const thumbnail = (firstPage && firstPage.status === 'done' && firstPage.url)
-            ? firstPage.url.split('/').pop()?.split('?')[0]
-            : generatedImages.find(name => name !== '') || null
+          const firstPage = store.images.find((img) => img.index === 0);
+          const thumbnail =
+            firstPage && firstPage.status === "done" && firstPage.url
+              ? firstPage.url.split("/").pop()?.split("?")[0]
+              : generatedImages.find((name) => name !== "") || null;
 
           await updateHistory(store.recordId, {
             images: {
               task_id: event.task_id,
-              generated: generatedImages
+              generated: generatedImages,
             },
             status: status,
-            thumbnail: thumbnail || undefined
-          })
-          console.log('历史记录已更新')
+            thumbnail: thumbnail || undefined,
+          });
+          console.log("历史记录已更新");
         } catch (e) {
-          console.error('更新历史记录失败:', e)
+          console.error("更新历史记录失败:", e);
         }
       }
 
       // 如果没有失败的，跳转到结果页
       if (!hasFailedImages.value) {
         setTimeout(() => {
-          router.push('/redbook/result')
-        }, 1000)
+          router.push("/redbook/result");
+        }, 1000);
       }
     },
     // onStreamError
     (err) => {
-      console.error('Stream Error:', err)
-      error.value = '生成失败: ' + err.message
+      console.error("Stream Error:", err);
+      error.value = "生成失败: " + err.message;
     },
     // userImages - 用户上传的参考图片
     store.userImages.length > 0 ? store.userImages : undefined,
     // userTopic - 用户原始输入
-    store.topic
-  )
-})
+    store.topic,
+  );
+});
 </script>
 
 <style scoped>
@@ -407,18 +481,18 @@ onMounted(async () => {
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: white;
+  background: var(--bg-card);
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
-  color: #333;
+  color: var(--text-main);
   transition: all 0.2s;
 }
 
 .overlay-btn:hover {
   background: var(--primary);
-  color: white;
+  color: var(--text-on-primary, white);
 }
 
 .overlay-btn:disabled {
@@ -428,7 +502,7 @@ onMounted(async () => {
 
 .image-placeholder {
   aspect-ratio: 3/4;
-  background: #f9f9f9;
+  background: var(--bg-elevated);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -439,15 +513,15 @@ onMounted(async () => {
 }
 
 .error-placeholder {
-  background: #fff5f5;
+  background: var(--color-error-bg);
 }
 
 .error-icon {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #ff4d4f;
-  color: white;
+  background: var(--color-error, #ff4d4f);
+  color: var(--text-on-primary, white);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -464,7 +538,7 @@ onMounted(async () => {
   margin-top: 8px;
   padding: 6px 16px;
   background: var(--primary);
-  color: white;
+  color: var(--text-on-primary, white);
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -503,19 +577,19 @@ onMounted(async () => {
 }
 
 .status-badge.done {
-  background: #E6F7ED;
-  color: #52C41A;
+  background: var(--color-success-bg, #e6f7ed);
+  color: var(--color-success, #52c41a);
 }
 
 .status-badge.generating,
 .status-badge.retrying {
-  background: #E6F4FF;
-  color: #1890FF;
+  background: var(--color-info-bg, #e6f4ff);
+  color: var(--color-info, #1890ff);
 }
 
 .status-badge.error {
-  background: #FFF1F0;
-  color: #FF4D4F;
+  background: var(--color-error-bg, #fff1f0);
+  color: var(--color-error, #ff4d4f);
 }
 
 .spinner {
