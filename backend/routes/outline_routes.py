@@ -106,17 +106,27 @@ def _parse_outline_request():
         return topic, images
 
     # JSON 请求（无图片或 base64 图片）
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        data = {}
     topic = data.get('topic')
     images = []
 
     # 支持 base64 格式的图片
     images_base64 = data.get('images', [])
+    if not isinstance(images_base64, list):
+        images_base64 = []
     if images_base64:
         for img_b64 in images_base64:
+            if not isinstance(img_b64, str):
+                continue
             # 移除可能的 data URL 前缀
             if ',' in img_b64:
-                img_b64 = img_b64.split(',')[1]
-            images.append(base64.b64decode(img_b64))
+                img_b64 = img_b64.split(',', 1)[1]
+            try:
+                images.append(base64.b64decode(img_b64))
+            except Exception:
+                logger.warning("忽略无效的 base64 图片输入")
+                continue
 
     return topic, images
