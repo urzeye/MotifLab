@@ -57,6 +57,8 @@ history/*
 # API configurations
 .gemini/
 # yaml 配置文件现在使用环境变量引用，可以安全提交
+image_providers.yaml
+text_providers.yaml
 
 # Logs
 *.log
@@ -91,3 +93,5 @@ data/xiaohongshu/*
 # Service PID files
 .service-pids
 .pids
+.backend-local.pid
+.frontend-local.pid

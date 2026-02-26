@@ -1,66 +1,8 @@
-# 文本生成服务配置
-# 说明：
-# 1) 推荐通过 Web 设置页维护，保存后会回写本文件。
-# 2) API Key 支持直接明文，或使用 ${ENV_VAR} 从 .env / 环境变量读取。
-# 3) active_provider 必须是 providers 中存在的名称。
-
 active_provider: default
-
 providers:
   default:
-    type: openai_compatible
-    api_key: ${OPENAI_API_KEY}
-    base_url: https://api.openai.com
-    model: gpt-4o-mini
+    api_key: sk-pFkjgdmXdGbKFO3knfpNBpt7J10wO3i6WgfhXb3kOghqkz2P
+    base_url: https://x666.me
     endpoint_type: /v1/chat/completions
-    temperature: 1.0
-    max_output_tokens: 8000
-    supports_images: true
-
-  # openrouter:
-  #   type: openai_compatible
-  #   api_key: ${OPENROUTER_API_KEY}
-  #   base_url: https://openrouter.ai/api/v1
-  #   model: google/gemini-2.0-flash-001
-  #   endpoint_type: /v1/chat/completions
-  #   temperature: 1.0
-  #   max_output_tokens: 8000
-  #   supports_images: true
-
-  # gemini:
-  #   type: google_gemini
-  #   api_key: ${GEMINI_TEXT_API_KEY}
-  #   model: gemini-2.0-flash-exp
-  #   temperature: 1.0
-  #   max_output_tokens: 8000
-  #   supports_images: true
-
-  # deepseek:
-  #   type: openai_compatible
-  #   api_key: ${DEEPSEEK_API_KEY}
-  #   base_url: https://api.deepseek.com
-  #   model: deepseek-chat
-  #   endpoint_type: /v1/chat/completions
-  #   temperature: 1.0
-  #   max_output_tokens: 8000
-  #   supports_images: false
-
-  # qwen:
-  #   type: openai_compatible
-  #   api_key: ${QWEN_API_KEY}
-  #   base_url: https://dashscope.aliyuncs.com/compatible-mode
-  #   model: qwen-max
-  #   endpoint_type: /v1/chat/completions
-  #   temperature: 1.0
-  #   max_output_tokens: 8000
-  #   supports_images: true
-
-  # third_party:
-  #   type: openai_compatible
-  #   api_key: ${THIRD_PARTY_API_KEY}
-  #   base_url: https://your-api-endpoint.com
-  #   model: gpt-4o
-  #   endpoint_type: /v1/chat/completions
-  #   temperature: 1.0
-  #   max_output_tokens: 8000
-  #   supports_images: true
+    model: gemini-3-flash-preview
+    type: openai_compatible
