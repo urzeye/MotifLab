@@ -310,6 +310,9 @@ def _test_provider_connection(provider_type: str, config: dict) -> dict:
     elif provider_type == 'modelscope':
         return _test_modelscope(config)
 
+    elif provider_type == 'replicate':
+        return _test_replicate(config)
+
     else:
         raise ValueError(f"不支持的类型: {provider_type}")
 
@@ -512,6 +515,31 @@ def _test_modelscope(config: dict) -> dict:
     return {
         "success": True,
         "message": f"连接成功！任务提交成功（task_id={data.get('task_id')}）"
+    }
+
+
+def _test_replicate(config: dict) -> dict:
+    """测试 Replicate API Key 与模型访问权限。"""
+    try:
+        import replicate
+    except Exception as e:
+        raise Exception(f"未安装 replicate 依赖: {e}")
+
+    client = replicate.Client(api_token=config['api_key'])
+    model_id = config.get('model') or (
+        'prunaai/z-image-turbo:'
+        '0870559624690b3709350177b9d521d84e54d297026d725358b8f73193429e91'
+    )
+    model_name = model_id.split(':', 1)[0]
+
+    try:
+        model = client.models.get(model_name)
+    except Exception as e:
+        raise Exception(f"连接失败或模型不可访问: {e}")
+
+    return {
+        "success": True,
+        "message": f"连接成功！模型可访问：{model.owner}/{model.name}"
     }
 
 

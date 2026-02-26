@@ -14,3 +14,9 @@ providers:
   #   high_concurrency: false
   #   model: Tongyi-MAI/Z-Image-Turbo
   #   type: modelscope
+  # replicate:
+  #   api_key: ""
+  #   default_aspect_ratio: 3:4
+  #   high_concurrency: false
+  #   model: prunaai/z-image-turbo:0870559624690b3709350177b9d521d84e54d297026d725358b8f73193429e91
+  #   type: replicate

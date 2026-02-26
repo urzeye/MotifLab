@@ -303,6 +303,12 @@ class ImageService:
             elif self.provider_config.get('type') == 'modelscope':
                 logger.debug("  使用 ModelScope 生成器")
                 image_data = self.generator.generate_image(prompt=prompt)
+            elif self.provider_config.get('type') == 'replicate':
+                logger.debug("  使用 Replicate 生成器")
+                image_data = self.generator.generate_image(
+                    prompt=prompt,
+                    aspect_ratio=self.provider_config.get('default_aspect_ratio', '3:4'),
+                )
             else:
                 logger.debug(f"  使用 OpenAI 兼容生成器")
                 image_data = self.generator.generate_image(

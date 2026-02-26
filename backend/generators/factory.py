@@ -7,6 +7,7 @@ from .image_api import ImageApiGenerator
 from .dashscope_sdk import DashScopeSdkGenerator
 from .dashscope_edit import DashScopeImageEditGenerator
 from .modelscope import ModelScopeGenerator
+from .replicate_gen import ReplicateGenerator
 
 
 class ImageGeneratorFactory:
@@ -21,6 +22,7 @@ class ImageGeneratorFactory:
         'dashscope': DashScopeSdkGenerator,
         'dashscope_edit': DashScopeImageEditGenerator,
         'modelscope': ModelScopeGenerator,
+        'replicate': ReplicateGenerator,
     }
 
     @classmethod
