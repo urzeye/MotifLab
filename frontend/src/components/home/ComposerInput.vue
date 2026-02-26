@@ -83,6 +83,36 @@
       </div>
     </div>
 
+    <!-- 生成设置 -->
+    <div class="generation-settings">
+      <label class="setting-item page-count-setting" title="控制本次大纲总页数（包含封面和总结）">
+        <span class="setting-label">页数</span>
+        <input
+          type="number"
+          class="page-count-input"
+          :value="pageCount"
+          min="1"
+          max="15"
+          :disabled="loading"
+          @input="handlePageCountInput"
+          @blur="handlePageCountBlur"
+        />
+        <span class="setting-unit">页</span>
+      </label>
+
+      <label class="setting-item search-toggle" title="开启后，模型会在生成大纲时联网检索（取决于当前文本模型是否支持）">
+        <input
+          type="checkbox"
+          class="switch-input"
+          :checked="enableSearch"
+          :disabled="loading"
+          @change="handleEnableSearchChange"
+        />
+        <span class="switch-ui"></span>
+        <span class="setting-label">联网搜索</span>
+      </label>
+    </div>
+
     <!-- 工具栏 -->
     <div class="composer-toolbar">
       <div class="toolbar-left">
@@ -155,11 +185,15 @@ const props = defineProps<{
   modelValue: string
   loading: boolean
   firecrawlEnabled: boolean
+  pageCount: number
+  enableSearch: boolean
 }>()
 
 // 定义 Emits
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
+  (e: 'update:pageCount', value: number): void
+  (e: 'update:enableSearch', value: boolean): void
   (e: 'generate'): void
   (e: 'imagesChange', images: File[]): void
   (e: 'urlContentChange', content: ScrapeResult | null): void
@@ -176,6 +210,8 @@ const scrapeStatus = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
 const scrapeResult = ref<ScrapeResult | null>(null)
 const scrapeError = ref('')
 let scrapeDebounceTimer: number | null = null
+const PAGE_COUNT_MIN = 1
+const PAGE_COUNT_MAX = 15
 
 /**
  * 处理输入变化
@@ -341,6 +377,29 @@ function clearUrlState() {
   showUrlInput.value = false
 }
 
+function clampPageCount(value: number): number {
+  if (Number.isNaN(value)) return PAGE_COUNT_MIN
+  return Math.max(PAGE_COUNT_MIN, Math.min(PAGE_COUNT_MAX, Math.trunc(value)))
+}
+
+function handlePageCountInput(event: Event) {
+  const target = event.target as HTMLInputElement
+  const next = clampPageCount(Number(target.value))
+  emit('update:pageCount', next)
+}
+
+function handlePageCountBlur(event: Event) {
+  const target = event.target as HTMLInputElement
+  const next = clampPageCount(Number(target.value))
+  target.value = String(next)
+  emit('update:pageCount', next)
+}
+
+function handleEnableSearchChange(event: Event) {
+  const target = event.target as HTMLInputElement
+  emit('update:enableSearch', !!target.checked)
+}
+
 // 组件卸载时清理
 onUnmounted(() => {
   clearPreviews()
@@ -467,6 +526,101 @@ defineExpose({
   font-size: var(--caption-size);
   color: var(--text-sub);
   text-align: right;
+}
+
+.generation-settings {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.setting-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-main);
+}
+
+.setting-label {
+  font-size: var(--small-size);
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.page-count-setting {
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+}
+
+.page-count-input {
+  width: 56px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  background: var(--bg-card);
+  color: var(--text-main);
+  text-align: center;
+  padding: 4px 6px;
+  font-size: var(--small-size);
+}
+
+.page-count-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.setting-unit {
+  font-size: var(--caption-size);
+  color: var(--text-sub);
+}
+
+.search-toggle {
+  cursor: pointer;
+  user-select: none;
+}
+
+.switch-input {
+  display: none;
+}
+
+.switch-ui {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+  transition: all var(--transition-fast);
+}
+
+.switch-ui::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text-sub);
+  transition: all var(--transition-fast);
+}
+
+.switch-input:checked + .switch-ui {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.switch-input:checked + .switch-ui::after {
+  left: 20px;
+  background: var(--text-inverse);
+}
+
+.switch-input:disabled + .switch-ui {
+  opacity: 0.6;
 }
 
 /* 工具栏 */

@@ -75,10 +75,16 @@ async function handleSSEStream(
   onStreamError: (error: Error) => void
 ) {
   try {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
+    const headers: Record<string, string> = { ...getAuthHeaders() }
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json'
+    }
+
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify(body)
+      headers,
+      body: isFormData ? body : JSON.stringify(body)
     })
 
     if (!response.ok) {
@@ -131,6 +137,7 @@ export interface Page {
   type: 'cover' | 'content' | 'summary'
   content: string
   user_image?: string // 页面级参考图（Base64）
+  image_suggestion?: string // AI 生成的配图建议
 }
 
 export interface OutlineResponse {
@@ -139,6 +146,45 @@ export interface OutlineResponse {
   pages?: Page[]
   error?: string
   has_images?: boolean
+}
+
+export interface OutlineStreamStartEvent {
+  success: boolean
+  message?: string
+}
+
+export interface OutlineStreamFinishEvent extends OutlineResponse {
+  elapsed?: number
+}
+
+export interface OutlineStreamParams {
+  topic: string
+  images?: File[]
+  sourceContent?: string
+  templateRef?: TemplateReferencePayload
+  enableSearch?: boolean
+}
+
+export interface OutlineEditStreamParams {
+  topic: string
+  current_outline?: string
+  current_pages?: Page[]
+  revision_request?: string
+  mode?: 'suggest_only' | 'revise'
+  template_ref?: TemplateReferencePayload
+}
+
+export interface OutlineEditStreamPageEvent {
+  success: boolean
+  mode: 'suggest_only' | 'revise'
+  page: Page
+}
+
+export interface OutlineEditStreamFinishEvent {
+  success: boolean
+  mode: 'suggest_only' | 'revise'
+  outline: string
+  pages: Page[]
 }
 
 export interface ProgressEvent {
@@ -406,6 +452,70 @@ export async function generateOutline(
     template_ref: templateRef || undefined
   })
   return response.data
+}
+
+export async function generateOutlineStream(
+  params: OutlineStreamParams,
+  onStart: (event: OutlineStreamStartEvent) => void,
+  onFinish: (event: OutlineStreamFinishEvent) => void,
+  onError: (event: { success: boolean; error?: string }) => void,
+  onStreamError: (error: Error) => void
+) {
+  const { topic, images, sourceContent, templateRef, enableSearch } = params
+  let body: FormData | Record<string, any>
+
+  if (images && images.length > 0) {
+    const formData = new FormData()
+    formData.append('topic', topic)
+    formData.append('enable_search', String(!!enableSearch))
+    if (sourceContent) {
+      formData.append('source_content', sourceContent)
+    }
+    if (templateRef) {
+      formData.append('template_ref', JSON.stringify(templateRef))
+    }
+    images.forEach(file => formData.append('images', file))
+    body = formData
+  } else {
+    body = {
+      topic,
+      enable_search: !!enableSearch,
+      source_content: sourceContent || undefined,
+      template_ref: templateRef || undefined
+    }
+  }
+
+  await handleSSEStream(
+    `${API_BASE_URL}/outline/stream`,
+    body,
+    {
+      start: onStart,
+      finish: onFinish,
+      error: onError
+    },
+    onStreamError
+  )
+}
+
+export async function editOutlineStream(
+  params: OutlineEditStreamParams,
+  onStart: (event: { success: boolean; mode: 'suggest_only' | 'revise'; message?: string }) => void,
+  onPage: (event: OutlineEditStreamPageEvent) => void,
+  onFinish: (event: OutlineEditStreamFinishEvent) => void,
+  onError: (event: { success: boolean; mode: 'suggest_only' | 'revise'; error?: string }) => void,
+  onStreamError: (error: Error) => void
+) {
+  await handleSSEStream(
+    `${API_BASE_URL}/outline/edit/stream`,
+    params,
+    {
+      start: onStart,
+      page: onPage,
+      finish: onFinish,
+      error: onError
+    },
+    onStreamError
+  )
 }
 
 // ==================== 图片生成 API ====================

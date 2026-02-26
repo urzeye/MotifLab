@@ -49,6 +49,10 @@
         v-model="topic"
         :loading="loading"
         :firecrawl-enabled="firecrawlEnabled"
+        :page-count="pageCount"
+        :enable-search="enableSearch"
+        @update:pageCount="handlePageCountChange"
+        @update:enableSearch="handleEnableSearchChange"
         @generate="handleGenerate"
         @imagesChange="handleImagesChange"
         @urlContentChange="handleUrlContentChange"
@@ -81,10 +85,11 @@ import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useGeneratorStore } from '../stores/generator'
 import {
-  generateOutline,
+  generateOutlineStream,
   createHistory,
   getFirecrawlStatus,
   getTemplateDetail,
+  type OutlineStreamFinishEvent,
   type ScrapeResult,
   type TemplateItem
 } from '../api'
@@ -109,6 +114,8 @@ const uploadedImageFiles = ref<File[]>([])
 const firecrawlEnabled = ref(false)
 const urlContent = ref<ScrapeResult | null>(null)
 const appliedTemplate = ref<TemplateItem | null>(null)
+const pageCount = ref(5)
+const enableSearch = ref(false)
 
 let templateRequestSeq = 0
 
@@ -153,11 +160,32 @@ function handleUrlContentChange(content: ScrapeResult | null) {
   urlContent.value = content
 }
 
+function handlePageCountChange(value: number) {
+  if (!Number.isFinite(value)) {
+    pageCount.value = 5
+    return
+  }
+  pageCount.value = Math.max(1, Math.min(15, Math.trunc(value)))
+}
+
+function handleEnableSearchChange(value: boolean) {
+  enableSearch.value = !!value
+}
+
+function buildTopicWithPageCount(rawTopic: string, totalPages: number): string {
+  const normalizedPages = Math.max(1, Math.min(15, Math.trunc(totalPages)))
+  return (
+    `${rawTopic}\n\n` +
+    `【页数要求】必须严格生成 ${normalizedPages} 页（包括封面和总结页），总计 ${normalizedPages} 页，不得多也不得少。`
+  )
+}
+
 /**
  * 生成大纲
  */
 async function handleGenerate() {
-  if (!topic.value.trim()) return
+  const rawTopic = topic.value.trim()
+  if (!rawTopic) return
 
   loading.value = true
   error.value = ''
@@ -165,6 +193,7 @@ async function handleGenerate() {
   try {
     const imageFiles = uploadedImageFiles.value
     const sourceContent = urlContent.value?.success ? urlContent.value.data?.content : undefined
+    const topicForOutline = buildTopicWithPageCount(rawTopic, pageCount.value)
     const templateRef = appliedTemplate.value
       ? {
           id: appliedTemplate.value.id,
@@ -177,23 +206,32 @@ async function handleGenerate() {
         }
       : undefined
 
-    const result = await generateOutline(
-      topic.value.trim(),
-      imageFiles.length > 0 ? imageFiles : undefined,
-      sourceContent,
-      templateRef
-    )
+    const result = await new Promise<OutlineStreamFinishEvent>((resolve, reject) => {
+      void generateOutlineStream(
+        {
+          topic: topicForOutline,
+          images: imageFiles.length > 0 ? imageFiles : undefined,
+          sourceContent,
+          templateRef,
+          enableSearch: enableSearch.value
+        },
+        () => {},
+        (event) => resolve(event),
+        (event) => resolve({ success: false, error: event.error || '生成大纲失败' }),
+        (streamError) => reject(streamError)
+      )
+    })
 
     if (result.success && result.pages) {
       // 设置主题和大纲到 store
-      store.setTopic(topic.value.trim())
+      store.setTopic(rawTopic)
       store.setOutline(result.outline || '', result.pages)
 
       // 大纲生成成功后，立即创建历史记录
       // 这样即使用户刷新页面或关闭浏览器，大纲也不会丢失
       try {
         const historyResult = await createHistory(
-          topic.value.trim(),
+          rawTopic,
           {
             raw: result.outline || '',
             pages: result.pages
