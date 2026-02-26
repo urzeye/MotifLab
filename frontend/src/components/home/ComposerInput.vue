@@ -87,17 +87,25 @@
     <div class="generation-settings">
       <label class="setting-item page-count-setting" title="控制本次大纲总页数（包含封面和总结）">
         <span class="setting-label">页数</span>
-        <input
-          type="number"
-          class="page-count-input"
-          :value="pageCount"
-          min="1"
-          max="15"
-          :disabled="loading"
-          @input="handlePageCountInput"
-          @blur="handlePageCountBlur"
-        />
-        <span class="setting-unit">页</span>
+        <div class="page-count-control">
+          <select
+            class="page-count-select"
+            :value="pageCount"
+            :disabled="loading"
+            @change="handlePageCountChange"
+          >
+            <option
+              v-for="count in PAGE_COUNT_OPTIONS"
+              :key="count"
+              :value="count"
+            >
+              {{ count }}
+            </option>
+          </select>
+          <svg class="page-count-caret" width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
       </label>
 
       <label class="setting-item search-toggle" title="开启后，模型会在生成大纲时联网检索（取决于当前文本模型是否支持）">
@@ -212,6 +220,10 @@ const scrapeError = ref('')
 let scrapeDebounceTimer: number | null = null
 const PAGE_COUNT_MIN = 1
 const PAGE_COUNT_MAX = 15
+const PAGE_COUNT_OPTIONS = Array.from(
+  { length: PAGE_COUNT_MAX - PAGE_COUNT_MIN + 1 },
+  (_, idx) => PAGE_COUNT_MIN + idx
+)
 
 /**
  * 处理输入变化
@@ -382,16 +394,9 @@ function clampPageCount(value: number): number {
   return Math.max(PAGE_COUNT_MIN, Math.min(PAGE_COUNT_MAX, Math.trunc(value)))
 }
 
-function handlePageCountInput(event: Event) {
-  const target = event.target as HTMLInputElement
+function handlePageCountChange(event: Event) {
+  const target = event.target as HTMLSelectElement
   const next = clampPageCount(Number(target.value))
-  emit('update:pageCount', next)
-}
-
-function handlePageCountBlur(event: Event) {
-  const target = event.target as HTMLInputElement
-  const next = clampPageCount(Number(target.value))
-  target.value = String(next)
   emit('update:pageCount', next)
 }
 
@@ -553,29 +558,59 @@ defineExpose({
 .page-count-setting {
   border: 1px solid var(--border-color);
   background: var(--bg-elevated);
-  border-radius: var(--radius-sm);
-  padding: 6px 10px;
+  border-radius: 18px;
+  padding: 6px 12px;
+  gap: 10px;
 }
 
-.page-count-input {
-  width: 56px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-xs);
-  background: var(--bg-card);
+.page-count-control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.page-count-select {
+  min-width: 46px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
   color: var(--text-main);
+  padding: 0 22px 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   text-align: center;
-  padding: 4px 6px;
-  font-size: var(--small-size);
+  text-align-last: center;
 }
 
-.page-count-input:focus {
+.page-count-select option {
+  font-size: 16px;
+  font-weight: 500;
+  color: #111827;
+  background: #ffffff;
+}
+
+.page-count-select:focus {
   outline: none;
-  border-color: var(--primary);
 }
 
-.setting-unit {
-  font-size: var(--caption-size);
+.page-count-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.page-count-caret {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--text-sub);
+  pointer-events: none;
 }
 
 .search-toggle {
