@@ -206,7 +206,7 @@ function createProviderHandler(
     if (isImage) {
       data.high_concurrency = form.value.high_concurrency
       data.short_prompt = form.value.short_prompt
-      if (form.value.type === 'image_api') data.endpoint_type = form.value.endpoint_type
+      if (form.value.type === 'image_api') data.endpoint_type = form.value.endpoint_type || '/v1/images/generations'
     } else {
       if (form.value.type === 'openai_compatible') data.endpoint_type = form.value.endpoint_type
     }
@@ -231,7 +231,8 @@ function createProviderHandler(
         provider_name: editing.value || undefined,
         api_key: form.value.api_key || undefined,
         base_url: form.value.base_url,
-        model: form.value.model
+        model: form.value.model,
+        endpoint_type: form.value.endpoint_type || '/v1/images/generations'
       })
       if (result.success) alert('✅ ' + result.message)
     } catch (e: any) {
@@ -247,7 +248,8 @@ function createProviderHandler(
         type: provider.type,
         provider_name: name,
         base_url: provider.base_url,
-        model: provider.model
+        model: provider.model,
+        endpoint_type: provider.endpoint_type || '/v1/images/generations'
       })
       if (result.success) alert('✅ ' + result.message)
     } catch (e: any) {

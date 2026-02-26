@@ -501,6 +501,7 @@ export async function testConnection(config: {
   api_key?: string
   base_url?: string
   model: string
+  endpoint_type?: string
 }): Promise<{ success: boolean; message?: string; error?: string }> {
   const response = await axios.post(`${API_BASE_URL}/config/test`, config)
   return response.data
