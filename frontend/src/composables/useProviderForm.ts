@@ -127,6 +127,11 @@ export const imageProviderPresets: Record<string, {
     base_url: 'https://api-inference.modelscope.cn',
     model: 'Tongyi-MAI/Z-Image-Turbo'
   },
+  replicate: {
+    label: 'Replicate',
+    base_url: '',
+    model: 'prunaai/z-image-turbo:0870559624690b3709350177b9d521d84e54d297026d725358b8f73193429e91'
+  },
   image_api: {
     label: '自定义 OpenAI 兼容',
     base_url: '',

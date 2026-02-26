@@ -43,3 +43,11 @@ providers:
     base_url: https://api-inference.modelscope.cn
     model: Tongyi-MAI/Z-Image-Turbo
     high_concurrency: false
+
+  # Replicate
+  replicate:
+    type: replicate
+    api_key: r8_xxxxxxxxxxxxxxxxxxxx
+    model: prunaai/z-image-turbo:0870559624690b3709350177b9d521d84e54d297026d725358b8f73193429e91
+    default_aspect_ratio: 3:4
+    high_concurrency: false

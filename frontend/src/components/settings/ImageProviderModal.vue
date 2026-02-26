@@ -257,8 +257,8 @@ function handleTypeChange(newType: string) {
 
 // 是否显示 Base URL（所有类型都显示，方便自定义）
 const showBaseUrl = computed(() => {
-  // google_genai 使用原生 SDK，不需要 base_url
-  return props.formData.type !== 'google_genai'
+  // google_genai 与 replicate 使用 SDK，不需要 base_url
+  return !['google_genai', 'replicate'].includes(props.formData.type)
 })
 
 // 是否显示端点类型（仅自定义 OpenAI 兼容接口）
