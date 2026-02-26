@@ -95,7 +95,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGeneratorStore } from '../stores/generator'
-import { regenerateImage } from '../api'
+import { regenerateImage, updateHistory } from '../api'
 import ContentDisplay from '../components/result/ContentDisplay.vue'
 
 const router = useRouter()
@@ -168,6 +168,28 @@ const handleRegenerate = async (image: any) => {
     if (result.success && result.image_url) {
        const newUrl = result.image_url
        store.updateImage(image.index, newUrl)
+
+       // 将重绘结果同步到历史记录，避免刷新后展示旧图
+       if (store.recordId) {
+         try {
+           const generated = store.outline.pages.map(p => {
+             const img = store.images.find(i => i.index === p.index)
+             if (img && img.status === 'done' && img.url) {
+               return img.url.split('/').pop()?.split('?')[0] || ''
+             }
+             return ''
+           })
+
+           await updateHistory(store.recordId, {
+             images: {
+               task_id: store.taskId,
+               generated
+             }
+           })
+         } catch (e) {
+           console.error('同步历史记录失败:', e)
+         }
+       }
     } else {
        alert('重绘失败: ' + (result.error || '未知错误'))
     }

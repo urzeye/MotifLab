@@ -271,10 +271,24 @@ onMounted(async () => {
   }
 
   store.startGeneration()
+  const pagesToGenerate = store.outline.pages.filter(page => {
+    const existing = store.images.find(img => img.index === page.index)
+    return !existing || existing.status !== 'done' || !existing.url
+  })
+
+  // 所有页面都已生成时，直接进入结果页
+  if (pagesToGenerate.length === 0) {
+    if (!store.taskId) {
+      store.taskId = `task_${Date.now()}_existing`
+    }
+    store.finishGeneration(store.taskId)
+    router.push('/redbook/result')
+    return
+  }
 
   generateImagesPost(
-    store.outline.pages,
-    null,
+    pagesToGenerate,
+    store.taskId,
     store.outline.raw,  // 传入完整大纲文本
     // onProgress
     (event) => {
@@ -300,17 +314,27 @@ onMounted(async () => {
       // 更新历史记录
       if (store.recordId) {
         try {
-          // 收集所有生成的图片文件名
-          const generatedImages = event.images.filter(img => img !== null)
+          // 构建完整列表：保留已完成图片，未完成位置保持空字符串
+          const generatedImages = store.outline.pages.map(p => {
+            const img = store.images.find(i => i.index === p.index)
+            if (img && img.status === 'done' && img.url) {
+              return img.url.split('/').pop()?.split('?')[0] || ''
+            }
+            return ''
+          })
+          const completedCount = generatedImages.filter(name => name !== '').length
 
           // 确定状态
           let status = 'completed'
           if (hasFailedImages.value) {
-            status = generatedImages.length > 0 ? 'partial' : 'draft'
+            status = completedCount > 0 ? 'partial' : 'draft'
           }
 
-          // 获取封面图作为缩略图（只保存文件名，不是完整URL）
-          const thumbnail = generatedImages.length > 0 ? generatedImages[0] : null
+          // 优先使用第一页图片作为缩略图
+          const firstPage = store.images.find(img => img.index === 0)
+          const thumbnail = (firstPage && firstPage.status === 'done' && firstPage.url)
+            ? firstPage.url.split('/').pop()?.split('?')[0]
+            : generatedImages.find(name => name !== '') || null
 
           await updateHistory(store.recordId, {
             images: {
@@ -318,7 +342,7 @@ onMounted(async () => {
               generated: generatedImages
             },
             status: status,
-            thumbnail: thumbnail
+            thumbnail: thumbnail || undefined
           })
           console.log('历史记录已更新')
         } catch (e) {
