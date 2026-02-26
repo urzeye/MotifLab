@@ -32,7 +32,7 @@
               已应用模板：{{ appliedTemplate.title }}
             </div>
             <div class="banner-sub">
-              分类：{{ appliedTemplate.category }} · 将模板提示词自动带入输入框
+              分类：{{ appliedTemplate.category }} · 将参考此模板的布局和风格，主题请自行输入
             </div>
           </div>
         </div>
@@ -124,11 +124,6 @@ async function applyTemplateById(templateId: string) {
 
   if (result.success && result.template) {
     appliedTemplate.value = result.template
-    const templatePrompt = (result.template.prompt || result.template.title || '').trim()
-    if (templatePrompt) {
-      topic.value = templatePrompt
-      store.setTopic(templatePrompt)
-    }
     error.value = ''
   } else {
     appliedTemplate.value = null
@@ -170,11 +165,23 @@ async function handleGenerate() {
   try {
     const imageFiles = uploadedImageFiles.value
     const sourceContent = urlContent.value?.success ? urlContent.value.data?.content : undefined
+    const templateRef = appliedTemplate.value
+      ? {
+          id: appliedTemplate.value.id,
+          title: appliedTemplate.value.title,
+          category: appliedTemplate.value.category,
+          description: appliedTemplate.value.description,
+          prompt: appliedTemplate.value.prompt,
+          stylePrompt: appliedTemplate.value.stylePrompt,
+          tags: appliedTemplate.value.tags
+        }
+      : undefined
 
     const result = await generateOutline(
       topic.value.trim(),
       imageFiles.length > 0 ? imageFiles : undefined,
-      sourceContent
+      sourceContent,
+      templateRef
     )
 
     if (result.success && result.pages) {

@@ -7,6 +7,7 @@
 
 import time
 import base64
+import json
 import logging
 from flask import Blueprint, request, jsonify
 from backend.services.outline import get_outline_service
@@ -44,12 +45,13 @@ def create_outline_blueprint():
 
         try:
             # 解析请求数据
-            topic, images, source_content = _parse_outline_request()
+            topic, images, source_content, template_ref = _parse_outline_request()
 
             log_request('/outline', {
                 'topic': topic,
                 'images': images,
-                'has_source_content': bool(source_content)
+                'has_source_content': bool(source_content),
+                'has_template_ref': bool(template_ref)
             })
 
             # 验证必填参数
@@ -66,7 +68,8 @@ def create_outline_blueprint():
             result = outline_service.generate_outline(
                 topic,
                 images if images else None,
-                source_content=source_content
+                source_content=source_content,
+                template_ref=template_ref
             )
 
             # 记录结果
@@ -98,13 +101,22 @@ def _parse_outline_request():
     2. application/json - 用于 base64 图片
 
     返回：
-        tuple: (topic, images, source_content) - 主题、图片和网页抓取正文
+        tuple: (topic, images, source_content, template_ref) - 主题、图片、网页抓取正文、模板参考
     """
     # 检查是否是 multipart/form-data（带图片文件）
     if request.content_type and 'multipart/form-data' in request.content_type:
         topic = request.form.get('topic')
         source_content = request.form.get('source_content')
+        template_ref_raw = request.form.get('template_ref')
+        template_ref = None
         images = []
+
+        if template_ref_raw:
+            try:
+                parsed = json.loads(template_ref_raw)
+                template_ref = parsed if isinstance(parsed, dict) else None
+            except Exception:
+                logger.warning("忽略无效的 template_ref（multipart）")
 
         # 获取上传的图片文件
         if 'images' in request.files:
@@ -114,7 +126,7 @@ def _parse_outline_request():
                     image_data = file.read()
                     images.append(image_data)
 
-        return topic, images, source_content
+        return topic, images, source_content, template_ref
 
     # JSON 请求（无图片或 base64 图片）
     data = request.get_json(silent=True)
@@ -122,6 +134,9 @@ def _parse_outline_request():
         data = {}
     topic = data.get('topic')
     source_content = data.get('source_content')
+    template_ref = data.get('template_ref')
+    if not isinstance(template_ref, dict):
+        template_ref = None
     images = []
 
     # 支持 base64 格式的图片
@@ -141,4 +156,4 @@ def _parse_outline_request():
                 logger.warning("忽略无效的 base64 图片输入")
                 continue
 
-    return topic, images, source_content
+    return topic, images, source_content, template_ref
