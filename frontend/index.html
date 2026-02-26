@@ -4,6 +4,35 @@
     <meta charset="UTF-8">
     <link rel="icon" href="/logo.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+      (function () {
+        try {
+          var key = "renderai-theme";
+          var saved = localStorage.getItem(key);
+          var prefersDark =
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var activeTheme =
+            saved === "light"
+              ? "light"
+              : saved === "dark"
+                ? "dark"
+                : prefersDark
+                  ? "dark"
+                  : "light";
+
+          if (activeTheme === "light") {
+            document.documentElement.setAttribute("data-theme", "light");
+          } else {
+            document.documentElement.removeAttribute("data-theme");
+          }
+
+          document.documentElement.style.colorScheme = activeTheme;
+        } catch (_) {
+          // ignore
+        }
+      })();
+    </script>
     <title>渲染AI - 图文生成器</title>
   </head>
   <body>
