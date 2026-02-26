@@ -5,12 +5,51 @@
       <p class="page-subtitle">配置文本生成和图片生成的 API 服务</p>
     </div>
 
-    <div v-if="loading" class="loading-container">
+    <div
+      v-if="loading"
+      class="loading-container"
+    >
       <div class="spinner"></div>
       <p>加载配置中...</p>
     </div>
 
-    <div v-else class="settings-container">
+    <div
+      v-else
+      class="settings-container"
+    >
+      <!-- 外观设置 -->
+      <div class="card">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">外观设置</h2>
+            <p class="section-desc">配置系统主题颜色</p>
+          </div>
+        </div>
+        <div class="theme-actions">
+          <button
+            class="btn"
+            :class="{ 'btn-primary': theme === 'system' }"
+            @click="setTheme('system')"
+          >
+            跟随系统
+          </button>
+          <button
+            class="btn"
+            :class="{ 'btn-primary': theme === 'light' }"
+            @click="setTheme('light')"
+          >
+            浅色模式
+          </button>
+          <button
+            class="btn"
+            :class="{ 'btn-primary': theme === 'dark' }"
+            @click="setTheme('dark')"
+          >
+            深色模式
+          </button>
+        </div>
+      </div>
+
       <!-- 访问安全配置 -->
       <div class="card">
         <div class="section-header">
@@ -18,21 +57,35 @@
             <h2 class="section-title">访问安全</h2>
             <p class="section-desc">配置前端访问令牌（仅保存在当前浏览器）</p>
           </div>
-          <button class="btn btn-small" @click="refreshAuthStatus" :disabled="authChecking">
-            {{ authChecking ? '检测中...' : '刷新状态' }}
+          <button
+            class="btn btn-small"
+            @click="refreshAuthStatus"
+            :disabled="authChecking"
+          >
+            {{ authChecking ? "检测中..." : "刷新状态" }}
           </button>
         </div>
 
         <div class="security-status">
-          <span class="status-pill" :class="authRequired ? 'required' : 'optional'">
-            {{ authRequired ? '服务端已开启令牌认证' : '服务端未开启令牌认证' }}
+          <span
+            class="status-pill"
+            :class="authRequired ? 'required' : 'optional'"
+          >
+            {{ authRequired ? "服务端已开启令牌认证" : "服务端未开启令牌认证" }}
           </span>
-          <span v-if="rateLimit" class="status-pill optional">
+          <span
+            v-if="rateLimit"
+            class="status-pill optional"
+          >
             限流：{{ rateLimit }}
           </span>
         </div>
 
-        <label class="token-label" for="access-token-input">访问令牌</label>
+        <label
+          class="token-label"
+          for="access-token-input"
+          >访问令牌</label
+        >
         <div class="token-row">
           <input
             id="access-token-input"
@@ -43,24 +96,40 @@
             autocomplete="off"
             spellcheck="false"
           />
-          <button class="btn btn-small" @click="showToken = !showToken">
-            {{ showToken ? '隐藏' : '显示' }}
+          <button
+            class="btn btn-small"
+            @click="showToken = !showToken"
+          >
+            {{ showToken ? "隐藏" : "显示" }}
           </button>
         </div>
         <p class="security-hint">
-          说明：这里不会修改服务端环境变量，只是设置浏览器请求头里的 `Authorization: Bearer ...`。
+          说明：这里不会修改服务端环境变量，只是设置浏览器请求头里的
+          `Authorization: Bearer ...`。
         </p>
 
         <div class="token-actions">
-          <button class="btn btn-primary" @click="saveAccessTokenSetting" :disabled="authChecking">
+          <button
+            class="btn btn-primary"
+            @click="saveAccessTokenSetting"
+            :disabled="authChecking"
+          >
             保存并验证
           </button>
-          <button class="btn" @click="clearAccessTokenSetting" :disabled="authChecking">
+          <button
+            class="btn"
+            @click="clearAccessTokenSetting"
+            :disabled="authChecking"
+          >
             清除本地令牌
           </button>
         </div>
 
-        <p v-if="tokenMessage" class="token-message" :class="tokenMessageType">
+        <p
+          v-if="tokenMessage"
+          class="token-message"
+          :class="tokenMessageType"
+        >
           {{ tokenMessage }}
         </p>
       </div>
@@ -72,10 +141,30 @@
             <h2 class="section-title">文本生成配置</h2>
             <p class="section-desc">用于生成小红书图文大纲</p>
           </div>
-          <button class="btn btn-small" @click="openAddTextModal">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
+          <button
+            class="btn btn-small"
+            @click="openAddTextModal"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line
+                x1="12"
+                y1="5"
+                x2="12"
+                y2="19"
+              ></line>
+              <line
+                x1="5"
+                y1="12"
+                x2="19"
+                y2="12"
+              ></line>
             </svg>
             添加
           </button>
@@ -99,10 +188,30 @@
             <h2 class="section-title">图片生成配置</h2>
             <p class="section-desc">用于生成小红书配图</p>
           </div>
-          <button class="btn btn-small" @click="openAddImageModal">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
+          <button
+            class="btn btn-small"
+            @click="openAddImageModal"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line
+                x1="12"
+                y1="5"
+                x2="12"
+                y2="19"
+              ></line>
+              <line
+                x1="5"
+                y1="12"
+                x2="19"
+                y2="12"
+              ></line>
             </svg>
             添加
           </button>
@@ -130,11 +239,18 @@
 
         <div class="firecrawl-grid">
           <label class="firecrawl-toggle">
-            <input type="checkbox" v-model="firecrawlConfig.enabled" />
+            <input
+              type="checkbox"
+              v-model="firecrawlConfig.enabled"
+            />
             <span>启用 Firecrawl URL 抓取</span>
           </label>
 
-          <label class="token-label" for="firecrawl-base-url">Base URL</label>
+          <label
+            class="token-label"
+            for="firecrawl-base-url"
+            >Base URL</label
+          >
           <input
             id="firecrawl-base-url"
             v-model="firecrawlConfig.base_url"
@@ -143,27 +259,44 @@
             placeholder="https://api.firecrawl.dev 或 http://localhost:3002"
           />
 
-          <label class="token-label" for="firecrawl-api-key">API Key（可选）</label>
+          <label
+            class="token-label"
+            for="firecrawl-api-key"
+            >API Key（可选）</label
+          >
           <input
             id="firecrawl-api-key"
             v-model="firecrawlConfig.api_key"
             class="token-input"
             type="password"
-            :placeholder="firecrawlConfig._has_api_key ? '已配置 API Key，留空表示不更新' : '本地部署可留空'"
+            :placeholder="
+              firecrawlConfig._has_api_key
+                ? '已配置 API Key，留空表示不更新'
+                : '本地部署可留空'
+            "
             autocomplete="off"
             spellcheck="false"
           />
 
           <p class="security-hint">
-            说明：保存时若 API Key 留空，会保留服务端已保存的 Key；测试连接支持无 Key 的本地部署。
+            说明：保存时若 API Key 留空，会保留服务端已保存的
+            Key；测试连接支持无 Key 的本地部署。
           </p>
 
           <div class="token-actions">
-            <button class="btn btn-primary" @click="saveFirecrawlConfig" :disabled="saving">
-              {{ saving ? '保存中...' : '保存 Firecrawl 配置' }}
+            <button
+              class="btn btn-primary"
+              @click="saveFirecrawlConfig"
+              :disabled="saving"
+            >
+              {{ saving ? "保存中..." : "保存 Firecrawl 配置" }}
             </button>
-            <button class="btn" @click="testFirecrawlConnection" :disabled="testingFirecrawl">
-              {{ testingFirecrawl ? '测试中...' : '测试 Firecrawl 连接' }}
+            <button
+              class="btn"
+              @click="testFirecrawlConnection"
+              :disabled="testingFirecrawl"
+            >
+              {{ testingFirecrawl ? "测试中..." : "测试 Firecrawl 连接" }}
             </button>
           </div>
         </div>
@@ -200,94 +333,97 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref } from "vue";
 import {
   getHealth,
   getAccessToken,
   setAccessToken,
   clearAccessToken,
-  verifyAccessToken
-} from '../api'
-import ProviderTable from '../components/settings/ProviderTable.vue'
-import ProviderModal from '../components/settings/ProviderModal.vue'
-import ImageProviderModal from '../components/settings/ImageProviderModal.vue'
+  verifyAccessToken,
+} from "../api";
+import ProviderTable from "../components/settings/ProviderTable.vue";
+import ProviderModal from "../components/settings/ProviderModal.vue";
+import ImageProviderModal from "../components/settings/ImageProviderModal.vue";
 import {
   useProviderForm,
   textTypeOptions,
-  imageTypeOptions
-} from '../composables/useProviderForm'
+  imageTypeOptions,
+} from "../composables/useProviderForm";
+import { useTheme } from "../composables/useTheme";
 
-const accessTokenInput = ref(getAccessToken())
-const showToken = ref(false)
-const authChecking = ref(false)
-const authRequired = ref(false)
-const rateLimit = ref('')
-const tokenMessage = ref('')
-const tokenMessageType = ref<'ok' | 'error'>('ok')
+const { theme, setTheme } = useTheme();
+
+const accessTokenInput = ref(getAccessToken());
+const showToken = ref(false);
+const authChecking = ref(false);
+const authRequired = ref(false);
+const rateLimit = ref("");
+const tokenMessage = ref("");
+const tokenMessageType = ref<"ok" | "error">("ok");
 
 async function refreshAuthStatus() {
-  authChecking.value = true
+  authChecking.value = true;
   try {
-    const health = await getHealth()
-    authRequired.value = !!health.auth_required
-    rateLimit.value = health.rate_limit || ''
+    const health = await getHealth();
+    authRequired.value = !!health.auth_required;
+    rateLimit.value = health.rate_limit || "";
     if (!health.success) {
-      tokenMessageType.value = 'error'
-      tokenMessage.value = `健康检查失败：${health.message || '未知错误'}`
+      tokenMessageType.value = "error";
+      tokenMessage.value = `健康检查失败：${health.message || "未知错误"}`;
     } else {
-      tokenMessage.value = ''
+      tokenMessage.value = "";
     }
   } finally {
-    authChecking.value = false
+    authChecking.value = false;
   }
 }
 
 async function saveAccessTokenSetting() {
-  const token = accessTokenInput.value.trim()
+  const token = accessTokenInput.value.trim();
 
   if (!token) {
     if (authRequired.value) {
-      tokenMessageType.value = 'error'
-      tokenMessage.value = '服务端已开启令牌认证，请输入有效令牌。'
-      return
+      tokenMessageType.value = "error";
+      tokenMessage.value = "服务端已开启令牌认证，请输入有效令牌。";
+      return;
     }
-    clearAccessToken()
-    tokenMessageType.value = 'ok'
-    tokenMessage.value = '服务端未开启认证，已清除本地令牌。'
-    return
+    clearAccessToken();
+    tokenMessageType.value = "ok";
+    tokenMessage.value = "服务端未开启认证，已清除本地令牌。";
+    return;
   }
 
-  setAccessToken(token)
+  setAccessToken(token);
 
   if (!authRequired.value) {
-    tokenMessageType.value = 'ok'
-    tokenMessage.value = '令牌已保存。当前服务端未开启令牌认证。'
-    return
+    tokenMessageType.value = "ok";
+    tokenMessage.value = "令牌已保存。当前服务端未开启令牌认证。";
+    return;
   }
 
-  authChecking.value = true
+  authChecking.value = true;
   try {
-    const ok = await verifyAccessToken()
+    const ok = await verifyAccessToken();
     if (ok) {
-      tokenMessageType.value = 'ok'
-      tokenMessage.value = '令牌验证通过，后续请求将自动携带该令牌。'
-      return
+      tokenMessageType.value = "ok";
+      tokenMessage.value = "令牌验证通过，后续请求将自动携带该令牌。";
+      return;
     }
 
-    clearAccessToken()
-    accessTokenInput.value = ''
-    tokenMessageType.value = 'error'
-    tokenMessage.value = '令牌验证失败，已清除本地令牌。请检查后重试。'
+    clearAccessToken();
+    accessTokenInput.value = "";
+    tokenMessageType.value = "error";
+    tokenMessage.value = "令牌验证失败，已清除本地令牌。请检查后重试。";
   } finally {
-    authChecking.value = false
+    authChecking.value = false;
   }
 }
 
 function clearAccessTokenSetting() {
-  clearAccessToken()
-  accessTokenInput.value = ''
-  tokenMessageType.value = 'ok'
-  tokenMessage.value = '本地令牌已清除。'
+  clearAccessToken();
+  accessTokenInput.value = "";
+  tokenMessageType.value = "ok";
+  tokenMessage.value = "本地令牌已清除。";
 }
 
 /**
@@ -348,13 +484,13 @@ const {
   testImageProviderInList,
   updateImageForm,
   saveFirecrawlConfig,
-  testFirecrawlConnection
-} = useProviderForm()
+  testFirecrawlConnection,
+} = useProviderForm();
 
 onMounted(async () => {
-  await Promise.all([loadConfig(), refreshAuthStatus()])
-  accessTokenInput.value = getAccessToken()
-})
+  await Promise.all([loadConfig(), refreshAuthStatus()]);
+  accessTokenInput.value = getAccessToken();
+});
 </script>
 
 <style scoped>
@@ -380,15 +516,15 @@ onMounted(async () => {
 }
 
 .status-pill.required {
-  color: #9f1239;
-  background: #ffe4e6;
-  border-color: #fecdd3;
+  color: var(--color-error);
+  background: var(--color-error-bg);
+  border-color: var(--color-error-border);
 }
 
 .status-pill.optional {
-  color: #334155;
-  background: #f1f5f9;
-  border-color: #e2e8f0;
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+  border-color: var(--border-color);
 }
 
 .token-label {
@@ -437,11 +573,11 @@ onMounted(async () => {
 }
 
 .token-message.ok {
-  color: #166534;
+  color: var(--color-success);
 }
 
 .token-message.error {
-  color: #b91c1c;
+  color: var(--color-error);
 }
 
 .section-header {
@@ -507,5 +643,11 @@ onMounted(async () => {
   gap: 8px;
   font-size: 14px;
   color: var(--text-main);
+}
+
+.theme-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
 }
 </style>

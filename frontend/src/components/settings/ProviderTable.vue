@@ -21,7 +21,7 @@
           @click="$emit('activate', name)"
           :disabled="activeProvider === name"
         >
-          {{ activeProvider === name ? '已激活' : '激活' }}
+          {{ activeProvider === name ? "已激活" : "激活" }}
         </button>
       </div>
       <div class="col-name">
@@ -31,20 +31,49 @@
         <span class="model-name">{{ provider.model }}</span>
       </div>
       <div class="col-apikey">
-        <span class="apikey-masked" :class="{ empty: !provider.api_key_masked }">
-          {{ provider.api_key_masked || '未配置' }}
+        <span
+          class="apikey-masked"
+          :class="{ empty: !provider.api_key_masked }"
+        >
+          {{ provider.api_key_masked || "未配置" }}
         </span>
       </div>
       <div class="col-actions">
-        <button class="btn-icon" @click="$emit('test', name, provider)" title="测试连接">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button
+          class="btn-icon"
+          @click="$emit('test', name, provider)"
+          title="测试连接"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
           </svg>
         </button>
-        <button class="btn-icon" @click="$emit('edit', name, provider)" title="编辑">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        <button
+          class="btn-icon"
+          @click="$emit('edit', name, provider)"
+          title="编辑"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+            ></path>
+            <path
+              d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+            ></path>
           </svg>
         </button>
         <button
@@ -53,9 +82,18 @@
           v-if="canDelete"
           title="删除"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <path
+              d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+            ></path>
           </svg>
         </button>
       </div>
@@ -64,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from "vue";
 
 /**
  * 服务商列表表格组件
@@ -76,29 +114,29 @@ import { computed } from 'vue'
 
 // 定义服务商类型
 interface Provider {
-  type: string
-  model: string
-  base_url?: string
-  api_key?: string
-  api_key_masked?: string
+  type: string;
+  model: string;
+  base_url?: string;
+  api_key?: string;
+  api_key_masked?: string;
 }
 
 // 定义 Props
 const props = defineProps<{
-  providers: Record<string, Provider>
-  activeProvider: string
-}>()
+  providers: Record<string, Provider>;
+  activeProvider: string;
+}>();
 
 // 定义 Emits
 defineEmits<{
-  (e: 'activate', name: string): void
-  (e: 'edit', name: string, provider: Provider): void
-  (e: 'delete', name: string): void
-  (e: 'test', name: string, provider: Provider): void
-}>()
+  (e: "activate", name: string): void;
+  (e: "edit", name: string, provider: Provider): void;
+  (e: "delete", name: string): void;
+  (e: "test", name: string, provider: Provider): void;
+}>();
 
 // 是否可以删除（至少保留一个）
-const canDelete = computed(() => Object.keys(props.providers).length > 1)
+const canDelete = computed(() => Object.keys(props.providers).length > 1);
 </script>
 
 <style scoped>
@@ -183,7 +221,7 @@ const canDelete = computed(() => Object.keys(props.providers).length > 1)
 
 /* 模型名称 */
 .model-name {
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-family: "Monaco", "Menlo", monospace;
   font-size: var(--caption-size);
   color: var(--text-sub);
   background: var(--bg-input);
@@ -195,13 +233,13 @@ const canDelete = computed(() => Object.keys(props.providers).length > 1)
 /* API Key 显示 */
 .apikey-masked {
   font-size: var(--caption-size);
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-family: "Monaco", "Menlo", monospace;
   color: var(--text-secondary);
   word-break: break-all;
 }
 
 .apikey-masked.empty {
-  color: #F59E0B;
+  color: #f59e0b;
 }
 
 /* 操作列 */
@@ -233,9 +271,14 @@ const canDelete = computed(() => Object.keys(props.providers).length > 1)
 }
 
 .btn-icon.danger:hover {
-  border-color: #EF4444;
-  color: #EF4444;
-  background: rgba(239, 68, 68, 0.1);
+  border-color: var(--color-error);
+  color: var(--color-error);
+  background: var(--color-error-bg);
+}
+
+.status-badge.warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
 }
 
 /* 响应式 */

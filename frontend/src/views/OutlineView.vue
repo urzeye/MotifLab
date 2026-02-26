@@ -3,18 +3,53 @@
     <div class="page-header outline-page-header">
       <div>
         <h1 class="page-title">编辑大纲</h1>
-        <div class="typing-tip-banner" aria-live="polite">
+        <div
+          class="typing-tip-banner"
+          aria-live="polite"
+        >
           <span class="typing-tip-icon">{{ activeTypingTip.icon }}</span>
           <span class="typing-tip-text">{{ typingTipText }}</span>
           <span class="typing-tip-cursor">|</span>
         </div>
       </div>
       <div class="header-actions">
-        <button class="btn btn-secondary" @click="goBack" :disabled="revising">
+        <button
+          class="btn btn-secondary"
+          @click="goBack"
+          :disabled="revising"
+        >
           上一步
         </button>
-        <button class="btn btn-primary" @click="startGeneration" :disabled="revising">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path><line x1="16" y1="8" x2="2" y2="22"></line><line x1="17.5" y1="15" x2="9" y2="15"></line></svg>
+        <button
+          class="btn btn-primary"
+          @click="startGeneration"
+          :disabled="revising"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="margin-right: 6px"
+          >
+            <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
+            <line
+              x1="16"
+              y1="8"
+              x2="2"
+              y2="22"
+            ></line>
+            <line
+              x1="17.5"
+              y1="15"
+              x2="9"
+              y2="15"
+            ></line>
+          </svg>
           开始生成图片
         </button>
       </div>
@@ -29,54 +64,163 @@
         @dragstart="onDragStart($event, idx)"
         @dragover.prevent="onDragOver($event, idx)"
         @drop="onDrop($event, idx)"
-        :class="{ 'dragging-over': dragOverIndex === idx, 'card-loading': isPageLoading(page.index) }"
+        :class="{
+          'dragging-over': dragOverIndex === idx,
+          'card-loading': isPageLoading(page.index),
+        }"
       >
         <div class="card-top-bar">
           <div class="page-info">
             <span class="page-number">P{{ idx + 1 }}</span>
-            <span class="page-type" :class="page.type">{{ getPageTypeName(page.type) }}</span>
+            <span
+              class="page-type"
+              :class="page.type"
+              >{{ getPageTypeName(page.type) }}</span
+            >
           </div>
 
           <div class="card-controls">
             <button
               class="icon-btn mode-btn"
               @click="togglePageMode(page.index)"
-              :title="isPageInEditMode(page.index) ? '切换为预览模式' : '切换为编辑模式'"
+              :title="
+                isPageInEditMode(page.index)
+                  ? '切换为预览模式'
+                  : '切换为编辑模式'
+              "
               :disabled="isPageLoading(page.index)"
             >
-              <svg v-if="isPageInEditMode(page.index)" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg
+                v-if="isPageInEditMode(page.index)"
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="3"
+                ></circle>
               </svg>
-              <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg
+                v-else
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
                 <path d="M12 20h9"></path>
                 <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"></path>
               </svg>
             </button>
 
-            <button class="icon-btn" @click="triggerUpload(page.index)" title="上传参考图" :disabled="isPageLoading(page.index)">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <button
+              class="icon-btn"
+              @click="triggerUpload(page.index)"
+              title="上传参考图"
+              :disabled="isPageLoading(page.index)"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="2"
+                ></rect>
+                <circle
+                  cx="8.5"
+                  cy="8.5"
+                  r="1.5"
+                ></circle>
                 <polyline points="21 15 16 10 5 21"></polyline>
               </svg>
             </button>
 
-            <div class="drag-handle" title="拖拽排序">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2">
-                <circle cx="9" cy="12" r="1"></circle>
-                <circle cx="9" cy="5" r="1"></circle>
-                <circle cx="9" cy="19" r="1"></circle>
-                <circle cx="15" cy="12" r="1"></circle>
-                <circle cx="15" cy="5" r="1"></circle>
-                <circle cx="15" cy="19" r="1"></circle>
+            <div
+              class="drag-handle"
+              title="拖拽排序"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle
+                  cx="9"
+                  cy="12"
+                  r="1"
+                ></circle>
+                <circle
+                  cx="9"
+                  cy="5"
+                  r="1"
+                ></circle>
+                <circle
+                  cx="9"
+                  cy="19"
+                  r="1"
+                ></circle>
+                <circle
+                  cx="15"
+                  cy="12"
+                  r="1"
+                ></circle>
+                <circle
+                  cx="15"
+                  cy="5"
+                  r="1"
+                ></circle>
+                <circle
+                  cx="15"
+                  cy="19"
+                  r="1"
+                ></circle>
               </svg>
             </div>
 
-            <button class="icon-btn danger" @click="deletePage(idx)" title="删除此页" :disabled="isPageLoading(page.index)">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
+            <button
+              class="icon-btn danger"
+              @click="deletePage(idx)"
+              title="删除此页"
+              :disabled="isPageLoading(page.index)"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line
+                  x1="18"
+                  y1="6"
+                  x2="6"
+                  y2="18"
+                ></line>
+                <line
+                  x1="6"
+                  y1="6"
+                  x2="18"
+                  y2="18"
+                ></line>
               </svg>
             </button>
           </div>
@@ -84,15 +228,27 @@
 
         <input
           type="file"
-          :ref="el => setFileInputRef(el, page.index)"
+          :ref="(el) => setFileInputRef(el, page.index)"
           style="display: none"
           accept="image/*"
           @change="handleImageUpload($event, page.index)"
         />
 
-        <div v-if="page.user_image" class="reference-image-preview">
-          <img :src="getPageImageSrc(page.user_image)" alt="参考图预览" />
-          <button class="remove-btn" @click.stop="store.setPageImage(page.index, undefined)" title="移除参考图">×</button>
+        <div
+          v-if="page.user_image"
+          class="reference-image-preview"
+        >
+          <img
+            :src="getPageImageSrc(page.user_image)"
+            alt="参考图预览"
+          />
+          <button
+            class="remove-btn"
+            @click.stop="store.setPageImage(page.index, undefined)"
+            title="移除参考图"
+          >
+            ×
+          </button>
         </div>
 
         <div class="content-panel">
@@ -113,27 +269,53 @@
 
         <div class="image-suggestion-card">
           <div class="suggestion-title">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
-              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect
+                x="3"
+                y="3"
+                width="18"
+                height="18"
+                rx="2"
+              ></rect>
+              <circle
+                cx="8.5"
+                cy="8.5"
+                r="1.5"
+              ></circle>
               <polyline points="21 15 16 10 5 21"></polyline>
             </svg>
             配图建议
           </div>
-          <div class="suggestion-content" :class="{ loading: suggestionSyncing && !page.image_suggestion }">
+          <div
+            class="suggestion-content"
+            :class="{ loading: suggestionSyncing && !page.image_suggestion }"
+          >
             {{ getImageSuggestionText(page, idx) }}
           </div>
         </div>
 
         <div class="word-count">{{ getContentWordCount(page.content) }} 字</div>
 
-        <div v-if="isPageLoading(page.index)" class="page-loading-overlay">
+        <div
+          v-if="isPageLoading(page.index)"
+          class="page-loading-overlay"
+        >
           <div class="loading-orb"></div>
           <div class="loading-text">重生成中...</div>
         </div>
       </div>
 
-      <div class="card add-card-dashed" @click="addPage('content')">
+      <div
+        class="card add-card-dashed"
+        @click="addPage('content')"
+      >
         <div class="add-content">
           <div class="add-icon">+</div>
           <span>添加页面</span>
@@ -155,628 +337,659 @@
         :disabled="revising || !revisionRequest.trim()"
         @click="applyRevisionRequest"
       >
-        {{ revising ? '重生成中...' : '确定修改' }}
+        {{ revising ? "重生成中..." : "确定修改" }}
       </button>
     </div>
 
-    <div v-if="revisionMessage" class="revision-message">{{ revisionMessage }}</div>
+    <div
+      v-if="revisionMessage"
+      class="revision-message"
+    >
+      {{ revisionMessage }}
+    </div>
     <div class="bottom-space"></div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, watch, onMounted, onUnmounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useGeneratorStore } from '../stores/generator'
-import { updateHistory, createHistory, editOutlineStream, type Page } from '../api'
+import { ref, nextTick, watch, onMounted, onUnmounted, computed } from "vue";
+import { useRouter } from "vue-router";
+import { useGeneratorStore } from "../stores/generator";
+import {
+  updateHistory,
+  createHistory,
+  editOutlineStream,
+  type Page,
+} from "../api";
 
-const router = useRouter()
-const store = useGeneratorStore()
+const router = useRouter();
+const store = useGeneratorStore();
 
-const dragOverIndex = ref<number | null>(null)
-const draggedIndex = ref<number | null>(null)
-const fileInputs = ref<Record<number, HTMLInputElement>>({})
-const pageEditModeMap = ref<Record<number, boolean>>({})
-const revisionRequest = ref('')
-const revising = ref(false)
-const revisionMessage = ref('')
-const suggestionSyncing = ref(false)
-const revisingPageMap = ref<Record<number, boolean>>({})
+const dragOverIndex = ref<number | null>(null);
+const draggedIndex = ref<number | null>(null);
+const fileInputs = ref<Record<number, HTMLInputElement>>({});
+const pageEditModeMap = ref<Record<number, boolean>>({});
+const revisionRequest = ref("");
+const revising = ref(false);
+const revisionMessage = ref("");
+const suggestionSyncing = ref(false);
+const revisingPageMap = ref<Record<number, boolean>>({});
 
 type OutlineTypingTip = {
-  icon: string
-  text: string
-}
+  icon: string;
+  text: string;
+};
 
 const outlineTypingTips: OutlineTypingTip[] = [
-  { icon: '🔄', text: '可以拖拽卡片左右排序，调整页面顺序' },
-  { icon: '🎯', text: '封面页建议包含吸引人的标题和关键信息' },
-  { icon: '💬', text: '内容页可以使用列表、分点等形式，更易阅读' },
-  { icon: '🌟', text: '生成图片前记得检查文案是否有错别字' },
-  { icon: '💡', text: '双击任意卡片内容即可快速进入编辑模式' },
-  { icon: '🖼️', text: '上传参考图片可以让生成的图片更贴合你的需求' },
-  { icon: '✨', text: '点击卡片右上角图标可以切换预览与编辑模式' },
-  { icon: '🎨', text: '在配图建议中详细描述风格，AI 会生成更符合预期的图片' },
-  { icon: '📊', text: '每页内容建议控制在50-200字之间，效果更佳' }
-]
+  { icon: "🔄", text: "可以拖拽卡片左右排序，调整页面顺序" },
+  { icon: "🎯", text: "封面页建议包含吸引人的标题和关键信息" },
+  { icon: "💬", text: "内容页可以使用列表、分点等形式，更易阅读" },
+  { icon: "🌟", text: "生成图片前记得检查文案是否有错别字" },
+  { icon: "💡", text: "双击任意卡片内容即可快速进入编辑模式" },
+  { icon: "🖼️", text: "上传参考图片可以让生成的图片更贴合你的需求" },
+  { icon: "✨", text: "点击卡片右上角图标可以切换预览与编辑模式" },
+  { icon: "🎨", text: "在配图建议中详细描述风格，AI 会生成更符合预期的图片" },
+  { icon: "📊", text: "每页内容建议控制在50-200字之间，效果更佳" },
+];
 
-const activeTypingTipIndex = ref(0)
-const typingTipText = ref('')
+const activeTypingTipIndex = ref(0);
+const typingTipText = ref("");
 const activeTypingTip = computed(
-  () => outlineTypingTips[activeTypingTipIndex.value] || outlineTypingTips[0]
-)
+  () => outlineTypingTips[activeTypingTipIndex.value] || outlineTypingTips[0],
+);
 
 const setFileInputRef = (el: any, index: number) => {
   if (el) {
-    fileInputs.value[index] = el as HTMLInputElement
+    fileInputs.value[index] = el as HTMLInputElement;
   } else {
-    delete fileInputs.value[index]
+    delete fileInputs.value[index];
   }
-}
+};
 
 const triggerUpload = (index: number) => {
-  fileInputs.value[index]?.click()
-}
+  fileInputs.value[index]?.click();
+};
 
 const getPageImageSrc = (base64: string) => {
-  if (base64.startsWith('data:image')) return base64
-  return `data:image/png;base64,${base64}`
-}
+  if (base64.startsWith("data:image")) return base64;
+  return `data:image/png;base64,${base64}`;
+};
 
 const handleImageUpload = (event: Event, index: number) => {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
 
   if (file.size > 20 * 1024 * 1024) {
-    alert('图片大小不能超过 20MB')
-    input.value = ''
-    return
+    alert("图片大小不能超过 20MB");
+    input.value = "";
+    return;
   }
 
-  const reader = new FileReader()
+  const reader = new FileReader();
   reader.onload = (e) => {
-    const result = e.target?.result as string
-    store.setPageImage(index, result)
-  }
-  reader.readAsDataURL(file)
-  input.value = ''
-}
+    const result = e.target?.result as string;
+    store.setPageImage(index, result);
+  };
+  reader.readAsDataURL(file);
+  input.value = "";
+};
 
 const getPageTypeName = (type: string) => {
-  const names = { cover: '封面', content: '内容', summary: '总结' }
-  return names[type as keyof typeof names] || '内容'
-}
+  const names = { cover: "封面", content: "内容", summary: "总结" };
+  return names[type as keyof typeof names] || "内容";
+};
 
 const onDragStart = (e: DragEvent, index: number) => {
-  if (revising.value || isPageLoading(store.outline.pages[index]?.index ?? -1)) {
-    e.preventDefault()
-    return
+  if (
+    revising.value ||
+    isPageLoading(store.outline.pages[index]?.index ?? -1)
+  ) {
+    e.preventDefault();
+    return;
   }
-  draggedIndex.value = index
+  draggedIndex.value = index;
   if (e.dataTransfer) {
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.dropEffect = 'move'
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.dropEffect = "move";
   }
-}
+};
 
 const onDragOver = (_e: DragEvent, index: number) => {
-  if (revising.value) return
-  if (draggedIndex.value === index) return
-  dragOverIndex.value = index
-}
+  if (revising.value) return;
+  if (draggedIndex.value === index) return;
+  dragOverIndex.value = index;
+};
 
 const onDrop = (_e: DragEvent, index: number) => {
-  if (revising.value) return
-  dragOverIndex.value = null
+  if (revising.value) return;
+  dragOverIndex.value = null;
   if (draggedIndex.value !== null && draggedIndex.value !== index) {
-    store.movePage(draggedIndex.value, index)
+    store.movePage(draggedIndex.value, index);
   }
-  draggedIndex.value = null
-}
+  draggedIndex.value = null;
+};
 
 const deletePage = (index: number) => {
-  if (confirm('确定要删除这一页吗？')) {
-    store.deletePage(index)
+  if (confirm("确定要删除这一页吗？")) {
+    store.deletePage(index);
   }
-}
+};
 
-const addPage = (type: 'cover' | 'content' | 'summary') => {
-  store.addPage(type, '')
+const addPage = (type: "cover" | "content" | "summary") => {
+  store.addPage(type, "");
   nextTick(() => {
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
-  })
-}
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  });
+};
 
 const goBack = () => {
-  router.back()
-}
+  router.back();
+};
 
 const startGeneration = async () => {
   if (saveTimer !== null) {
-    clearTimeout(saveTimer)
-    saveTimer = null
-    await autoSaveOutline()
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    await autoSaveOutline();
   }
-  router.push('/redbook/generate')
-}
+  router.push("/redbook/generate");
+};
 
 const syncPageEditModeMap = () => {
-  const next: Record<number, boolean> = {}
+  const next: Record<number, boolean> = {};
   store.outline.pages.forEach((page) => {
-    next[page.index] = pageEditModeMap.value[page.index] ?? false
-  })
-  pageEditModeMap.value = next
-}
+    next[page.index] = pageEditModeMap.value[page.index] ?? false;
+  });
+  pageEditModeMap.value = next;
+};
 
-const isPageInEditMode = (index: number) => !!pageEditModeMap.value[index]
+const isPageInEditMode = (index: number) => !!pageEditModeMap.value[index];
 
 const togglePageMode = (index: number) => {
-  if (isPageLoading(index)) return
-  pageEditModeMap.value[index] = !pageEditModeMap.value[index]
-}
+  if (isPageLoading(index)) return;
+  pageEditModeMap.value[index] = !pageEditModeMap.value[index];
+};
 
-const isPageLoading = (index: number) => !!revisingPageMap.value[index]
+const isPageLoading = (index: number) => !!revisingPageMap.value[index];
 
 const initRevisingPageLoading = (pages: Page[]) => {
-  const next: Record<number, boolean> = {}
+  const next: Record<number, boolean> = {};
   pages.forEach((page, idx) => {
-    const key = typeof page?.index === 'number' ? page.index : idx
-    next[key] = true
-  })
-  revisingPageMap.value = next
-}
+    const key = typeof page?.index === "number" ? page.index : idx;
+    next[key] = true;
+  });
+  revisingPageMap.value = next;
+};
 
 const markPageLoaded = (index: number) => {
   revisingPageMap.value = {
     ...revisingPageMap.value,
-    [index]: false
-  }
-}
+    [index]: false,
+  };
+};
 
 const clearRevisingPageLoading = () => {
-  revisingPageMap.value = {}
-}
+  revisingPageMap.value = {};
+};
 
 const upsertPageFromStream = (incoming: Page) => {
-  const target = store.outline.pages.find((p) => p.index === incoming.index)
+  const target = store.outline.pages.find((p) => p.index === incoming.index);
   if (target) {
-    target.type = incoming.type
-    target.content = incoming.content
-    target.image_suggestion = incoming.image_suggestion
-    return
+    target.type = incoming.type;
+    target.content = incoming.content;
+    target.image_suggestion = incoming.image_suggestion;
+    return;
   }
 
-  store.outline.pages.push({ ...incoming })
-  store.outline.pages.sort((a, b) => a.index - b.index)
-}
+  store.outline.pages.push({ ...incoming });
+  store.outline.pages.sort((a, b) => a.index - b.index);
+};
 
-const escapeHtml = (value: string) => value
-  .replace(/&/g, '&amp;')
-  .replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;')
-  .replace(/'/g, '&#39;')
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 
 const renderInlineMarkdown = (text: string) => {
-  let html = escapeHtml(text)
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>')
-  html = html.replace(/~~([^~]+)~~/g, '<del>$1</del>')
-  return html
-}
+  let html = escapeHtml(text);
+  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+  html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  html = html.replace(/~~([^~]+)~~/g, "<del>$1</del>");
+  return html;
+};
 
 const renderMarkdown = (markdown: string) => {
   if (!markdown || !markdown.trim()) {
-    return '<p class="md-empty">点击右上角编辑按钮开始填写文案</p>'
+    return '<p class="md-empty">点击右上角编辑按钮开始填写文案</p>';
   }
 
-  const lines = markdown.replace(/\r\n/g, '\n').split('\n')
-  let html = ''
-  let inUl = false
-  let inOl = false
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  let html = "";
+  let inUl = false;
+  let inOl = false;
 
   const closeLists = () => {
     if (inUl) {
-      html += '</ul>'
-      inUl = false
+      html += "</ul>";
+      inUl = false;
     }
     if (inOl) {
-      html += '</ol>'
-      inOl = false
+      html += "</ol>";
+      inOl = false;
     }
-  }
+  };
 
   lines.forEach((rawLine) => {
-    const line = rawLine.trim()
+    const line = rawLine.trim();
 
     if (!line) {
-      closeLists()
-      return
+      closeLists();
+      return;
     }
 
-    const h3Match = line.match(/^###\s+(.+)$/)
+    const h3Match = line.match(/^###\s+(.+)$/);
     if (h3Match) {
-      closeLists()
-      html += `<h3>${renderInlineMarkdown(h3Match[1])}</h3>`
-      return
+      closeLists();
+      html += `<h3>${renderInlineMarkdown(h3Match[1])}</h3>`;
+      return;
     }
 
-    const h2Match = line.match(/^##\s+(.+)$/)
+    const h2Match = line.match(/^##\s+(.+)$/);
     if (h2Match) {
-      closeLists()
-      html += `<h2>${renderInlineMarkdown(h2Match[1])}</h2>`
-      return
+      closeLists();
+      html += `<h2>${renderInlineMarkdown(h2Match[1])}</h2>`;
+      return;
     }
 
-    const h1Match = line.match(/^#\s+(.+)$/)
+    const h1Match = line.match(/^#\s+(.+)$/);
     if (h1Match) {
-      closeLists()
-      html += `<h1>${renderInlineMarkdown(h1Match[1])}</h1>`
-      return
+      closeLists();
+      html += `<h1>${renderInlineMarkdown(h1Match[1])}</h1>`;
+      return;
     }
 
-    const ulMatch = line.match(/^[-*+]\s+(.+)$/)
+    const ulMatch = line.match(/^[-*+]\s+(.+)$/);
     if (ulMatch) {
       if (inOl) {
-        html += '</ol>'
-        inOl = false
+        html += "</ol>";
+        inOl = false;
       }
       if (!inUl) {
-        html += '<ul>'
-        inUl = true
+        html += "<ul>";
+        inUl = true;
       }
-      html += `<li>${renderInlineMarkdown(ulMatch[1])}</li>`
-      return
+      html += `<li>${renderInlineMarkdown(ulMatch[1])}</li>`;
+      return;
     }
 
-    const olMatch = line.match(/^\d+\.\s+(.+)$/)
+    const olMatch = line.match(/^\d+\.\s+(.+)$/);
     if (olMatch) {
       if (inUl) {
-        html += '</ul>'
-        inUl = false
+        html += "</ul>";
+        inUl = false;
       }
       if (!inOl) {
-        html += '<ol>'
-        inOl = true
+        html += "<ol>";
+        inOl = true;
       }
-      html += `<li>${renderInlineMarkdown(olMatch[1])}</li>`
-      return
+      html += `<li>${renderInlineMarkdown(olMatch[1])}</li>`;
+      return;
     }
 
-    closeLists()
-    html += `<p>${renderInlineMarkdown(line)}</p>`
-  })
+    closeLists();
+    html += `<p>${renderInlineMarkdown(line)}</p>`;
+  });
 
-  closeLists()
-  return html
-}
+  closeLists();
+  return html;
+};
 
-const extractPlainText = (markdown: string) => markdown
-  .replace(/```[\s\S]*?```/g, ' ')
-  .replace(/`[^`]+`/g, ' ')
-  .replace(/!\[[^\]]*\]\([^)]+\)/g, ' ')
-  .replace(/\[[^\]]*\]\([^)]+\)/g, ' ')
-  .replace(/^#{1,6}\s+/gm, '')
-  .replace(/^[-*+]\s+/gm, '')
-  .replace(/^\d+\.\s+/gm, '')
-  .replace(/\*\*([^*]+)\*\*/g, '$1')
-  .replace(/\*([^*]+)\*/g, '$1')
-  .replace(/~~([^~]+)~~/g, '$1')
-  .replace(/\s+/g, ' ')
-  .trim()
+const extractPlainText = (markdown: string) =>
+  markdown
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`]+`/g, " ")
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, " ")
+    .replace(/\[[^\]]*\]\([^)]+\)/g, " ")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^[-*+]\s+/gm, "")
+    .replace(/^\d+\.\s+/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/~~([^~]+)~~/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
 
 const getContentWordCount = (content: string) => {
-  const plain = extractPlainText(content || '').replace(/\s+/g, '')
-  return plain.length
-}
+  const plain = extractPlainText(content || "").replace(/\s+/g, "");
+  return plain.length;
+};
 
 const getImageSuggestionText = (page: Page, idx: number) => {
-  const aiText = (page.image_suggestion || '').trim()
-  if (aiText) return aiText
-  if (suggestionSyncing.value) return '正在生成配图建议...'
-  return `第 ${idx + 1} 页暂未生成配图建议，可点击底部“确定修改”或稍后重试。`
-}
+  const aiText = (page.image_suggestion || "").trim();
+  if (aiText) return aiText;
+  if (suggestionSyncing.value) return "正在生成配图建议...";
+  return `第 ${idx + 1} 页暂未生成配图建议，可点击底部“确定修改”或稍后重试。`;
+};
 
-let saveTimer: number | null = null
-let revisionMessageTimer: number | null = null
-let typingStepTimer: number | null = null
-let typingSwitchTimer: number | null = null
+let saveTimer: number | null = null;
+let revisionMessageTimer: number | null = null;
+let typingStepTimer: number | null = null;
+let typingSwitchTimer: number | null = null;
 
 const clearTypingTipTimers = () => {
   if (typingStepTimer !== null) {
-    clearTimeout(typingStepTimer)
-    typingStepTimer = null
+    clearTimeout(typingStepTimer);
+    typingStepTimer = null;
   }
   if (typingSwitchTimer !== null) {
-    clearTimeout(typingSwitchTimer)
-    typingSwitchTimer = null
+    clearTimeout(typingSwitchTimer);
+    typingSwitchTimer = null;
   }
-}
+};
 
 const getNextTypingTipIndex = () => {
-  const total = outlineTypingTips.length
-  if (total <= 1) return 0
-  let next = activeTypingTipIndex.value
+  const total = outlineTypingTips.length;
+  if (total <= 1) return 0;
+  let next = activeTypingTipIndex.value;
   while (next === activeTypingTipIndex.value) {
-    next = Math.floor(Math.random() * total)
+    next = Math.floor(Math.random() * total);
   }
-  return next
-}
+  return next;
+};
 
 const startTypingTip = () => {
-  clearTypingTipTimers()
-  const text = activeTypingTip.value.text || ''
-  typingTipText.value = ''
-  let cursor = 0
+  clearTypingTipTimers();
+  const text = activeTypingTip.value.text || "";
+  typingTipText.value = "";
+  let cursor = 0;
 
   const typeNext = () => {
     if (cursor >= text.length) {
       typingSwitchTimer = window.setTimeout(() => {
-        activeTypingTipIndex.value = getNextTypingTipIndex()
-        startTypingTip()
-      }, 3200)
-      return
+        activeTypingTipIndex.value = getNextTypingTipIndex();
+        startTypingTip();
+      }, 3200);
+      return;
     }
 
-    const char = text[cursor]
-    typingTipText.value = text.slice(0, cursor + 1)
-    cursor += 1
-    const delay = /[，。！？,.]/.test(char) ? 220 : 78
-    typingStepTimer = window.setTimeout(typeNext, delay)
-  }
+    const char = text[cursor];
+    typingTipText.value = text.slice(0, cursor + 1);
+    cursor += 1;
+    const delay = /[，。！？,.]/.test(char) ? 220 : 78;
+    typingStepTimer = window.setTimeout(typeNext, delay);
+  };
 
-  typingStepTimer = window.setTimeout(typeNext, 450)
-}
+  typingStepTimer = window.setTimeout(typeNext, 450);
+};
 
 const clearRevisionMessage = () => {
   if (revisionMessageTimer !== null) {
-    clearTimeout(revisionMessageTimer)
-    revisionMessageTimer = null
+    clearTimeout(revisionMessageTimer);
+    revisionMessageTimer = null;
   }
-  revisionMessage.value = ''
-}
+  revisionMessage.value = "";
+};
 
 const showRevisionMessage = (message: string, duration = 2600) => {
-  clearRevisionMessage()
-  revisionMessage.value = message
+  clearRevisionMessage();
+  revisionMessage.value = message;
   if (duration > 0) {
     revisionMessageTimer = window.setTimeout(() => {
-      revisionMessage.value = ''
-      revisionMessageTimer = null
-    }, duration)
+      revisionMessage.value = "";
+      revisionMessageTimer = null;
+    }, duration);
   }
-}
+};
 
 const autoSaveOutline = async () => {
   if (!store.recordId) {
-    console.warn('未找到历史记录ID，无法自动保存')
-    return
+    console.warn("未找到历史记录ID，无法自动保存");
+    return;
   }
-  if (!store.outline.pages || store.outline.pages.length === 0) return
+  if (!store.outline.pages || store.outline.pages.length === 0) return;
 
   try {
     const result = await updateHistory(store.recordId, {
-      outline: { raw: store.outline.raw, pages: store.outline.pages }
-    })
+      outline: { raw: store.outline.raw, pages: store.outline.pages },
+    });
     if (!result.success) {
-      console.error('自动保存失败:', result.error)
+      console.error("自动保存失败:", result.error);
     }
   } catch (error) {
-    console.error('自动保存出错:', error)
+    console.error("自动保存出错:", error);
   }
-}
+};
 
 const debouncedSave = () => {
-  if (saveTimer !== null) clearTimeout(saveTimer)
+  if (saveTimer !== null) clearTimeout(saveTimer);
   saveTimer = window.setTimeout(() => {
-    autoSaveOutline()
-    saveTimer = null
-  }, 300)
-}
+    autoSaveOutline();
+    saveTimer = null;
+  }, 300);
+};
 
 const checkAndCreateHistory = async () => {
-  if (store.recordId) return
-  if (!store.outline.pages || store.outline.pages.length === 0) return
+  if (store.recordId) return;
+  if (!store.outline.pages || store.outline.pages.length === 0) return;
 
   try {
     const result = await createHistory(
-      store.topic || '未命名主题',
+      store.topic || "未命名主题",
       { raw: store.outline.raw, pages: store.outline.pages },
-      store.taskId || undefined
-    )
+      store.taskId || undefined,
+    );
     if (result.success && result.record_id) {
-      store.setRecordId(result.record_id)
+      store.setRecordId(result.record_id);
     }
   } catch (error) {
-    console.error('创建历史记录出错:', error)
+    console.error("创建历史记录出错:", error);
   }
-}
+};
 
 const normalizeStreamPage = (page: any, fallbackIndex: number): Page => {
-  const type = String(page?.type || 'content')
-  const safeType: 'cover' | 'content' | 'summary' =
-    type === 'cover' || type === 'summary' ? type : 'content'
+  const type = String(page?.type || "content");
+  const safeType: "cover" | "content" | "summary" =
+    type === "cover" || type === "summary" ? type : "content";
   return {
-    index: typeof page?.index === 'number' ? page.index : fallbackIndex,
+    index: typeof page?.index === "number" ? page.index : fallbackIndex,
     type: safeType,
-    content: String(page?.content || ''),
-    image_suggestion: String(page?.image_suggestion || '').trim() || undefined
-  }
-}
+    content: String(page?.content || ""),
+    image_suggestion: String(page?.image_suggestion || "").trim() || undefined,
+  };
+};
 
 const mergeSuggestionsIntoCurrentPages = (pages: Page[]) => {
-  const suggestionMap = new Map<number, string>()
+  const suggestionMap = new Map<number, string>();
   pages.forEach((page, idx) => {
-    const targetIndex = typeof page.index === 'number' ? page.index : idx
-    const text = (page.image_suggestion || '').trim()
-    if (text) suggestionMap.set(targetIndex, text)
-  })
+    const targetIndex = typeof page.index === "number" ? page.index : idx;
+    const text = (page.image_suggestion || "").trim();
+    if (text) suggestionMap.set(targetIndex, text);
+  });
 
   store.outline.pages.forEach((page, idx) => {
-    const text = suggestionMap.get(idx) || suggestionMap.get(page.index)
+    const text = suggestionMap.get(idx) || suggestionMap.get(page.index);
     if (text) {
-      page.image_suggestion = text
+      page.image_suggestion = text;
     }
-  })
-}
+  });
+};
 
 const runOutlineEditStream = async (
-  mode: 'suggest_only' | 'revise',
+  mode: "suggest_only" | "revise",
   revisionText: string,
-  onPageEvent?: (page: Page) => void
+  onPageEvent?: (page: Page) => void,
 ): Promise<{ outline: string; pages: Page[] }> => {
-  const streamedPages: Page[] = []
+  const streamedPages: Page[] = [];
 
   return new Promise((resolve, reject) => {
     editOutlineStream(
       {
-        topic: store.topic || '未命名主题',
+        topic: store.topic || "未命名主题",
         current_outline: store.outline.raw,
         current_pages: store.outline.pages,
         revision_request: revisionText,
-        mode
+        mode,
       },
       () => {},
       (event) => {
-        const normalized = normalizeStreamPage(event.page, streamedPages.length)
-        streamedPages[normalized.index] = normalized
-        onPageEvent?.(normalized)
+        const normalized = normalizeStreamPage(
+          event.page,
+          streamedPages.length,
+        );
+        streamedPages[normalized.index] = normalized;
+        onPageEvent?.(normalized);
 
-        if (mode === 'suggest_only') {
-          const target = store.outline.pages.find(p => p.index === normalized.index)
+        if (mode === "suggest_only") {
+          const target = store.outline.pages.find(
+            (p) => p.index === normalized.index,
+          );
           if (target && normalized.image_suggestion) {
-            target.image_suggestion = normalized.image_suggestion
+            target.image_suggestion = normalized.image_suggestion;
           }
         }
       },
       (event) => {
-        const pages = Array.isArray(event.pages) && event.pages.length > 0
-          ? event.pages.map((page, idx) => normalizeStreamPage(page, idx))
-          : streamedPages.filter(Boolean)
+        const pages =
+          Array.isArray(event.pages) && event.pages.length > 0
+            ? event.pages.map((page, idx) => normalizeStreamPage(page, idx))
+            : streamedPages.filter(Boolean);
         resolve({
           outline: event.outline || store.outline.raw,
-          pages
-        })
+          pages,
+        });
       },
       (event) => {
-        reject(new Error(event.error || '流式编辑失败'))
+        reject(new Error(event.error || "流式编辑失败"));
       },
       (error) => {
-        reject(error)
-      }
-    )
-  })
-}
+        reject(error);
+      },
+    );
+  });
+};
 
 const syncSuggestionsWithAI = async () => {
-  if (!store.outline.pages.length) return
-  const missing = store.outline.pages.some(page => !(page.image_suggestion || '').trim())
-  if (!missing) return
+  if (!store.outline.pages.length) return;
+  const missing = store.outline.pages.some(
+    (page) => !(page.image_suggestion || "").trim(),
+  );
+  if (!missing) return;
 
-  suggestionSyncing.value = true
-  clearRevisionMessage()
+  suggestionSyncing.value = true;
+  clearRevisionMessage();
   try {
-    const result = await runOutlineEditStream('suggest_only', '')
-    mergeSuggestionsIntoCurrentPages(result.pages)
+    const result = await runOutlineEditStream("suggest_only", "");
+    mergeSuggestionsIntoCurrentPages(result.pages);
     if (store.recordId) {
       await updateHistory(store.recordId, {
-        outline: { raw: store.outline.raw, pages: store.outline.pages }
-      })
+        outline: { raw: store.outline.raw, pages: store.outline.pages },
+      });
     }
-    showRevisionMessage('已生成配图建议')
+    showRevisionMessage("已生成配图建议");
   } catch (error: any) {
-    showRevisionMessage(error?.message || '生成配图建议失败', 4200)
+    showRevisionMessage(error?.message || "生成配图建议失败", 4200);
   } finally {
-    suggestionSyncing.value = false
+    suggestionSyncing.value = false;
   }
-}
+};
 
 const applyRevisionRequest = async () => {
-  if (!revisionRequest.value.trim() || revising.value) return
+  if (!revisionRequest.value.trim() || revising.value) return;
   if (!store.topic.trim()) {
-    showRevisionMessage('缺少主题，无法重生成，请先返回首页输入主题。', 4200)
-    return
+    showRevisionMessage("缺少主题，无法重生成，请先返回首页输入主题。", 4200);
+    return;
   }
 
   if (saveTimer !== null) {
-    clearTimeout(saveTimer)
-    saveTimer = null
-    await autoSaveOutline()
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    await autoSaveOutline();
   }
 
-  revising.value = true
-  suggestionSyncing.value = true
-  clearRevisionMessage()
-  initRevisingPageLoading(store.outline.pages)
+  revising.value = true;
+  suggestionSyncing.value = true;
+  clearRevisionMessage();
+  initRevisingPageLoading(store.outline.pages);
 
   try {
-    const oldImages = store.outline.pages.map(page => page.user_image)
-    const requestText = revisionRequest.value.trim()
-    const result = await runOutlineEditStream('revise', requestText, (streamedPage) => {
-      upsertPageFromStream(streamedPage)
-      markPageLoaded(streamedPage.index)
-    })
+    const oldImages = store.outline.pages.map((page) => page.user_image);
+    const requestText = revisionRequest.value.trim();
+    const result = await runOutlineEditStream(
+      "revise",
+      requestText,
+      (streamedPage) => {
+        upsertPageFromStream(streamedPage);
+        markPageLoaded(streamedPage.index);
+      },
+    );
 
     if (!result.pages.length) {
-      throw new Error('未返回有效页面数据')
+      throw new Error("未返回有效页面数据");
     }
 
     const nextPages: Page[] = result.pages.map((page, idx) => ({
       ...page,
       index: idx,
-      user_image: oldImages[idx]
-    }))
+      user_image: oldImages[idx],
+    }));
 
-    const nextRaw = result.outline || nextPages.map(page => page.content).join('\n\n<page>\n\n')
-    store.setOutline(nextRaw, nextPages)
-    syncPageEditModeMap()
-    revisionRequest.value = ''
+    const nextRaw =
+      result.outline ||
+      nextPages.map((page) => page.content).join("\n\n<page>\n\n");
+    store.setOutline(nextRaw, nextPages);
+    syncPageEditModeMap();
+    revisionRequest.value = "";
 
     if (store.recordId) {
       await updateHistory(store.recordId, {
-        outline: { raw: store.outline.raw, pages: store.outline.pages }
-      })
+        outline: { raw: store.outline.raw, pages: store.outline.pages },
+      });
     }
 
-    showRevisionMessage('已根据修改需求重新生成大纲')
+    showRevisionMessage("已根据修改需求重新生成大纲");
   } catch (error: any) {
-    showRevisionMessage(error?.message || '重新生成失败，请稍后重试', 4200)
+    showRevisionMessage(error?.message || "重新生成失败，请稍后重试", 4200);
   } finally {
-    revising.value = false
-    suggestionSyncing.value = false
-    clearRevisingPageLoading()
+    revising.value = false;
+    suggestionSyncing.value = false;
+    clearRevisingPageLoading();
   }
-}
+};
 
 onMounted(() => {
-  activeTypingTipIndex.value = Math.floor(Math.random() * outlineTypingTips.length)
-  startTypingTip()
-  checkAndCreateHistory()
-  syncPageEditModeMap()
-  syncSuggestionsWithAI()
-})
+  activeTypingTipIndex.value = Math.floor(
+    Math.random() * outlineTypingTips.length,
+  );
+  startTypingTip();
+  checkAndCreateHistory();
+  syncPageEditModeMap();
+  syncSuggestionsWithAI();
+});
 
 onUnmounted(() => {
   if (saveTimer !== null) {
-    clearTimeout(saveTimer)
-    saveTimer = null
+    clearTimeout(saveTimer);
+    saveTimer = null;
   }
-  clearTypingTipTimers()
-  clearRevisionMessage()
-})
+  clearTypingTipTimers();
+  clearRevisionMessage();
+});
 
 watch(
   () => store.outline.pages,
   () => {
-    syncPageEditModeMap()
+    syncPageEditModeMap();
     if (!revising.value) {
-      debouncedSave()
+      debouncedSave();
     }
   },
-  { deep: true }
-)
+  { deep: true },
+);
 </script>
 
 <style scoped>
@@ -798,39 +1011,39 @@ watch(
   margin-top: 12px;
   width: fit-content;
   max-width: min(100%, 760px);
-  min-height: 46px;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
-  border-radius: 12px;
+  padding: 8px 16px;
+  background: var(--bg-elevated);
   border: 1px solid var(--border-color);
-  background: linear-gradient(140deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+  border-radius: 100px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+}
+
+.typing-tip-banner:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
 }
 
 .typing-tip-icon {
-  font-size: 24px;
-  line-height: 1;
-  flex-shrink: 0;
+  font-size: 14px;
+  animation: bounce 2s infinite ease-in-out;
 }
 
 .typing-tip-text {
-  color: #b7bcc7;
-  font-size: 15px;
-  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .typing-tip-cursor {
-  color: #ff5f6d;
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1;
-  margin-left: 2px;
-  animation: tipCursorBlink 0.9s steps(1, end) infinite;
+  color: var(--primary);
+  opacity: 1;
+  animation: blink 1s step-end infinite;
 }
 
 .outline-grid {
@@ -845,14 +1058,14 @@ watch(
 .outline-card {
   display: flex;
   flex-direction: column;
-  padding: 18px;
-  transition: all 0.2s ease;
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
+  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
   background: var(--bg-card);
-  box-shadow: var(--shadow-sm);
-  min-height: 620px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
+  min-height: 280px;
+  border: 1px solid var(--border-color);
 }
 
 .outline-card.card-loading .content-panel,
@@ -863,10 +1076,9 @@ watch(
 }
 
 .outline-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
   border-color: var(--border-hover);
-  z-index: 10;
 }
 
 .outline-card.dragging-over {
@@ -879,7 +1091,7 @@ watch(
   justify-content: space-between;
   align-items: center;
   margin-bottom: 14px;
-  padding-bottom: 10px;
+  padding: 16px 16px 10px;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -901,20 +1113,23 @@ watch(
   letter-spacing: 0.03em;
   color: #fff;
   background: linear-gradient(135deg, #ff5f6d, #ff3f5c);
-  box-shadow: 0 6px 14px rgba(255, 79, 106, 0.3);
+  box-shadow: 0 6px 14px var(--color-primary-shadow);
 }
 
 .page-type {
   font-size: 12px;
-  padding: 5px 10px;
-  border-radius: 8px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-weight: 500;
+  background: var(--bg-hover);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
 }
 
 .page-type.cover {
-  color: #ff5f6d;
-  background: rgba(255, 95, 109, 0.14);
+  background: var(--color-primary-alpha);
+  color: var(--primary);
+  border-color: var(--color-primary-alpha);
 }
 
 .page-type.content {
@@ -923,8 +1138,9 @@ watch(
 }
 
 .page-type.summary {
-  color: #52c41a;
-  background: rgba(82, 196, 26, 0.12);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: var(--color-success-border);
 }
 
 .card-controls {
@@ -941,12 +1157,15 @@ watch(
 
 .drag-handle {
   cursor: grab;
-  padding: 2px;
-  color: var(--text-placeholder);
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  color: var(--text-muted);
 }
 
-.drag-handle:active {
-  cursor: grabbing;
+.drag-handle:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
 }
 
 .icon-btn {
@@ -1030,42 +1249,30 @@ watch(
 }
 
 .textarea-paper {
-  width: 100%;
   flex: 1;
-  min-height: 300px;
-  height: 100%;
-  border: 1px solid var(--border-color);
+  width: 100%;
+  border: none;
   background: transparent;
-  padding: 12px;
-  font-size: 16px;
-  line-height: 1.72;
   color: var(--text-main);
+  font-size: 14px;
+  line-height: 1.6;
   resize: none;
-  overflow-y: auto;
+  padding: 16px;
   font-family: inherit;
-  border-radius: 10px;
+  outline: none;
 }
 
 .textarea-paper::placeholder {
-  color: var(--text-placeholder);
-}
-
-.textarea-paper:focus {
-  outline: none;
-  border-color: #ff5f6d;
-  box-shadow: 0 0 0 2px rgba(255, 95, 109, 0.14);
+  color: var(--text-muted);
 }
 
 .markdown-preview {
   flex: 1;
-  min-height: 300px;
-  border: 1px solid rgba(255, 95, 109, 0.2);
-  border-radius: 12px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  line-height: 1.75;
-  font-size: 16px;
+  padding: 16px;
+  font-size: 14px;
+  line-height: 1.6;
   color: var(--text-main);
+  word-break: break-word;
   overflow: auto;
 }
 
@@ -1103,30 +1310,32 @@ watch(
   display: inline-block;
   padding: 1px 6px;
   border-radius: 6px;
-  background: rgba(255, 95, 109, 0.12);
-  color: #ff8a9b;
+  background: var(--color-primary-alpha);
+  color: var(--primary);
   font-size: 14px;
 }
 
 .markdown-preview :deep(.md-empty) {
-  color: var(--text-placeholder);
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .image-suggestion-card {
-  margin-top: 14px;
-  border: 1px solid rgba(255, 95, 109, 0.22);
-  border-radius: 14px;
-  background: rgba(255, 95, 109, 0.04);
-  padding: 10px 10px 12px;
+  margin: 12px;
+  padding: 12px;
+  background: var(--bg-hover);
+  border-radius: 8px;
+  border: 1px dashed var(--border-color);
+  font-size: 12px;
+  color: var(--text-sub);
 }
 
 .suggestion-title {
-  font-size: 14px;
-  color: #ff6478;
-  font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  color: var(--primary);
+  font-weight: 500;
   margin-bottom: 6px;
 }
 
@@ -1148,18 +1357,27 @@ watch(
 }
 
 .word-count {
-  text-align: right;
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
   font-size: 12px;
-  color: var(--text-secondary);
-  margin-top: 8px;
+  color: var(--text-sub);
+  background: var(--bg-hover);
+  padding: 2px 8px;
+  border-radius: 10px;
+  pointer-events: none;
 }
 
 .page-loading-overlay {
   position: absolute;
   inset: 12px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 95, 109, 0.28);
-  background: linear-gradient(145deg, rgba(19, 20, 30, 0.78), rgba(28, 22, 30, 0.78));
+  border: 1px solid var(--color-primary-alpha);
+  background: linear-gradient(
+    145deg,
+    var(--bg-overlay-start),
+    var(--bg-overlay-end)
+  );
   backdrop-filter: blur(4px);
   display: flex;
   flex-direction: column;
@@ -1172,7 +1390,7 @@ watch(
 }
 
 .page-loading-overlay::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: -40% -10%;
   background: linear-gradient(
@@ -1189,15 +1407,15 @@ watch(
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 95, 109, 0.24);
-  border-top-color: #ff6e7f;
-  box-shadow: 0 0 20px rgba(255, 95, 109, 0.3);
+  border: 2px solid var(--color-primary-alpha);
+  border-top-color: var(--primary);
+  box-shadow: 0 0 20px var(--color-primary-shadow);
   animation: pageSpin 0.9s linear infinite;
 }
 
 .loading-text {
   font-size: 13px;
-  color: #ffd6dc;
+  color: var(--primary-light);
   font-weight: 600;
   letter-spacing: 0.03em;
 }
@@ -1210,42 +1428,63 @@ watch(
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  min-height: 620px;
-  color: var(--text-placeholder);
+  min-height: 280px;
+  border-radius: 12px;
   transition: all 0.2s;
 }
 
 .add-card-dashed:hover {
   border-color: var(--primary);
-  color: var(--primary);
-  background: var(--primary-fade);
+  background: var(--color-primary-alpha);
 }
 
 .add-content {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--text-sub);
+  gap: 12px;
+}
+
+.add-card-dashed:hover .add-content {
+  color: var(--primary);
 }
 
 .add-icon {
-  font-size: 34px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
   font-weight: 300;
-  margin-bottom: 8px;
+  transition: all 0.2s;
 }
 
+.add-card-dashed:hover .add-icon {
+  background: var(--primary);
+  color: var(--text-inverse);
+}
+
+/* Floating AI Revision input */
 .revision-float-box {
   position: fixed;
+  bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 22px;
-  width: min(760px, calc(100vw - 42px));
-  background: rgba(25, 25, 28, 0.96);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 95, 109, 0.22);
-  border-radius: 18px;
-  padding: 10px;
+  width: 90%;
+  max-width: 800px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 100px;
+  padding: 8px 12px;
   display: flex;
-  gap: 10px;
-  z-index: 90;
-  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
+  align-items: center;
+  box-shadow: var(--shadow-xl);
+  z-index: 100;
+  backdrop-filter: blur(10px);
 }
 
 .revision-input {
@@ -1261,8 +1500,8 @@ watch(
 
 .revision-input:focus {
   outline: none;
-  border-color: #ff5f6d;
-  box-shadow: 0 0 0 2px rgba(255, 95, 109, 0.16);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--color-primary-alpha);
 }
 
 .revision-btn {
@@ -1292,9 +1531,9 @@ watch(
   left: 50%;
   transform: translateX(-50%);
   bottom: 86px;
-  color: #ffd8de;
-  background: rgba(255, 95, 109, 0.18);
-  border: 1px solid rgba(255, 95, 109, 0.35);
+  color: var(--primary-light);
+  background: var(--color-primary-alpha);
+  border: 1px solid var(--color-primary-alpha);
   border-radius: 999px;
   padding: 6px 14px;
   font-size: 12px;

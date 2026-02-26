@@ -1,16 +1,36 @@
 <template>
   <!-- 大纲查看模态框 -->
-  <div v-if="visible && pages" class="outline-modal-overlay" @click="$emit('close')">
-    <div class="outline-modal-content" @click.stop>
+  <div
+    v-if="visible && pages"
+    class="outline-modal-overlay"
+    @click="$emit('close')"
+  >
+    <div
+      class="outline-modal-content"
+      @click.stop
+    >
       <div class="outline-modal-header">
         <h3>完整大纲</h3>
-        <button class="close-icon" @click="$emit('close')">×</button>
+        <button
+          class="close-icon"
+          @click="$emit('close')"
+        >
+          ×
+        </button>
       </div>
       <div class="outline-modal-body">
-        <div v-for="(page, idx) in pages" :key="idx" class="outline-page-card">
+        <div
+          v-for="(page, idx) in pages"
+          :key="idx"
+          class="outline-page-card"
+        >
           <div class="outline-page-card-header">
             <span class="page-badge">P{{ idx + 1 }}</span>
-            <span class="page-type-badge" :class="page.type">{{ getPageTypeName(page.type) }}</span>
+            <span
+              class="page-type-badge"
+              :class="page.type"
+              >{{ getPageTypeName(page.type) }}</span
+            >
             <span class="word-count">{{ page.content.length }} 字</span>
           </div>
           <div class="outline-page-card-content">{{ page.content }}</div>
@@ -33,31 +53,31 @@
 
 // 定义页面类型
 interface Page {
-  type: 'cover' | 'content' | 'summary'
-  content: string
+  type: "cover" | "content" | "summary";
+  content: string;
 }
 
 // 定义 Props
 defineProps<{
-  visible: boolean
-  pages: Page[] | null
-}>()
+  visible: boolean;
+  pages: Page[] | null;
+}>();
 
 // 定义 Emits
 defineEmits<{
-  (e: 'close'): void
-}>()
+  (e: "close"): void;
+}>();
 
 /**
  * 获取页面类型的中文名称
  */
 function getPageTypeName(type: string): string {
   const names: Record<string, string> = {
-    cover: '封面',
-    content: '内容',
-    summary: '总结'
-  }
-  return names[type] || '内容'
+    cover: "封面",
+    content: "内容",
+    summary: "总结",
+  };
+  return names[type] || "内容";
 }
 </script>
 
@@ -101,7 +121,7 @@ function getPageTypeName(type: string): string {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-sub);
 }
 
 /* 关闭按钮 */
@@ -134,14 +154,14 @@ function getPageTypeName(type: string): string {
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 16px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   transition: all 0.2s;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .outline-page-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-color: #d1d5db;
+  border-color: var(--border-hover);
 }
 
 .outline-page-card:last-child {
@@ -155,7 +175,7 @@ function getPageTypeName(type: string): string {
   gap: 10px;
   margin-bottom: 14px;
   padding-bottom: 14px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color);
 }
 
 /* 页码标识 */
@@ -171,7 +191,7 @@ function getPageTypeName(type: string): string {
   border-radius: 4px;
   font-size: 12px;
   font-weight: 700;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
 /* 页面类型标识 */
@@ -187,18 +207,18 @@ function getPageTypeName(type: string): string {
 }
 
 .page-type-badge.cover {
-  background: #e3f2fd;
-  color: #1976d2;
+  background: var(--primary);
+  color: var(--text-inverse);
 }
 
 .page-type-badge.content {
-  background: #f3e5f5;
-  color: #7b1fa2;
+  background: var(--color-info-bg);
+  color: var(--color-info);
 }
 
 .page-type-badge.summary {
-  background: #e8f5e9;
-  color: #388e3c;
+  background: var(--color-success-bg);
+  color: var(--color-success);
 }
 
 /* 字数统计 */
@@ -215,7 +235,8 @@ function getPageTypeName(type: string): string {
   color: #374151;
   white-space: pre-wrap;
   word-break: break-word;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
 
 /* 响应式布局 */

@@ -2,23 +2,57 @@
   <div class="container market-container">
     <section class="market-hero">
       <div class="hero-badge">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
           <path d="M20 7h-9"></path>
           <path d="M14 17H5"></path>
-          <circle cx="17" cy="17" r="3"></circle>
-          <circle cx="7" cy="7" r="3"></circle>
+          <circle
+            cx="17"
+            cy="17"
+            r="3"
+          ></circle>
+          <circle
+            cx="7"
+            cy="7"
+            r="3"
+          ></circle>
         </svg>
         热门模板持续更新
       </div>
       <h1 class="page-title">模板市集</h1>
-      <p class="hero-subtitle">搜索灵感、按分类筛选，预览后可一键带入创作中心。</p>
+      <p class="hero-subtitle">
+        搜索灵感、按分类筛选，预览后可一键带入创作中心。
+      </p>
     </section>
 
     <section class="toolbar-card">
       <div class="search-input-wrap">
-        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        <svg
+          class="search-icon"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <circle
+            cx="11"
+            cy="11"
+            r="8"
+          ></circle>
+          <line
+            x1="21"
+            y1="21"
+            x2="16.65"
+            y2="16.65"
+          ></line>
         </svg>
         <input
           v-model="keyword"
@@ -31,9 +65,12 @@
 
       <div class="toolbar-meta">
         <span class="result-text">
-          {{ loading ? '加载中...' : `共 ${total} 个模板` }}
+          {{ loading ? "加载中..." : `共 ${total} 个模板` }}
         </span>
-        <RouterLink class="btn btn-secondary jump-btn" to="/redbook">
+        <RouterLink
+          class="btn btn-secondary jump-btn"
+          to="/redbook"
+        >
           去创作中心
         </RouterLink>
       </div>
@@ -52,35 +89,64 @@
       </button>
     </section>
 
-    <section v-if="error" class="error-msg">{{ error }}</section>
+    <section
+      v-if="error"
+      class="error-msg"
+    >
+      {{ error }}
+    </section>
 
-    <section v-if="loading" class="loading-block">
+    <section
+      v-if="loading"
+      class="loading-block"
+    >
       <div class="spinner"></div>
     </section>
 
-    <section v-else-if="templates.length === 0" class="empty-card">
+    <section
+      v-else-if="templates.length === 0"
+      class="empty-card"
+    >
       <h3>没有找到匹配模板</h3>
       <p>换个关键词试试，或切换到「全部」分类。</p>
     </section>
 
-    <section v-else class="template-grid">
+    <section
+      v-else
+      class="template-grid"
+    >
       <article
         v-for="item in templates"
         :key="item.id"
         class="template-card"
       >
         <div class="cover-wrap">
-          <img :src="item.coverImage" :alt="item.title" class="cover-image" loading="lazy" />
+          <img
+            :src="item.coverImage"
+            :alt="item.title"
+            class="cover-image"
+            loading="lazy"
+          />
           <div class="card-badges">
-            <span v-if="item.isNew" class="badge-new">NEW</span>
-            <span v-if="item.isHot" class="badge-hot">HOT</span>
+            <span
+              v-if="item.isNew"
+              class="badge-new"
+              >NEW</span
+            >
+            <span
+              v-if="item.isHot"
+              class="badge-hot"
+              >HOT</span
+            >
           </div>
         </div>
 
         <div class="card-content">
           <div class="card-top">
             <span class="category-mini">{{ item.category }}</span>
-            <span class="usage-mini">已使用 {{ formatUsage(item.usageCount) }}</span>
+            <span class="usage-mini"
+              >已使用 {{ formatUsage(item.usageCount) }}</span
+            >
           </div>
 
           <h3 class="card-title">{{ item.title }}</h3>
@@ -97,10 +163,16 @@
           </div>
 
           <div class="card-actions">
-            <button class="btn btn-secondary action-btn" @click="openPreview(item)">
+            <button
+              class="btn btn-secondary action-btn"
+              @click="openPreview(item)"
+            >
               预览模板
             </button>
-            <button class="btn btn-primary action-btn" @click="useTemplate(item)">
+            <button
+              class="btn btn-primary action-btn"
+              @click="useTemplate(item)"
+            >
               使用模板
             </button>
           </div>
@@ -119,123 +191,126 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { computed, onMounted, ref, watch } from "vue";
+import { RouterLink, useRouter } from "vue-router";
 import {
   getTemplateCategories,
   getTemplates,
   type TemplateCategory,
-  type TemplateItem
-} from '../api'
-import TemplatePreviewModal from '../components/template/TemplatePreviewModal.vue'
+  type TemplateItem,
+} from "../api";
+import TemplatePreviewModal from "../components/template/TemplatePreviewModal.vue";
 
-const router = useRouter()
+const router = useRouter();
 
-const templates = ref<TemplateItem[]>([])
-const categories = ref<TemplateCategory[]>([{ name: '全部', count: 0 }])
-const selectedCategory = ref('全部')
-const keyword = ref('')
-const total = ref(0)
-const loading = ref(false)
-const error = ref('')
+const templates = ref<TemplateItem[]>([]);
+const categories = ref<TemplateCategory[]>([{ name: "全部", count: 0 }]);
+const selectedCategory = ref("全部");
+const keyword = ref("");
+const total = ref(0);
+const loading = ref(false);
+const error = ref("");
 
-const previewVisible = ref(false)
-const activeTemplate = ref<TemplateItem | null>(null)
-const applying = ref(false)
+const previewVisible = ref(false);
+const activeTemplate = ref<TemplateItem | null>(null);
+const applying = ref(false);
 
 const normalizedCategory = computed(() =>
-  selectedCategory.value === '全部' ? '' : selectedCategory.value
-)
+  selectedCategory.value === "全部" ? "" : selectedCategory.value,
+);
 
-let requestSeq = 0
-let keywordDebounceTimer: number | null = null
+let requestSeq = 0;
+let keywordDebounceTimer: number | null = null;
 
 async function loadCategories() {
-  const response = await getTemplateCategories()
+  const response = await getTemplateCategories();
   if (!response.success) {
-    return
+    return;
   }
 
-  const sum = response.categories.reduce((acc, item) => acc + (item.count || 0), 0)
-  categories.value = [{ name: '全部', count: sum }, ...response.categories]
+  const sum = response.categories.reduce(
+    (acc, item) => acc + (item.count || 0),
+    0,
+  );
+  categories.value = [{ name: "全部", count: sum }, ...response.categories];
 }
 
 async function loadTemplates() {
-  const reqId = ++requestSeq
-  loading.value = true
-  error.value = ''
+  const reqId = ++requestSeq;
+  loading.value = true;
+  error.value = "";
 
   const response = await getTemplates({
     q: keyword.value.trim() || undefined,
-    category: normalizedCategory.value || undefined
-  })
+    category: normalizedCategory.value || undefined,
+  });
 
   if (reqId !== requestSeq) {
-    return
+    return;
   }
 
   if (response.success) {
-    templates.value = response.templates || []
-    total.value = response.total || 0
+    templates.value = response.templates || [];
+    total.value = response.total || 0;
   } else {
-    templates.value = []
-    total.value = 0
-    error.value = response.error || '获取模板失败，请稍后重试'
+    templates.value = [];
+    total.value = 0;
+    error.value = response.error || "获取模板失败，请稍后重试";
   }
 
-  loading.value = false
+  loading.value = false;
 }
 
 function selectCategory(name: string) {
-  if (selectedCategory.value === name) return
-  selectedCategory.value = name
+  if (selectedCategory.value === name) return;
+  selectedCategory.value = name;
 }
 
 function openPreview(template: TemplateItem) {
-  activeTemplate.value = template
-  previewVisible.value = true
+  activeTemplate.value = template;
+  previewVisible.value = true;
 }
 
 function closePreview() {
-  previewVisible.value = false
-  activeTemplate.value = null
+  previewVisible.value = false;
+  activeTemplate.value = null;
 }
 
 async function useTemplate(template: TemplateItem) {
-  applying.value = true
+  applying.value = true;
   try {
     await router.push({
-      path: '/redbook',
-      query: { template_id: template.id }
-    })
+      path: "/redbook",
+      query: { template_id: template.id },
+    });
   } finally {
-    applying.value = false
-    closePreview()
+    applying.value = false;
+    closePreview();
   }
 }
 
 function formatUsage(value: number | undefined): string {
-  return Number(value || 0).toLocaleString('zh-CN')
+  return Number(value || 0).toLocaleString("zh-CN");
 }
 
 watch(selectedCategory, () => {
-  loadTemplates()
-})
+  loadTemplates();
+});
 
 watch(keyword, () => {
   if (keywordDebounceTimer !== null) {
-    clearTimeout(keywordDebounceTimer)
+    clearTimeout(keywordDebounceTimer);
   }
   keywordDebounceTimer = window.setTimeout(() => {
-    loadTemplates()
-    keywordDebounceTimer = null
-  }, 280)
-})
+    loadTemplates();
+    keywordDebounceTimer = null;
+  }, 280);
+});
 
 onMounted(async () => {
-  await loadCategories()
-  await loadTemplates()
-})
+  await loadCategories();
+  await loadTemplates();
+});
 </script>
 
 <style scoped>
@@ -247,7 +322,11 @@ onMounted(async () => {
 
 .market-hero {
   background:
-    radial-gradient(1000px 200px at 20% -20%, rgba(0, 255, 136, 0.14), transparent),
+    radial-gradient(
+      1000px 200px at 20% -20%,
+      rgba(0, 255, 136, 0.14),
+      transparent
+    ),
     radial-gradient(900px 250px at 90% 0, rgba(56, 189, 248, 0.1), transparent),
     var(--bg-card);
   border: 1px solid var(--border-color);
@@ -403,8 +482,11 @@ onMounted(async () => {
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(22, 22, 26, 1), rgba(18, 18, 22, 1));
-  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+  background: var(--bg-card);
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .template-card:hover {
@@ -443,15 +525,15 @@ onMounted(async () => {
 }
 
 .badge-new {
-  color: #67e8f9;
-  background: rgba(103, 232, 249, 0.14);
-  border: 1px solid rgba(103, 232, 249, 0.5);
+  color: var(--color-cyan);
+  background: var(--color-info-bg);
+  border: 1px solid var(--color-info-border);
 }
 
 .badge-hot {
-  color: #fb7185;
-  background: rgba(251, 113, 133, 0.14);
-  border: 1px solid rgba(251, 113, 133, 0.45);
+  color: var(--color-rose);
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error-border);
 }
 
 .card-content {

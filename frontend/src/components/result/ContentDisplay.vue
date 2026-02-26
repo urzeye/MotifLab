@@ -1,42 +1,99 @@
 <template>
   <div class="content-display">
     <!-- 生成按钮 -->
-    <div v-if="content.status === 'idle'" class="generate-section">
-      <button class="btn btn-primary generate-btn" @click="handleGenerate" :disabled="loading">
-        <svg v-if="!loading" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 5v14M5 12h14"/>
+    <div
+      v-if="content.status === 'idle'"
+      class="generate-section"
+    >
+      <button
+        class="btn btn-primary generate-btn"
+        @click="handleGenerate"
+        :disabled="loading"
+      >
+        <svg
+          v-if="!loading"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M12 5v14M5 12h14" />
         </svg>
-        <span v-if="loading" class="spinner"></span>
-        {{ loading ? '生成中...' : '生成标题、文案和标签' }}
+        <span
+          v-if="loading"
+          class="spinner"
+        ></span>
+        {{ loading ? "生成中..." : "生成标题、文案和标签" }}
       </button>
     </div>
 
     <!-- 加载状态 -->
-    <div v-else-if="content.status === 'generating'" class="loading-section">
+    <div
+      v-else-if="content.status === 'generating'"
+      class="loading-section"
+    >
       <div class="loading-spinner"></div>
       <p>正在生成标题、文案和标签...</p>
     </div>
 
     <!-- 错误状态 -->
-    <div v-else-if="content.status === 'error'" class="error-section">
+    <div
+      v-else-if="content.status === 'error'"
+      class="error-section"
+    >
       <div class="error-icon">!</div>
-      <p class="error-message">{{ content.error || '生成失败，请重试' }}</p>
-      <button class="btn btn-secondary" @click="handleGenerate">重新生成</button>
+      <p class="error-message">{{ content.error || "生成失败，请重试" }}</p>
+      <button
+        class="btn btn-secondary"
+        @click="handleGenerate"
+      >
+        重新生成
+      </button>
     </div>
 
     <!-- 生成结果 -->
-    <div v-else-if="content.status === 'done'" class="result-section">
+    <div
+      v-else-if="content.status === 'done'"
+      class="result-section"
+    >
       <div class="content-toolbar">
         <span class="toolbar-label">内容操作</span>
-        <button class="copy-btn copy-full-btn" @click="copyFullContent" :class="{ copied: copiedFullContent }">
-          <svg v-if="!copiedFullContent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        <button
+          class="copy-btn copy-full-btn"
+          @click="copyFullContent"
+          :class="{ copied: copiedFullContent }"
+        >
+          <svg
+            v-if="!copiedFullContent"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <rect
+              x="9"
+              y="9"
+              width="13"
+              height="13"
+              rx="2"
+              ry="2"
+            />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
           </svg>
-          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="20 6 9 17 4 12"/>
+          <svg
+            v-else
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <polyline points="20 6 9 17 4 12" />
           </svg>
-          {{ copiedFullContent ? '已复制全部文案' : '复制全部文案（标题+正文+标签）' }}
+          {{
+            copiedFullContent
+              ? "已复制全部文案"
+              : "复制全部文案（标题+正文+标签）"
+          }}
         </button>
       </div>
 
@@ -44,28 +101,68 @@
       <div class="content-card">
         <div class="card-header">
           <h3>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M4 6h16M4 12h16M4 18h10"/>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M4 6h16M4 12h16M4 18h10" />
             </svg>
             标题
           </h3>
-          <button class="copy-btn" @click="copyTitles" :class="{ copied: copiedTitles }">
-            <svg v-if="!copiedTitles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          <button
+            class="copy-btn"
+            @click="copyTitles"
+            :class="{ copied: copiedTitles }"
+          >
+            <svg
+              v-if="!copiedTitles"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect
+                x="9"
+                y="9"
+                width="13"
+                height="13"
+                rx="2"
+                ry="2"
+              />
+              <path
+                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+              />
             </svg>
-            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="20 6 9 17 4 12"/>
+            <svg
+              v-else
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="20 6 9 17 4 12" />
             </svg>
-            {{ copiedTitles ? '已复制' : '复制' }}
+            {{ copiedTitles ? "已复制" : "复制" }}
           </button>
         </div>
         <div class="titles-list">
-          <div v-for="(title, index) in content.titles" :key="index" class="title-item" @click="copyTitle(title, index)">
-            <span class="title-badge">{{ index === 0 ? '推荐' : `备选${index}` }}</span>
+          <div
+            v-for="(title, index) in content.titles"
+            :key="index"
+            class="title-item"
+            @click="copyTitle(title, index)"
+          >
+            <span class="title-badge">{{
+              index === 0 ? "推荐" : `备选${index}`
+            }}</span>
             <span class="title-text">{{ title }}</span>
-            <span class="copy-hint" :class="{ show: copiedTitleIndex === index }">
-              {{ copiedTitleIndex === index ? '已复制' : '点击复制' }}
+            <span
+              class="copy-hint"
+              :class="{ show: copiedTitleIndex === index }"
+            >
+              {{ copiedTitleIndex === index ? "已复制" : "点击复制" }}
             </span>
           </div>
         </div>
@@ -75,27 +172,74 @@
       <div class="content-card">
         <div class="card-header">
           <h3>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+              />
+              <polyline points="14 2 14 8 20 8" />
+              <line
+                x1="16"
+                y1="13"
+                x2="8"
+                y2="13"
+              />
+              <line
+                x1="16"
+                y1="17"
+                x2="8"
+                y2="17"
+              />
             </svg>
             文案
           </h3>
-          <button class="copy-btn" @click="copyCopywriting" :class="{ copied: copiedCopywriting }">
-            <svg v-if="!copiedCopywriting" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          <button
+            class="copy-btn"
+            @click="copyCopywriting"
+            :class="{ copied: copiedCopywriting }"
+          >
+            <svg
+              v-if="!copiedCopywriting"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect
+                x="9"
+                y="9"
+                width="13"
+                height="13"
+                rx="2"
+                ry="2"
+              />
+              <path
+                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+              />
             </svg>
-            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="20 6 9 17 4 12"/>
+            <svg
+              v-else
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="20 6 9 17 4 12" />
             </svg>
-            {{ copiedCopywriting ? '已复制' : '复制' }}
+            {{ copiedCopywriting ? "已复制" : "复制" }}
           </button>
         </div>
         <div class="copywriting-content">
-          <p v-for="(paragraph, index) in formattedCopywriting" :key="index">{{ paragraph }}</p>
+          <p
+            v-for="(paragraph, index) in formattedCopywriting"
+            :key="index"
+          >
+            {{ paragraph }}
+          </p>
         </div>
       </div>
 
@@ -103,21 +247,58 @@
       <div class="content-card">
         <div class="card-header">
           <h3>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-              <line x1="7" y1="7" x2="7.01" y2="7"/>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
+              />
+              <line
+                x1="7"
+                y1="7"
+                x2="7.01"
+                y2="7"
+              />
             </svg>
             标签
           </h3>
-          <button class="copy-btn" @click="copyTags" :class="{ copied: copiedTags }">
-            <svg v-if="!copiedTags" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          <button
+            class="copy-btn"
+            @click="copyTags"
+            :class="{ copied: copiedTags }"
+          >
+            <svg
+              v-if="!copiedTags"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect
+                x="9"
+                y="9"
+                width="13"
+                height="13"
+                rx="2"
+                ry="2"
+              />
+              <path
+                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+              />
             </svg>
-            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="20 6 9 17 4 12"/>
+            <svg
+              v-else
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="20 6 9 17 4 12" />
             </svg>
-            {{ copiedTags ? '已复制' : '复制' }}
+            {{ copiedTags ? "已复制" : "复制" }}
           </button>
         </div>
         <div class="tags-list">
@@ -135,12 +316,23 @@
 
       <!-- 重新生成按钮 -->
       <div class="regenerate-section">
-        <button class="btn btn-secondary" @click="handleGenerate" :disabled="loading">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M23 4v6h-6M1 20v-6h6"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        <button
+          class="btn btn-secondary"
+          @click="handleGenerate"
+          :disabled="loading"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M23 4v6h-6M1 20v-6h6" />
+            <path
+              d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
+            />
           </svg>
-          {{ loading ? '生成中...' : '重新生成' }}
+          {{ loading ? "生成中..." : "重新生成" }}
         </button>
       </div>
     </div>
@@ -148,75 +340,79 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useGeneratorStore } from '../../stores/generator'
-import { generateContent, updateHistory } from '../../api'
+import { ref, computed, onMounted } from "vue";
+import { useGeneratorStore } from "../../stores/generator";
+import { generateContent, updateHistory } from "../../api";
 
-const store = useGeneratorStore()
+const store = useGeneratorStore();
 
 onMounted(() => {
-  if (store.content.status === 'idle') {
-    handleGenerate()
+  if (store.content.status === "idle") {
+    handleGenerate();
   }
-})
+});
 
-const loading = ref(false)
-const copiedTitles = ref(false)
-const copiedCopywriting = ref(false)
-const copiedTags = ref(false)
-const copiedTitleIndex = ref<number | null>(null)
-const copiedTagIndex = ref<number | null>(null)
-const copiedFullContent = ref(false)
+const loading = ref(false);
+const copiedTitles = ref(false);
+const copiedCopywriting = ref(false);
+const copiedTags = ref(false);
+const copiedTitleIndex = ref<number | null>(null);
+const copiedTagIndex = ref<number | null>(null);
+const copiedFullContent = ref(false);
 
-const content = computed(() => store.content)
+const content = computed(() => store.content);
 
 // 格式化文案（按换行分段）
 const formattedCopywriting = computed(() => {
-  if (!content.value.copywriting) return []
-  return content.value.copywriting.split('\n').filter(p => p.trim())
-})
+  if (!content.value.copywriting) return [];
+  return content.value.copywriting.split("\n").filter((p) => p.trim());
+});
 
 const fullContentText = computed(() => {
-  const lines: string[] = []
+  const lines: string[] = [];
 
   if (content.value.titles.length > 0) {
-    lines.push('【标题】')
+    lines.push("【标题】");
     content.value.titles.forEach((title, index) => {
-      lines.push(`${index === 0 ? '推荐' : `备选${index}`}：${title}`)
-    })
+      lines.push(`${index === 0 ? "推荐" : `备选${index}`}：${title}`);
+    });
   }
 
   if (content.value.copywriting) {
-    if (lines.length > 0) lines.push('')
-    lines.push('【正文】')
-    lines.push(content.value.copywriting)
+    if (lines.length > 0) lines.push("");
+    lines.push("【正文】");
+    lines.push(content.value.copywriting);
   }
 
   if (content.value.tags.length > 0) {
-    if (lines.length > 0) lines.push('')
-    lines.push('【话题标签】')
-    lines.push(content.value.tags.map(t => `#${t}`).join(' '))
+    if (lines.length > 0) lines.push("");
+    lines.push("【话题标签】");
+    lines.push(content.value.tags.map((t) => `#${t}`).join(" "));
   }
 
-  return lines.join('\n')
-})
+  return lines.join("\n");
+});
 
 // 生成内容
 async function handleGenerate() {
-  if (loading.value) return
+  if (loading.value) return;
 
-  loading.value = true
-  store.startContentGeneration()
+  loading.value = true;
+  store.startContentGeneration();
 
   try {
-    const result = await generateContent(store.topic, store.outline.raw, store.recordId || undefined)
+    const result = await generateContent(
+      store.topic,
+      store.outline.raw,
+      store.recordId || undefined,
+    );
 
     if (result.success && result.titles && result.copywriting && result.tags) {
-      const titles = result.titles
-      const copywriting = result.copywriting
-      const tags = result.tags
+      const titles = result.titles;
+      const copywriting = result.copywriting;
+      const tags = result.tags;
 
-      store.setContent(titles, copywriting, tags)
+      store.setContent(titles, copywriting, tags);
 
       if (store.recordId) {
         try {
@@ -224,94 +420,94 @@ async function handleGenerate() {
             content: {
               titles,
               copywriting,
-              tags
-            }
-          })
+              tags,
+            },
+          });
         } catch (syncError) {
-          console.error('生成文案后回写历史记录失败:', syncError)
+          console.error("生成文案后回写历史记录失败:", syncError);
         }
       }
     } else {
-      store.setContentError(result.error || '生成失败')
+      store.setContentError(result.error || "生成失败");
     }
   } catch (error: any) {
-    store.setContentError(error.message || '生成失败，请重试')
+    store.setContentError(error.message || "生成失败，请重试");
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 // 复制到剪贴板
 async function copyToClipboard(text: string): Promise<boolean> {
   try {
-    await navigator.clipboard.writeText(text)
-    return true
+    await navigator.clipboard.writeText(text);
+    return true;
   } catch {
     // 降级方案
-    const textarea = document.createElement('textarea')
-    textarea.value = text
-    textarea.style.position = 'fixed'
-    textarea.style.opacity = '0'
-    document.body.appendChild(textarea)
-    textarea.select()
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
     try {
-      document.execCommand('copy')
-      return true
+      document.execCommand("copy");
+      return true;
     } catch {
-      return false
+      return false;
     } finally {
-      document.body.removeChild(textarea)
+      document.body.removeChild(textarea);
     }
   }
 }
 
 // 复制所有标题
 async function copyTitles() {
-  const text = content.value.titles.join('\n')
+  const text = content.value.titles.join("\n");
   if (await copyToClipboard(text)) {
-    copiedTitles.value = true
-    setTimeout(() => copiedTitles.value = false, 2000)
+    copiedTitles.value = true;
+    setTimeout(() => (copiedTitles.value = false), 2000);
   }
 }
 
 // 复制单个标题
 async function copyTitle(title: string, index: number) {
   if (await copyToClipboard(title)) {
-    copiedTitleIndex.value = index
-    setTimeout(() => copiedTitleIndex.value = null, 2000)
+    copiedTitleIndex.value = index;
+    setTimeout(() => (copiedTitleIndex.value = null), 2000);
   }
 }
 
 // 复制文案
 async function copyCopywriting() {
   if (await copyToClipboard(content.value.copywriting)) {
-    copiedCopywriting.value = true
-    setTimeout(() => copiedCopywriting.value = false, 2000)
+    copiedCopywriting.value = true;
+    setTimeout(() => (copiedCopywriting.value = false), 2000);
   }
 }
 
 // 复制所有标签
 async function copyTags() {
-  const text = content.value.tags.map(t => `#${t}`).join(' ')
+  const text = content.value.tags.map((t) => `#${t}`).join(" ");
   if (await copyToClipboard(text)) {
-    copiedTags.value = true
-    setTimeout(() => copiedTags.value = false, 2000)
+    copiedTags.value = true;
+    setTimeout(() => (copiedTags.value = false), 2000);
   }
 }
 
 // 复制全文（标题+正文+标签）
 async function copyFullContent() {
   if (await copyToClipboard(fullContentText.value)) {
-    copiedFullContent.value = true
-    setTimeout(() => copiedFullContent.value = false, 2000)
+    copiedFullContent.value = true;
+    setTimeout(() => (copiedFullContent.value = false), 2000);
   }
 }
 
 // 复制单个标签
 async function copyTag(tag: string, index: number) {
   if (await copyToClipboard(`#${tag}`)) {
-    copiedTagIndex.value = index
-    setTimeout(() => copiedTagIndex.value = null, 2000)
+    copiedTagIndex.value = index;
+    setTimeout(() => (copiedTagIndex.value = null), 2000);
   }
 }
 </script>
@@ -360,6 +556,42 @@ async function copyTag(tag: string, index: number) {
 }
 
 .loading-section p {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  border: 2px dashed var(--border-color);
+}
+
+.generate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 32px;
+  font-size: 16px;
+}
+
+.generate-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.loading-section {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+.loading-section p {
   color: var(--text-sub);
   font-size: 16px;
 }
@@ -367,16 +599,16 @@ async function copyTag(tag: string, index: number) {
 .error-section {
   text-align: center;
   padding: 40px 20px;
-  background: #FFF2F0;
+  background: var(--color-error-bg);
   border-radius: var(--radius-xl);
-  border: 1px solid #FFCCC7;
+  border: 1px solid var(--color-error-border);
 }
 
 .error-icon {
   width: 48px;
   height: 48px;
-  background: #FF4D4F;
-  color: white;
+  background: var(--color-error);
+  color: var(--text-inverse);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -387,7 +619,7 @@ async function copyTag(tag: string, index: number) {
 }
 
 .error-message {
-  color: #CF1322;
+  color: var(--color-error);
   margin-bottom: 20px;
   white-space: pre-line;
 }
@@ -464,9 +696,9 @@ async function copyTag(tag: string, index: number) {
 }
 
 .copy-btn.copied {
-  background: #E6FFFB;
-  color: #13C2C2;
-  border-color: #13C2C2;
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: var(--color-success);
 }
 
 .copy-btn svg {
@@ -476,64 +708,11 @@ async function copyTag(tag: string, index: number) {
 
 .copy-btn.copy-full-btn {
   color: var(--primary);
-  border-color: rgba(0, 255, 153, 0.35);
-  background: rgba(0, 255, 153, 0.06);
+  border-color: var(--color-info-border);
+  background: var(--color-info-bg);
 }
 
 .copy-btn.copy-full-btn:hover {
-  background: rgba(0, 255, 153, 0.12);
-  color: var(--primary);
-  border-color: var(--primary);
-}
-
-/* 标题列表 */
-.titles-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.title-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: var(--bg-body);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-.title-item:hover {
-  background: var(--primary-light);
-}
-
-.title-badge {
-  flex-shrink: 0;
-  padding: 4px 8px;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 4px;
-  background: var(--primary);
-  color: white;
-}
-
-.title-item:not(:first-child) .title-badge {
-  background: var(--text-sub);
-}
-
-.title-text {
-  flex: 1;
-  font-size: 15px;
-  color: var(--text-main);
-  line-height: 1.5;
-}
-
-.copy-hint {
-  font-size: 12px;
-  color: var(--text-sub);
-  opacity: 0;
   transition: opacity 0.2s ease;
 }
 
@@ -543,7 +722,7 @@ async function copyTag(tag: string, index: number) {
 
 .copy-hint.show {
   opacity: 1;
-  color: #13C2C2;
+  color: #13c2c2;
 }
 
 /* 文案内容 */
@@ -584,7 +763,7 @@ async function copyTag(tag: string, index: number) {
 }
 
 .tag-item.copied {
-  background: #13C2C2;
+  background: #13c2c2;
   color: white;
 }
 
@@ -624,14 +803,16 @@ async function copyTag(tag: string, index: number) {
 
 /* 动画 */
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinner {
   display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   border-top-color: white;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
