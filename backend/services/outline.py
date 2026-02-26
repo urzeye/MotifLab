@@ -116,15 +116,28 @@ class OutlineService:
                 }
                 page_type = type_mapping.get(type_cn, "content")
 
-            clean_content, embedded_suggestion = self._extract_embedded_image_suggestion(page_text)
+            normalized_page_text = self._strip_leading_page_type_marker(page_text)
+            clean_content, embedded_suggestion = self._extract_embedded_image_suggestion(
+                normalized_page_text
+            )
             pages.append({
                 "index": index,
                 "type": page_type,
-                "content": clean_content or page_text,
+                "content": clean_content or normalized_page_text,
                 "image_suggestion": embedded_suggestion or None
             })
 
         return pages
+
+    def _strip_leading_page_type_marker(self, content: str) -> str:
+        """
+        去掉文案开头的页面类型标记（如 [封面]/[内容]/[总结]），
+        避免与卡片头部的类型标签重复展示。
+        """
+        text = str(content or "").replace("\r\n", "\n").strip()
+        if not text:
+            return ""
+        return re.sub(r'(?is)^\s*\[(?:封面|内容|总结)\]\s*\n?', '', text).strip()
 
     def _extract_embedded_image_suggestion(self, content: str) -> tuple[str, Optional[str]]:
         """
@@ -449,8 +462,11 @@ class OutlineService:
         pages_input = current_pages or []
         pages_input = [p for p in pages_input if isinstance(p, dict)]
         for idx, p in enumerate(pages_input):
-            clean_content, embedded_suggestion = self._extract_embedded_image_suggestion(
+            normalized_content = self._strip_leading_page_type_marker(
                 str(p.get("content", "")).strip()
+            )
+            clean_content, embedded_suggestion = self._extract_embedded_image_suggestion(
+                normalized_content
             )
             merged_suggestion = self._merge_suggestion(
                 str(p.get("image_suggestion", "")).strip() or None,
@@ -458,7 +474,7 @@ class OutlineService:
             )
             p["index"] = idx
             p["type"] = str(p.get("type", "content"))
-            p["content"] = clean_content
+            p["content"] = clean_content or normalized_content
             p["image_suggestion"] = merged_suggestion
 
         if normalized_mode == "suggest_only":
