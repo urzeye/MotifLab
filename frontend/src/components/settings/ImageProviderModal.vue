@@ -128,6 +128,23 @@
             启用后使用精简版提示词，适合有字符限制的 API（如即梦 1600 字符限制）。
           </span>
         </div>
+
+        <!-- 尺寸标签模式（仅 OpenAI 兼容接口） -->
+        <div class="form-group" v-if="showEndpointType">
+          <label class="toggle-label">
+            <span>使用原始尺寸标签</span>
+            <div
+              class="toggle-switch"
+              :class="{ active: formData.use_size_tag }"
+              @click="updateField('use_size_tag', !formData.use_size_tag)"
+            >
+              <div class="toggle-slider"></div>
+            </div>
+          </label>
+          <span class="form-hint">
+            启用后发送 4K/HD 等标签；关闭后自动转换为 1024x1024 等标准分辨率。
+          </span>
+        </div>
       </div>
 
       <div class="modal-footer">
@@ -175,6 +192,7 @@ interface FormData {
   endpoint_type?: string
   high_concurrency?: boolean
   short_prompt?: boolean
+  use_size_tag?: boolean
 }
 
 // 定义类型选项
