@@ -26,32 +26,32 @@
           <!-- Image Area -->
           <div
             v-if="image.url"
-            style="position: relative; aspect-ratio: 3/4; overflow: hidden; cursor: pointer;"
+            class="result-image-wrap"
             @click="viewImage(image.url)"
           >
             <img
               :src="image.url"
               :alt="`第 ${image.index + 1} 页`"
-              style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;"
+              class="result-image"
             />
             <!-- Regenerating Overlay -->
-            <div v-if="regeneratingIndex === image.index" style="position: absolute; inset: 0; background: rgba(255,255,255,0.8); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;">
+            <div v-if="regeneratingIndex === image.index" class="result-image-overlay regenerating-overlay">
                <div class="spinner" style="width: 24px; height: 24px; border-width: 2px; border-color: var(--primary); border-top-color: transparent;"></div>
                <span style="font-size: 12px; color: var(--primary); margin-top: 8px; font-weight: 600;">重绘中...</span>
             </div>
 
             <!-- Hover Overlay -->
-            <div v-else style="position: absolute; inset: 0; background: rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;" class="hover-overlay">
+            <div v-else class="result-image-overlay hover-overlay">
               预览大图
             </div>
           </div>
 
           <!-- Action Bar -->
-          <div style="padding: 12px; border-top: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
+          <div class="result-image-footer">
             <span style="font-size: 12px; color: var(--text-sub);">Page {{ image.index + 1 }}</span>
             <div style="display: flex; gap: 8px;">
               <button
-                style="border: none; background: none; color: var(--text-sub); cursor: pointer; display: flex; align-items: center;"
+                class="image-action-btn"
                 title="重新生成此图"
                 @click="handleRegenerate(image)"
                 :disabled="regeneratingIndex === image.index"
@@ -59,7 +59,7 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
               </button>
               <button
-                style="border: none; background: none; color: var(--primary); cursor: pointer; font-size: 12px;"
+                class="image-action-btn download-btn"
                 @click="downloadOne(image)"
               >
                 下载
@@ -81,6 +81,74 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+}
+
+.result-image-wrap {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  cursor: pointer;
+  line-height: 0;
+  background: var(--bg-elevated);
+}
+
+.result-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  vertical-align: top;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.result-image-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.regenerating-overlay {
+  flex-direction: column;
+  background: rgba(10, 12, 18, 0.62);
+  backdrop-filter: blur(2px);
+  z-index: 10;
+}
+
+.hover-overlay {
+  background: rgba(0, 0, 0, 0.38);
+  opacity: 0;
+}
+
+.result-image-footer {
+  padding: 12px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.image-action-btn {
+  border: none;
+  background: none;
+  color: var(--text-sub);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.image-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.download-btn {
+  color: var(--primary);
+  font-size: 12px;
 }
 
 .image-card:hover .hover-overlay {
