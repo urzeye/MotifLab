@@ -152,7 +152,8 @@ def create_config_blueprint():
             config = {
                 'api_key': data.get('api_key'),
                 'base_url': data.get('base_url'),
-                'model': data.get('model')
+                'model': data.get('model'),
+                'endpoint_type': data.get('endpoint_type')
             }
 
             # 如果没有提供 api_key，从配置文件读取
@@ -272,6 +273,8 @@ def _load_provider_config(provider_type: str, provider_name: str, config: dict) 
                     config['base_url'] = saved.get('base_url')
                 if not config['model']:
                     config['model'] = saved.get('model')
+                if not config.get('endpoint_type'):
+                    config['endpoint_type'] = saved.get('endpoint_type')
 
     return config
 
