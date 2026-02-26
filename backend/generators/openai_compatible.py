@@ -2,7 +2,7 @@
 import logging
 import base64
 import os
-from typing import Dict, Any
+from typing import Dict, Any, List
 import requests
 from .base import ImageGeneratorBase
 
@@ -268,12 +268,19 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
                 content = choice["message"]["content"]
 
                 if isinstance(content, str):
-                    # 1. 尝试解析 Markdown 图片链接: ![xxx](url)
-                    image_urls = self._extract_markdown_image_urls(content)
+                    # 1. 尝试从文本中提取图片 URL（兼容多种服务商返回格式）
+                    image_urls = self._extract_image_urls(content)
                     if image_urls:
-                        # 下载第一张图片
-                        logger.info(f"从 Markdown 提取到 {len(image_urls)} 张图片，下载第一张...")
-                        return self._download_image(image_urls[0])
+                        logger.info(f"从响应中提取到 {len(image_urls)} 个候选图片 URL，按顺序尝试下载")
+                        last_error = None
+                        for image_url in image_urls:
+                            try:
+                                return self._download_image(image_url)
+                            except Exception as e:
+                                last_error = e
+                                logger.warning(f"图片下载失败，尝试下一个候选 URL: {image_url[:120]}..., error={e}")
+                        if last_error:
+                            raise last_error
 
                     # 2. 尝试解析 Base64 data URL
                     if content.startswith("data:image"):
@@ -298,17 +305,37 @@ class OpenAICompatibleGenerator(ImageGeneratorBase):
             "2. 修改提示词后重试"
         )
 
-    def _extract_markdown_image_urls(self, content: str) -> list:
+    def _extract_image_urls(self, content: str) -> List[str]:
         """
-        从 Markdown 内容中提取图片 URL
+        从响应文本中提取图片 URL（按优先级返回）
 
-        支持格式: ![alt text](url) 或 ![](url)
+        兼容格式：
+        1. Markdown 图片链接: ![alt](url)
+        2. 带扩展名 URL: *.png/*.jpg/*.jpeg/*.gif/*.webp
+        3. 特殊路径 URL: /file/xxx、/image/xxx、/img/xxx、/media/xxx
+        4. 通用 URL 兜底
         """
         import re
-        # 匹配 ![任意文字](url) 格式
-        pattern = r'!\[.*?\]\((https?://[^\s\)]+)\)'
-        urls = re.findall(pattern, content)
-        logger.debug(f"从 Markdown 提取到 {len(urls)} 个图片 URL")
+
+        if not isinstance(content, str) or not content:
+            return []
+
+        patterns = [
+            r'!\[.*?\]\((https?://[^\s\)]+)\)',
+            r'(https?://[^\s\)]+\.(?:png|jpg|jpeg|gif|webp))',
+            r'(https?://[^\s\)]+/(?:file|image|img|media)/[A-Za-z0-9._-]+)',
+            r'(https?://[^\s\)]+)',
+        ]
+
+        urls: List[str] = []
+        seen = set()
+        for pattern in patterns:
+            for url in re.findall(pattern, content, re.IGNORECASE):
+                if url not in seen:
+                    seen.add(url)
+                    urls.append(url)
+
+        logger.debug(f"从响应文本提取到 {len(urls)} 个候选 URL")
         return urls
 
     def _download_image(self, url: str) -> bytes:
