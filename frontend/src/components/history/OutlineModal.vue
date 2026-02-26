@@ -34,6 +34,40 @@
             <span class="word-count">{{ page.content.length }} 字</span>
           </div>
           <div class="outline-page-card-content">{{ page.content }}</div>
+
+          <div
+            v-if="page.image_suggestion"
+            class="image-suggestion-card"
+          >
+            <div class="suggestion-title">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="2"
+                ></rect>
+                <circle
+                  cx="8.5"
+                  cy="8.5"
+                  r="1.5"
+                ></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              配图建议
+            </div>
+            <div class="suggestion-content">
+              {{ page.image_suggestion }}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -55,6 +89,7 @@
 interface Page {
   type: "cover" | "content" | "summary";
   content: string;
+  image_suggestion?: string;
 }
 
 // 定义 Props
@@ -96,7 +131,7 @@ function getPageTypeName(type: string): string {
 
 /* 模态框内容容器 */
 .outline-modal-content {
-  background: white;
+  background: var(--bg-card);
   width: 100%;
   max-width: 800px;
   max-height: 85vh;
@@ -110,7 +145,7 @@ function getPageTypeName(type: string): string {
 /* 模态框头部 */
 .outline-modal-header {
   padding: 20px 24px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -130,14 +165,14 @@ function getPageTypeName(type: string): string {
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #666;
+  color: var(--text-sub);
   padding: 0;
   line-height: 1;
   transition: color 0.2s;
 }
 
 .close-icon:hover {
-  color: #333;
+  color: var(--text-main);
 }
 
 /* 模态框主体（可滚动） */
@@ -145,12 +180,12 @@ function getPageTypeName(type: string): string {
   flex: 1;
   overflow-y: auto;
   padding: 20px 24px;
-  background: #f9fafb;
+  background: var(--bg-body);
 }
 
 /* 大纲页面卡片 */
 .outline-page-card {
-  background: #ffffff;
+  background: var(--bg-card);
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 16px;
@@ -202,8 +237,8 @@ function getPageTypeName(type: string): string {
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
-  background: #e9ecef;
-  color: #6c757d;
+  background: var(--bg-elevated);
+  color: var(--text-sub);
 }
 
 .page-type-badge.cover {
@@ -225,18 +260,46 @@ function getPageTypeName(type: string): string {
 .word-count {
   margin-left: auto;
   font-size: 11px;
-  color: #999;
+  color: var(--text-sub);
 }
 
 /* 卡片内容 */
 .outline-page-card-content {
   font-size: 14px;
   line-height: 1.8;
-  color: #374151;
+  color: var(--text-main);
   white-space: pre-wrap;
   word-break: break-word;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+
+/* 配图建议卡片 */
+.image-suggestion-card {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: var(--bg-hover);
+  border-radius: 8px;
+  border: 1px dashed var(--border-color);
+  font-size: 13px;
+}
+
+.suggestion-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-rose, #f43f5e);
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.suggestion-content {
+  line-height: 1.6;
+  color: var(--text-sub);
+  word-break: break-word;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 95, 109, 0.18);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 /* 响应式布局 */

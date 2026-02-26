@@ -9,22 +9,14 @@
       </div>
       <div style="display: flex; gap: 12px">
         <button
-          class="btn"
+          class="btn btn-secondary"
           @click="startOver"
-          style="
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-          "
         >
           再来一篇
         </button>
         <button
-          class="btn"
+          class="btn btn-secondary"
           @click="downloadAll"
-          style="
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-          "
         >
           <svg
             width="18"

@@ -1,13 +1,37 @@
 <template>
   <!-- 统计概览卡片 -->
-  <div class="stats-overview" v-if="stats">
+  <div
+    class="stats-overview"
+    v-if="stats"
+  >
     <div class="stat-box">
       <div class="stat-icon-circle blue">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+          ></path>
           <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="16" y1="13" x2="8" y2="13"></line>
-          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <line
+            x1="16"
+            y1="13"
+            x2="8"
+            y2="13"
+          ></line>
+          <line
+            x1="16"
+            y1="17"
+            x2="8"
+            y2="17"
+          ></line>
           <polyline points="10 9 9 9 8 9"></polyline>
         </svg>
       </div>
@@ -19,7 +43,16 @@
 
     <div class="stat-box">
       <div class="stat-icon-circle green">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
           <polyline points="22 4 12 14.01 9 11.01"></polyline>
         </svg>
@@ -32,9 +65,20 @@
 
     <div class="stat-box">
       <div class="stat-icon-circle orange">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <path d="M12 20h9"></path>
-          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          <path
+            d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+          ></path>
         </svg>
       </div>
       <div class="stat-content">
@@ -57,17 +101,17 @@
 
 // 定义 Props
 interface Stats {
-  total?: number
+  total?: number;
   by_status?: {
-    completed?: number
-    draft?: number
-    generating?: number
-  }
+    completed?: number;
+    draft?: number;
+    generating?: number;
+  };
 }
 
 defineProps<{
-  stats: Stats | null
-}>()
+  stats: Stats | null;
+}>();
 </script>
 
 <style scoped>
@@ -85,7 +129,7 @@ defineProps<{
   align-items: center;
   gap: 16px;
   padding: 20px 24px;
-  background: white;
+  background: var(--bg-card);
   border-radius: 12px;
   border: 1px solid var(--border-color);
   transition: all 0.2s ease;
