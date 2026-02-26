@@ -20,6 +20,11 @@ DEFAULT_CONFIG_STORAGE_MODE = CONFIG_STORAGE_YAML
 CONFIG_SUPABASE_TABLE_ENV = "CONFIG_SUPABASE_TABLE"
 DEFAULT_CONFIG_SUPABASE_TABLE = "app_configs"
 
+SEARCH_PROVIDER_FIRECRAWL = "firecrawl"
+SEARCH_PROVIDER_EXA = "exa"
+DEFAULT_FIRECRAWL_BASE_URL = "https://api.firecrawl.dev"
+DEFAULT_EXA_BASE_URL = "https://api.exa.ai"
+
 
 def _get_project_root() -> Path:
     """获取项目根目录（处理包安装和直接运行两种情况）"""
@@ -102,7 +107,7 @@ class YamlConfigStore(BaseConfigStore):
     _FILE_MAPPING = {
         "text_providers": "text_providers.yaml",
         "image_providers": "image_providers.yaml",
-        "firecrawl_config": "firecrawl_config.yaml",
+        "search_providers": "search_providers.yaml",
     }
 
     def __init__(self, project_root: Path):
@@ -339,42 +344,127 @@ class Config:
         cls._save_config_document("text_providers", "text_providers", config)
 
     @classmethod
-    def load_firecrawl_config(cls) -> Dict[str, Any]:
-        config = cls._load_config_document(
-            cache_key="firecrawl",
-            config_name="firecrawl_config",
-            default={
-                "enabled": False,
-                "api_key": "",
-                "base_url": "",
+    def _default_search_providers_config(cls) -> Dict[str, Any]:
+        return {
+            "active_provider": SEARCH_PROVIDER_FIRECRAWL,
+            "providers": {
+                SEARCH_PROVIDER_FIRECRAWL: {
+                    "type": SEARCH_PROVIDER_FIRECRAWL,
+                    "enabled": False,
+                    "api_key": "",
+                    "base_url": "",
+                },
+                SEARCH_PROVIDER_EXA: {
+                    "type": SEARCH_PROVIDER_EXA,
+                    "enabled": False,
+                    "api_key": "",
+                    "base_url": "",
+                },
             },
+        }
+
+    @classmethod
+    def _normalize_search_provider_item(cls, provider_name: str, item: Any) -> Dict[str, Any]:
+        normalized = item.copy() if isinstance(item, dict) else {}
+        provider_type = str(normalized.get("type") or provider_name).strip().lower() or provider_name
+        normalized["type"] = provider_type
+        normalized["enabled"] = bool(normalized.get("enabled", False))
+        normalized["api_key"] = (normalized.get("api_key") or "").strip()
+        normalized["base_url"] = (normalized.get("base_url") or "").strip()
+        return normalized
+
+    @classmethod
+    def _normalize_search_providers_config(cls, config: Dict[str, Any]) -> Dict[str, Any]:
+        raw_providers = config.get("providers")
+        providers: Dict[str, Any] = {}
+
+        if isinstance(raw_providers, dict) and raw_providers:
+            for name, provider_item in raw_providers.items():
+                provider_name = str(name or "").strip()
+                if not provider_name:
+                    continue
+                providers[provider_name] = cls._normalize_search_provider_item(provider_name, provider_item)
+        else:
+            providers = deepcopy(cls._default_search_providers_config()["providers"])
+
+        # 保证 firecrawl/exa 至少存在
+        if SEARCH_PROVIDER_FIRECRAWL not in providers:
+            providers[SEARCH_PROVIDER_FIRECRAWL] = cls._normalize_search_provider_item(
+                SEARCH_PROVIDER_FIRECRAWL,
+                cls._default_search_providers_config()["providers"][SEARCH_PROVIDER_FIRECRAWL],
+            )
+        if SEARCH_PROVIDER_EXA not in providers:
+            providers[SEARCH_PROVIDER_EXA] = cls._normalize_search_provider_item(
+                SEARCH_PROVIDER_EXA,
+                cls._default_search_providers_config()["providers"][SEARCH_PROVIDER_EXA],
+            )
+
+        active_provider = str(config.get("active_provider") or "").strip()
+        if not active_provider or active_provider not in providers:
+            active_provider = cls._resolve_active_provider(
+                {"active_provider": active_provider, "providers": providers},
+                SEARCH_PROVIDER_FIRECRAWL,
+            )
+
+        return {
+            "active_provider": active_provider,
+            "providers": providers,
+        }
+
+    @classmethod
+    def load_search_providers_config(cls) -> Dict[str, Any]:
+        config = cls._load_config_document(
+            cache_key="search_providers",
+            config_name="search_providers",
+            default=cls._default_search_providers_config(),
         )
-        return {
-            "enabled": bool(config.get("enabled", False)),
-            "api_key": (config.get("api_key") or "").strip(),
-            "base_url": (config.get("base_url") or "").strip(),
-        }
+        normalized = cls._normalize_search_providers_config(config if isinstance(config, dict) else {})
+        cls._configs["search_providers"] = normalized
+        return normalized
 
     @classmethod
-    def save_firecrawl_config(cls, config: Dict[str, Any]) -> None:
-        sanitized = {
-            "enabled": bool(config.get("enabled", False)),
-            "api_key": (config.get("api_key") or "").strip(),
-            "base_url": (config.get("base_url") or "").strip(),
-        }
-        cls._save_config_document("firecrawl", "firecrawl_config", sanitized)
+    def save_search_providers_config(cls, config: Dict[str, Any]) -> None:
+        normalized = cls._normalize_search_providers_config(config if isinstance(config, dict) else {})
+        cls._save_config_document("search_providers", "search_providers", normalized)
 
     @classmethod
-    def get_firecrawl_config(cls) -> Optional[Dict[str, Any]]:
-        """获取 Firecrawl 运行配置；未启用时返回 None"""
-        config = cls.load_firecrawl_config()
-        if not config.get("enabled"):
-            return None
-        return {
-            "enabled": True,
-            "api_key": config.get("api_key", ""),
-            "base_url": (config.get("base_url") or "").strip() or "https://api.firecrawl.dev",
-        }
+    def get_active_search_provider(cls) -> str:
+        config = cls.load_search_providers_config()
+        return cls._resolve_active_provider(config, SEARCH_PROVIDER_FIRECRAWL)
+
+    @classmethod
+    def get_search_provider_config(
+        cls,
+        provider_name: Optional[str] = None,
+        require_enabled: bool = True,
+    ) -> Dict[str, Any]:
+        search_config = cls.load_search_providers_config()
+        providers = search_config.get("providers") or {}
+        if not providers:
+            raise ValueError("未找到任何搜索服务商配置")
+
+        provider_name = provider_name or cls.get_active_search_provider()
+        if provider_name not in providers:
+            available = ", ".join(providers.keys())
+            raise ValueError(f"未找到搜索服务商配置: {provider_name}，可用: {available}")
+
+        provider_config = providers[provider_name].copy()
+        provider_type = (provider_config.get("type") or provider_name).strip().lower()
+        provider_config["type"] = provider_type
+
+        if require_enabled and not bool(provider_config.get("enabled", False)):
+            raise ValueError(f"搜索服务商 [{provider_name}] 未启用")
+
+        if provider_type == SEARCH_PROVIDER_EXA and not (provider_config.get("api_key") or "").strip():
+            raise ValueError(f"搜索服务商 [{provider_name}] 未配置 API Key")
+
+        if not (provider_config.get("base_url") or "").strip():
+            if provider_type == SEARCH_PROVIDER_FIRECRAWL:
+                provider_config["base_url"] = DEFAULT_FIRECRAWL_BASE_URL
+            elif provider_type == SEARCH_PROVIDER_EXA:
+                provider_config["base_url"] = DEFAULT_EXA_BASE_URL
+
+        return provider_config
 
     @classmethod
     def get_active_image_provider(cls) -> str:
