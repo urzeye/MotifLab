@@ -84,6 +84,7 @@
         :record="record"
         @preview="viewImages"
         @edit="loadRecord"
+        @result="openResultPage"
         @delete="confirmDelete"
       />
     </div>
@@ -520,6 +521,20 @@ async function viewImages(id: string) {
   // 小红书记录：打开图片查看器
   const res = await getHistory(id)
   if (res.success) viewingRecord.value = res.record
+}
+
+function openResultPage(id: string) {
+  const unifiedRecord = findUnifiedRecord(id)
+
+  if (unifiedRecord?.recordType === 'concept') {
+    router.push(`/concept/history?view=${id}`)
+    return
+  }
+
+  router.push({
+    path: '/redbook/result',
+    query: { recordId: id }
+  })
 }
 
 /**

@@ -52,6 +52,11 @@ const router = createRouter({
       component: ResultView
     },
     {
+      path: '/redbook/result/:recordId',
+      name: 'redbook-result-record',
+      component: ResultView
+    },
+    {
       path: '/redbook/publish',
       name: 'redbook-publish',
       component: PublishView
@@ -109,6 +114,10 @@ const router = createRouter({
     {
       path: '/result',
       redirect: '/redbook/result'
+    },
+    {
+      path: '/result/:recordId',
+      redirect: to => `/redbook/result/${to.params.recordId}`
     },
     {
       path: '/publish',
