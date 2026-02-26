@@ -294,7 +294,7 @@ const formattedDate = computed(() => {
 
 /* 模态框主体 */
 .modal-body {
-  background: white;
+  background: var(--bg-card);
   width: 100%;
   max-width: 1000px;
   height: 90vh;
@@ -307,7 +307,7 @@ const formattedDate = computed(() => {
 /* 头部区域 */
 .modal-header {
   padding: 20px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -329,7 +329,7 @@ const formattedDate = computed(() => {
   font-size: 18px;
   font-weight: 600;
   line-height: 1.4;
-  color: #1a1a1a;
+  color: var(--text-main);
   word-break: break-word;
   transition: max-height 0.3s ease;
 }
@@ -350,7 +350,8 @@ const formattedDate = computed(() => {
   border-radius: 4px;
   cursor: pointer;
   font-size: 11px;
-  color: #666;
+  color: var(--text-sub);
+  background: var(--bg-elevated);
   transition: all 0.2s;
   margin-top: 2px;
 }
@@ -363,7 +364,7 @@ const formattedDate = computed(() => {
 /* 元信息 */
 .modal-meta {
   font-size: 12px;
-  color: #999;
+  color: var(--text-sub);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -376,12 +377,12 @@ const formattedDate = computed(() => {
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  background: white;
-  border: 1px solid #dee2e6;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   cursor: pointer;
   font-size: 12px;
-  color: #495057;
+  color: var(--text-main);
   transition: all 0.2s;
 }
 
@@ -411,13 +412,13 @@ const formattedDate = computed(() => {
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #666;
+  color: var(--text-sub);
   padding: 0;
   line-height: 1;
 }
 
 .close-icon:hover {
-  color: #333;
+  color: var(--text-main);
 }
 
 /* 图片网格 */
@@ -497,11 +498,11 @@ const formattedDate = computed(() => {
   gap: 6px;
   padding: 8px 16px;
   background: white;
-  border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
-  color: #333;
+  color: var(--text-main);
+  background: var(--bg-elevated);
   transition:
     background-color 0.2s,
     color 0.2s,
@@ -525,12 +526,12 @@ const formattedDate = computed(() => {
 .placeholder {
   width: 100%;
   aspect-ratio: 3/4;
-  background: #f5f5f5;
+  background: var(--bg-elevated);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #999;
+  color: var(--text-placeholder);
   font-size: 14px;
 }
 
@@ -540,7 +541,7 @@ const formattedDate = computed(() => {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #666;
+  color: var(--text-sub);
 }
 
 .download-link {
