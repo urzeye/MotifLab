@@ -35,3 +35,11 @@ providers:
     size: 1104*1472             # qwen-image-max 支持的 3:4 最高分辨率
     use_style_transfer: false   # 默认关闭，开启后使用图像编辑模式（分辨率会降低）
     edit_model: wan2.5-i2i-preview  # 图像编辑模型（仅 use_style_transfer=true 时生效）
+
+  # ModelScope Z-Image
+  modelscope:
+    type: modelscope
+    api_key: ms-xxxxxxxxxxxxxxxxxxxx
+    base_url: https://api-inference.modelscope.cn
+    model: Tongyi-MAI/Z-Image-Turbo
+    high_concurrency: false

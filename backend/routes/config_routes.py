@@ -307,6 +307,9 @@ def _test_provider_connection(provider_type: str, config: dict) -> dict:
     elif provider_type == 'dashscope':
         return _test_dashscope(config)
 
+    elif provider_type == 'modelscope':
+        return _test_modelscope(config)
+
     else:
         raise ValueError(f"不支持的类型: {provider_type}")
 
@@ -480,6 +483,36 @@ def _test_image_api(config: dict) -> dict:
         }
     else:
         raise Exception(f"HTTP {response.status_code}: {response.text[:200]}")
+
+
+def _test_modelscope(config: dict) -> dict:
+    """测试 ModelScope 图片 API 连接"""
+    import requests
+
+    base_url = (config.get('base_url') or 'https://api-inference.modelscope.cn').rstrip('/')
+    url = f"{base_url}/v1/images/generations"
+    headers = {
+        "Authorization": f"Bearer {config['api_key']}",
+        "Content-Type": "application/json",
+        "X-ModelScope-Async-Mode": "true",
+    }
+    payload = {
+        "model": config.get('model') or 'Tongyi-MAI/Z-Image-Turbo',
+        "prompt": "test",
+    }
+
+    response = requests.post(url, headers=headers, json=payload, timeout=30)
+    if response.status_code != 200:
+        raise Exception(f"HTTP {response.status_code}: {response.text[:200]}")
+
+    data = response.json()
+    if not data.get("task_id"):
+        raise Exception(f"ModelScope 返回异常: {str(data)[:200]}")
+
+    return {
+        "success": True,
+        "message": f"连接成功！任务提交成功（task_id={data.get('task_id')}）"
+    }
 
 
 def _check_response(result_text: str) -> dict:
