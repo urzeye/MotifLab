@@ -3,11 +3,11 @@
     <div class="page-header outline-page-header">
       <div>
         <h1 class="page-title">编辑大纲</h1>
-        <p class="page-subtitle">
-          支持 Markdown 语法：`**加粗**`、`*斜体*`、`## 标题`
-          <span v-if="isSaving" class="save-indicator saving">保存中...</span>
-          <span v-else class="save-indicator saved">已保存</span>
-        </p>
+        <div class="typing-tip-banner" aria-live="polite">
+          <span class="typing-tip-icon">{{ activeTypingTip.icon }}</span>
+          <span class="typing-tip-text">{{ typingTipText }}</span>
+          <span class="typing-tip-cursor">|</span>
+        </div>
       </div>
       <div class="header-actions">
         <button class="btn btn-secondary" @click="goBack" :disabled="revising">
@@ -165,7 +165,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, watch, onMounted, onUnmounted } from 'vue'
+import { ref, nextTick, watch, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGeneratorStore } from '../stores/generator'
 import { updateHistory, createHistory, editOutlineStream, type Page } from '../api'
@@ -175,7 +175,6 @@ const store = useGeneratorStore()
 
 const dragOverIndex = ref<number | null>(null)
 const draggedIndex = ref<number | null>(null)
-const isSaving = ref(false)
 const fileInputs = ref<Record<number, HTMLInputElement>>({})
 const pageEditModeMap = ref<Record<number, boolean>>({})
 const revisionRequest = ref('')
@@ -183,6 +182,29 @@ const revising = ref(false)
 const revisionMessage = ref('')
 const suggestionSyncing = ref(false)
 const revisingPageMap = ref<Record<number, boolean>>({})
+
+type OutlineTypingTip = {
+  icon: string
+  text: string
+}
+
+const outlineTypingTips: OutlineTypingTip[] = [
+  { icon: '🔄', text: '可以拖拽卡片左右排序，调整页面顺序' },
+  { icon: '🎯', text: '封面页建议包含吸引人的标题和关键信息' },
+  { icon: '💬', text: '内容页可以使用列表、分点等形式，更易阅读' },
+  { icon: '🌟', text: '生成图片前记得检查文案是否有错别字' },
+  { icon: '💡', text: '双击任意卡片内容即可快速进入编辑模式' },
+  { icon: '🖼️', text: '上传参考图片可以让生成的图片更贴合你的需求' },
+  { icon: '✨', text: '点击卡片右上角图标可以切换预览与编辑模式' },
+  { icon: '🎨', text: '在配图建议中详细描述风格，AI 会生成更符合预期的图片' },
+  { icon: '📊', text: '每页内容建议控制在50-200字之间，效果更佳' }
+]
+
+const activeTypingTipIndex = ref(0)
+const typingTipText = ref('')
+const activeTypingTip = computed(
+  () => outlineTypingTips[activeTypingTipIndex.value] || outlineTypingTips[0]
+)
 
 const setFileInputRef = (el: any, index: number) => {
   if (el) {
@@ -459,6 +481,54 @@ const getImageSuggestionText = (page: Page, idx: number) => {
 
 let saveTimer: number | null = null
 let revisionMessageTimer: number | null = null
+let typingStepTimer: number | null = null
+let typingSwitchTimer: number | null = null
+
+const clearTypingTipTimers = () => {
+  if (typingStepTimer !== null) {
+    clearTimeout(typingStepTimer)
+    typingStepTimer = null
+  }
+  if (typingSwitchTimer !== null) {
+    clearTimeout(typingSwitchTimer)
+    typingSwitchTimer = null
+  }
+}
+
+const getNextTypingTipIndex = () => {
+  const total = outlineTypingTips.length
+  if (total <= 1) return 0
+  let next = activeTypingTipIndex.value
+  while (next === activeTypingTipIndex.value) {
+    next = Math.floor(Math.random() * total)
+  }
+  return next
+}
+
+const startTypingTip = () => {
+  clearTypingTipTimers()
+  const text = activeTypingTip.value.text || ''
+  typingTipText.value = ''
+  let cursor = 0
+
+  const typeNext = () => {
+    if (cursor >= text.length) {
+      typingSwitchTimer = window.setTimeout(() => {
+        activeTypingTipIndex.value = getNextTypingTipIndex()
+        startTypingTip()
+      }, 3200)
+      return
+    }
+
+    const char = text[cursor]
+    typingTipText.value = text.slice(0, cursor + 1)
+    cursor += 1
+    const delay = /[，。！？,.]/.test(char) ? 220 : 78
+    typingStepTimer = window.setTimeout(typeNext, delay)
+  }
+
+  typingStepTimer = window.setTimeout(typeNext, 450)
+}
 
 const clearRevisionMessage = () => {
   if (revisionMessageTimer !== null) {
@@ -487,7 +557,6 @@ const autoSaveOutline = async () => {
   if (!store.outline.pages || store.outline.pages.length === 0) return
 
   try {
-    isSaving.value = true
     const result = await updateHistory(store.recordId, {
       outline: { raw: store.outline.raw, pages: store.outline.pages }
     })
@@ -496,8 +565,6 @@ const autoSaveOutline = async () => {
     }
   } catch (error) {
     console.error('自动保存出错:', error)
-  } finally {
-    isSaving.value = false
   }
 }
 
@@ -684,6 +751,8 @@ const applyRevisionRequest = async () => {
 }
 
 onMounted(() => {
+  activeTypingTipIndex.value = Math.floor(Math.random() * outlineTypingTips.length)
+  startTypingTip()
   checkAndCreateHistory()
   syncPageEditModeMap()
   syncSuggestionsWithAI()
@@ -694,6 +763,7 @@ onUnmounted(() => {
     clearTimeout(saveTimer)
     saveTimer = null
   }
+  clearTypingTipTimers()
   clearRevisionMessage()
 })
 
@@ -724,26 +794,43 @@ watch(
   gap: 12px;
 }
 
-.save-indicator {
-  margin-left: 12px;
-  font-size: 12px;
+.typing-tip-banner {
+  margin-top: 12px;
+  width: fit-content;
+  max-width: min(100%, 760px);
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+}
+
+.typing-tip-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.typing-tip-text {
+  color: #b7bcc7;
+  font-size: 15px;
   font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 4px;
-  transition: all 0.3s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.save-indicator.saving {
-  color: #1890ff;
-  background: #e6f7ff;
-  border: 1px solid #91d5ff;
-}
-
-.save-indicator.saved {
-  color: #52c41a;
-  background: #f6ffed;
-  border: 1px solid #b7eb8f;
-  opacity: 0.78;
+.typing-tip-cursor {
+  color: #ff5f6d;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  margin-left: 2px;
+  animation: tipCursorBlink 0.9s steps(1, end) infinite;
 }
 
 .outline-grid {
@@ -1235,6 +1322,18 @@ watch(
     justify-content: flex-end;
   }
 
+  .typing-tip-banner {
+    max-width: 100%;
+  }
+
+  .typing-tip-icon {
+    font-size: 20px;
+  }
+
+  .typing-tip-text {
+    font-size: 14px;
+  }
+
   .revision-float-box {
     width: calc(100vw - 28px);
     bottom: 14px;
@@ -1263,6 +1362,18 @@ watch(
   }
   100% {
     transform: translateX(120%);
+  }
+}
+
+@keyframes tipCursorBlink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
   }
 }
 </style>
