@@ -17,6 +17,32 @@
         <p class="page-subtitle">输入你的创意主题，让 AI 帮你生成爆款标题、正文和封面图</p>
       </div>
 
+      <div v-if="appliedTemplate" class="template-applied-banner">
+        <div class="banner-left">
+          <div class="banner-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 7h-9"></path>
+              <path d="M14 17H5"></path>
+              <circle cx="17" cy="17" r="3"></circle>
+              <circle cx="7" cy="7" r="3"></circle>
+            </svg>
+          </div>
+          <div class="banner-text">
+            <div class="banner-title">
+              已应用模板：{{ appliedTemplate.title }}
+            </div>
+            <div class="banner-sub">
+              分类：{{ appliedTemplate.category }} · 将模板提示词自动带入输入框
+            </div>
+          </div>
+        </div>
+
+        <div class="banner-actions">
+          <button class="banner-btn" @click="openTemplateMarket">切换模板</button>
+          <button class="banner-btn ghost" @click="clearTemplate">取消使用</button>
+        </div>
+      </div>
+
       <!-- 主题输入组合框 -->
       <ComposerInput
         ref="composerRef"
@@ -51,16 +77,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useGeneratorStore } from '../stores/generator'
-import { generateOutline, createHistory, getFirecrawlStatus, type ScrapeResult } from '../api'
+import {
+  generateOutline,
+  createHistory,
+  getFirecrawlStatus,
+  getTemplateDetail,
+  type ScrapeResult,
+  type TemplateItem
+} from '../api'
 
 // 引入组件
 import ShowcaseBackground from '../components/home/ShowcaseBackground.vue'
 import ComposerInput from '../components/home/ComposerInput.vue'
 
 const router = useRouter()
+const route = useRoute()
 const store = useGeneratorStore()
 
 // 状态
@@ -74,10 +108,43 @@ const uploadedImageFiles = ref<File[]>([])
 // Firecrawl 状态
 const firecrawlEnabled = ref(false)
 const urlContent = ref<ScrapeResult | null>(null)
+const appliedTemplate = ref<TemplateItem | null>(null)
+
+let templateRequestSeq = 0
 
 async function checkFirecrawlStatus() {
   const result = await getFirecrawlStatus()
   firecrawlEnabled.value = result.success && !!result.enabled && !!result.configured
+}
+
+async function applyTemplateById(templateId: string) {
+  const reqId = ++templateRequestSeq
+  const result = await getTemplateDetail(templateId)
+  if (reqId !== templateRequestSeq) return
+
+  if (result.success && result.template) {
+    appliedTemplate.value = result.template
+    const templatePrompt = (result.template.prompt || result.template.title || '').trim()
+    if (templatePrompt) {
+      topic.value = templatePrompt
+      store.setTopic(templatePrompt)
+    }
+    error.value = ''
+  } else {
+    appliedTemplate.value = null
+    error.value = result.error || '模板加载失败，请重试'
+  }
+}
+
+function openTemplateMarket() {
+  router.push('/templates')
+}
+
+function clearTemplate() {
+  appliedTemplate.value = null
+  const query = { ...route.query }
+  delete query.template_id
+  router.replace({ path: '/redbook', query })
 }
 
 /**
@@ -167,6 +234,19 @@ async function handleGenerate() {
 onMounted(() => {
   checkFirecrawlStatus()
 })
+
+watch(
+  () => route.query.template_id,
+  (value) => {
+    const templateId = Array.isArray(value) ? value[0] : value
+    if (templateId && typeof templateId === 'string') {
+      applyTemplateById(templateId)
+    } else {
+      appliedTemplate.value = null
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
@@ -190,6 +270,74 @@ onMounted(() => {
 
 .hero-content {
   margin-bottom: 40px;
+}
+
+.template-applied-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+  padding: 14px 16px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, var(--primary-light), rgba(56, 189, 248, 0.08));
+}
+
+.banner-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.banner-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 255, 136, 0.08);
+}
+
+.banner-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.banner-sub {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-top: 2px;
+}
+
+.banner-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.banner-btn {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: var(--text-inverse);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.banner-btn:hover {
+  opacity: 0.92;
+}
+
+.banner-btn.ghost {
+  background: transparent;
+  color: var(--primary);
 }
 
 .brand-pill {
@@ -292,5 +440,12 @@ onMounted(() => {
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 900px) {
+  .template-applied-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>
