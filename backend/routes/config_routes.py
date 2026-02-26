@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 CONFIG_DIR = Path(__file__).parent.parent.parent
 IMAGE_CONFIG_PATH = CONFIG_DIR / 'image_providers.yaml'
 TEXT_CONFIG_PATH = CONFIG_DIR / 'text_providers.yaml'
+FIRECRAWL_CONFIG_PATH = CONFIG_DIR / 'firecrawl_config.yaml'
 
 
 def create_config_blueprint():
@@ -38,6 +39,7 @@ def create_config_blueprint():
         - config: 配置对象
           - text_generation: 文本生成配置
           - image_generation: 图片生成配置
+          - firecrawl: Firecrawl 抓取配置
         """
         try:
             # 读取图片生成配置
@@ -51,6 +53,23 @@ def create_config_blueprint():
                 'active_provider': 'google_gemini',
                 'providers': {}
             })
+
+            firecrawl_config = _read_config(FIRECRAWL_CONFIG_PATH, {
+                'enabled': False,
+                'api_key': '',
+                'base_url': ''
+            })
+            firecrawl_api_key = (firecrawl_config.get('api_key') or '').strip()
+            firecrawl_response = {
+                "enabled": bool(firecrawl_config.get('enabled', False)),
+                "base_url": firecrawl_config.get('base_url', ''),
+                "api_key_masked": (
+                    firecrawl_api_key[:8] + "****"
+                    if len(firecrawl_api_key) > 8
+                    else ("****" if firecrawl_api_key else "")
+                ),
+                "_has_api_key": bool(firecrawl_api_key)
+            }
 
             return jsonify({
                 "success": True,
@@ -66,7 +85,8 @@ def create_config_blueprint():
                         "providers": prepare_providers_for_response(
                             image_config.get('providers', {})
                         )
-                    }
+                    },
+                    "firecrawl": firecrawl_response
                 }
             })
 
@@ -92,6 +112,11 @@ def create_config_blueprint():
         """
         try:
             data = request.get_json()
+            if not isinstance(data, dict):
+                return jsonify({
+                    "success": False,
+                    "error": "请求体必须为 JSON 对象"
+                }), 400
 
             # 更新图片生成配置
             if 'image_generation' in data:
@@ -106,6 +131,10 @@ def create_config_blueprint():
                     TEXT_CONFIG_PATH,
                     data['text_generation']
                 )
+
+            # 更新 Firecrawl 配置
+            if 'firecrawl' in data:
+                _update_firecrawl_config(data['firecrawl'])
 
             # 清除配置缓存，确保下次使用时读取新配置
             _clear_config_cache()
@@ -130,7 +159,7 @@ def create_config_blueprint():
         测试服务商连接
 
         请求体：
-        - type: 服务商类型（google_genai/google_gemini/openai_compatible/image_api）
+        - type: 服务商类型（google_genai/google_gemini/openai_compatible/image_api/firecrawl）
         - provider_name: 服务商名称（用于从配置读取 API Key）
         - api_key: API Key（可选，若不提供则从配置读取）
         - base_url: Base URL（可选）
@@ -141,7 +170,9 @@ def create_config_blueprint():
         - message: 测试结果消息
         """
         try:
-            data = request.get_json()
+            data = request.get_json(silent=True)
+            if not isinstance(data, dict):
+                return jsonify({"success": False, "error": "请求体必须为 JSON 对象"}), 400
             provider_type = data.get('type')
             provider_name = data.get('provider_name')
 
@@ -160,7 +191,7 @@ def create_config_blueprint():
             if not config['api_key'] and provider_name:
                 config = _load_provider_config(provider_type, provider_name, config)
 
-            if not config['api_key']:
+            if not config['api_key'] and provider_type != 'firecrawl':
                 return jsonify({"success": False, "error": "API Key 未配置"}), 400
 
             # 根据类型执行测试
@@ -231,7 +262,10 @@ def _clear_config_cache():
     """清除配置缓存"""
     try:
         from backend.config import Config
-        Config._image_providers_config = None
+        if hasattr(Config, 'reload_config'):
+            Config.reload_config()
+        elif hasattr(Config, '_configs'):
+            Config._configs.clear()
     except Exception:
         pass
 
@@ -240,6 +274,27 @@ def _clear_config_cache():
         reset_image_service()
     except Exception:
         pass
+
+
+def _update_firecrawl_config(new_data: dict):
+    """更新 Firecrawl 配置。"""
+    existing_config = _read_config(FIRECRAWL_CONFIG_PATH, {
+        'enabled': False,
+        'api_key': '',
+        'base_url': ''
+    })
+
+    if 'enabled' in new_data:
+        existing_config['enabled'] = bool(new_data['enabled'])
+
+    if 'base_url' in new_data:
+        existing_config['base_url'] = (new_data.get('base_url') or '').strip()
+
+    new_api_key = new_data.get('api_key')
+    if new_api_key not in [None, '', True, False]:
+        existing_config['api_key'] = str(new_api_key).strip()
+
+    _write_config(FIRECRAWL_CONFIG_PATH, existing_config)
 
 
 def _load_provider_config(provider_type: str, provider_name: str, config: dict) -> dict:
@@ -254,6 +309,19 @@ def _load_provider_config(provider_type: str, provider_name: str, config: dict) 
     Returns:
         dict: 合并后的配置
     """
+    # Firecrawl 配置独立保存
+    if provider_type == 'firecrawl':
+        firecrawl_config = _read_config(FIRECRAWL_CONFIG_PATH, {
+            'enabled': False,
+            'api_key': '',
+            'base_url': ''
+        })
+        if not config.get('api_key'):
+            config['api_key'] = firecrawl_config.get('api_key')
+        if not config.get('base_url'):
+            config['base_url'] = firecrawl_config.get('base_url')
+        return config
+
     # 确定配置文件路径
     if provider_type in ['openai_compatible', 'google_gemini']:
         config_path = TEXT_CONFIG_PATH
@@ -312,6 +380,9 @@ def _test_provider_connection(provider_type: str, config: dict) -> dict:
 
     elif provider_type == 'replicate':
         return _test_replicate(config)
+
+    elif provider_type == 'firecrawl':
+        return _test_firecrawl(config)
 
     else:
         raise ValueError(f"不支持的类型: {provider_type}")
@@ -541,6 +612,42 @@ def _test_replicate(config: dict) -> dict:
         "success": True,
         "message": f"连接成功！模型可访问：{model.owner}/{model.name}"
     }
+
+
+def _test_firecrawl(config: dict) -> dict:
+    """测试 Firecrawl API 连接。"""
+    import requests
+
+    base_url = (config.get('base_url') or '').rstrip('/') or 'https://api.firecrawl.dev'
+    api_key = (config.get('api_key') or '').strip()
+    url = f"{base_url}/v1/scrape"
+
+    headers = {'Content-Type': 'application/json'}
+    if api_key:
+        headers['Authorization'] = f'Bearer {api_key}'
+
+    payload = {
+        'url': 'https://example.com',
+        'formats': ['markdown']
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+    except requests.exceptions.Timeout:
+        raise Exception("连接超时，请检查网络或服务地址")
+    except requests.exceptions.ConnectionError:
+        raise Exception(f"无法连接到 {base_url}，请检查地址是否正确")
+
+    if response.status_code == 200:
+        return {
+            "success": True,
+            "message": "Firecrawl 连接成功，可以正常抓取网页内容"
+        }
+    if response.status_code == 401:
+        raise Exception("API Key 无效或未提供")
+    if response.status_code == 402:
+        raise Exception("API 配额已用尽")
+    raise Exception(f"HTTP {response.status_code}: {response.text[:200]}")
 
 
 def _check_response(result_text: str) -> dict:

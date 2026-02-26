@@ -118,6 +118,56 @@
           @test="testImageProviderInList"
         />
       </div>
+
+      <!-- Firecrawl 配置 -->
+      <div class="card">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Firecrawl 抓取配置</h2>
+            <p class="section-desc">用于抓取网页内容并注入到大纲生成上下文</p>
+          </div>
+        </div>
+
+        <div class="firecrawl-grid">
+          <label class="firecrawl-toggle">
+            <input type="checkbox" v-model="firecrawlConfig.enabled" />
+            <span>启用 Firecrawl URL 抓取</span>
+          </label>
+
+          <label class="token-label" for="firecrawl-base-url">Base URL</label>
+          <input
+            id="firecrawl-base-url"
+            v-model="firecrawlConfig.base_url"
+            class="token-input"
+            type="text"
+            placeholder="https://api.firecrawl.dev 或 http://localhost:3002"
+          />
+
+          <label class="token-label" for="firecrawl-api-key">API Key（可选）</label>
+          <input
+            id="firecrawl-api-key"
+            v-model="firecrawlConfig.api_key"
+            class="token-input"
+            type="password"
+            :placeholder="firecrawlConfig._has_api_key ? '已配置 API Key，留空表示不更新' : '本地部署可留空'"
+            autocomplete="off"
+            spellcheck="false"
+          />
+
+          <p class="security-hint">
+            说明：保存时若 API Key 留空，会保留服务端已保存的 Key；测试连接支持无 Key 的本地部署。
+          </p>
+
+          <div class="token-actions">
+            <button class="btn btn-primary" @click="saveFirecrawlConfig" :disabled="saving">
+              {{ saving ? '保存中...' : '保存 Firecrawl 配置' }}
+            </button>
+            <button class="btn" @click="testFirecrawlConnection" :disabled="testingFirecrawl">
+              {{ testingFirecrawl ? '测试中...' : '测试 Firecrawl 连接' }}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 文本服务商弹窗 -->
@@ -253,12 +303,15 @@ function clearAccessTokenSetting() {
 const {
   // 状态
   loading,
+  saving,
   testingText,
   testingImage,
+  testingFirecrawl,
 
   // 配置数据
   textConfig,
   imageConfig,
+  firecrawlConfig,
 
   // 文本服务商弹窗
   showTextModal,
@@ -293,7 +346,9 @@ const {
   deleteImageProvider,
   testImageConnection,
   testImageProviderInList,
-  updateImageForm
+  updateImageForm,
+  saveFirecrawlConfig,
+  testFirecrawlConnection
 } = useProviderForm()
 
 onMounted(async () => {
@@ -438,5 +493,19 @@ onMounted(async () => {
   justify-content: center;
   padding: 80px 20px;
   color: var(--text-sub);
+}
+
+.firecrawl-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.firecrawl-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-main);
 }
 </style>
