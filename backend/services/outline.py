@@ -116,13 +116,87 @@ class OutlineService:
                 }
                 page_type = type_mapping.get(type_cn, "content")
 
+            clean_content, embedded_suggestion = self._extract_embedded_image_suggestion(page_text)
             pages.append({
                 "index": index,
                 "type": page_type,
-                "content": page_text
+                "content": clean_content or page_text,
+                "image_suggestion": embedded_suggestion or None
             })
 
         return pages
+
+    def _extract_embedded_image_suggestion(self, content: str) -> tuple[str, Optional[str]]:
+        """
+        从页面文案中提取“配图建议”段落，避免与独立展示区域重复。
+
+        规则：
+        - 识别常见标题：配图建议 / 图片建议 / 画面建议 / 视觉建议
+        - 命中后将该标题行及其后内容视为建议区（通常位于页尾）
+        """
+        text = str(content or "").replace("\r\n", "\n").strip()
+        if not text:
+            return "", None
+
+        marker = re.search(
+            r'(?im)^\s*(?:[-*+]\s*)?(?:【\s*)?(?:配图建议|图片建议|画面建议|视觉建议)(?:\s*】)?\s*(?:[:：]\s*)?(.*)$',
+            text
+        )
+        if not marker:
+            return text, None
+
+        suggestion_inline = (marker.group(1) or "").strip()
+        trailing = text[marker.end():].strip()
+
+        parts = []
+        if suggestion_inline:
+            parts.append(suggestion_inline)
+        if trailing:
+            parts.append(trailing)
+        suggestion = "\n".join(parts).strip()
+
+        clean_content = text[:marker.start()].rstrip()
+        clean_content = re.sub(r'\n{3,}', '\n\n', clean_content).strip()
+        return clean_content, (suggestion or None)
+
+    def _score_suggestion_text(self, text: str) -> int:
+        """对建议文本做一个简易质量评分，用于冲突时择优。"""
+        value = (text or "").strip()
+        if not value:
+            return 0
+
+        detail_keywords = ["主体", "场景", "构图", "镜头", "光线", "色调", "风格", "氛围", "材质", "景别"]
+        score = len(value)
+        score += value.count("\n") * 8
+        score += sum(20 for kw in detail_keywords if kw in value)
+        return score
+
+    def _merge_suggestion(self, primary: Optional[str], secondary: Optional[str]) -> Optional[str]:
+        """
+        合并两路建议文本（primary 优先），在不丢信息的前提下避免重复。
+        """
+        a = (primary or "").strip()
+        b = (secondary or "").strip()
+
+        if not a and not b:
+            return None
+        if not a:
+            return b
+        if not b:
+            return a
+
+        norm_a = re.sub(r'\s+', '', a)
+        norm_b = re.sub(r'\s+', '', b)
+        if norm_a == norm_b:
+            return a if len(a) >= len(b) else b
+
+        if norm_b in norm_a:
+            return a
+        if norm_a in norm_b:
+            return b
+
+        # 两者差异明显时择优保留信息更丰富的版本
+        return a if self._score_suggestion_text(a) >= self._score_suggestion_text(b) else b
 
     def _build_source_reference(self, source_content: Optional[str]) -> str:
         """构造网页参考素材片段，避免超长输入导致模型失败。"""
@@ -375,9 +449,17 @@ class OutlineService:
         pages_input = current_pages or []
         pages_input = [p for p in pages_input if isinstance(p, dict)]
         for idx, p in enumerate(pages_input):
+            clean_content, embedded_suggestion = self._extract_embedded_image_suggestion(
+                str(p.get("content", "")).strip()
+            )
+            merged_suggestion = self._merge_suggestion(
+                str(p.get("image_suggestion", "")).strip() or None,
+                embedded_suggestion
+            )
             p["index"] = idx
             p["type"] = str(p.get("type", "content"))
-            p["content"] = str(p.get("content", "")).strip()
+            p["content"] = clean_content
+            p["image_suggestion"] = merged_suggestion
 
         if normalized_mode == "suggest_only":
             pages = pages_input if pages_input else self._parse_outline(current_outline or "")

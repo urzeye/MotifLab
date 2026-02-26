@@ -124,9 +124,101 @@ function saveState(state: GeneratorState) {
   }
 }
 
+const IMAGE_SUGGESTION_MARKER_RE =
+  /^\s*(?:[-*+]\s*)?(?:【\s*)?(?:配图建议|图片建议|画面建议|视觉建议)(?:\s*】)?\s*(?:[:：]\s*)?(.*)$/im
+
+function extractEmbeddedImageSuggestion(content: string): { content: string; suggestion?: string } {
+  const text = String(content || '').replace(/\r\n/g, '\n').trim()
+  if (!text) {
+    return { content: '' }
+  }
+
+  const matched = IMAGE_SUGGESTION_MARKER_RE.exec(text)
+  if (!matched) {
+    return { content: text }
+  }
+
+  const markerStart = matched.index
+  const markerEnd = markerStart + matched[0].length
+  const inlineSuggestion = (matched[1] || '').trim()
+  const trailingSuggestion = text.slice(markerEnd).trim()
+
+  const suggestionParts = [inlineSuggestion, trailingSuggestion].filter(Boolean)
+  const suggestion = suggestionParts.join('\n').trim()
+  const cleanedContent = text.slice(0, markerStart).replace(/\n{3,}/g, '\n\n').trim()
+
+  return {
+    content: cleanedContent,
+    suggestion: suggestion || undefined
+  }
+}
+
+function scoreSuggestionText(text: string): number {
+  const value = String(text || '').trim()
+  if (!value) return 0
+
+  const detailKeywords = ['主体', '场景', '构图', '镜头', '光线', '色调', '风格', '氛围', '材质', '景别']
+  let score = value.length + value.split('\n').length * 8
+  score += detailKeywords.reduce((acc, kw) => acc + (value.includes(kw) ? 20 : 0), 0)
+  return score
+}
+
+function mergeImageSuggestion(primary?: string, secondary?: string): string | undefined {
+  const a = String(primary || '').trim()
+  const b = String(secondary || '').trim()
+
+  if (!a && !b) return undefined
+  if (!a) return b
+  if (!b) return a
+
+  const normA = a.replace(/\s+/g, '')
+  const normB = b.replace(/\s+/g, '')
+
+  if (normA === normB) return a.length >= b.length ? a : b
+  if (normB && normA.includes(normB)) return a
+  if (normA && normB.includes(normA)) return b
+
+  return scoreSuggestionText(a) >= scoreSuggestionText(b) ? a : b
+}
+
+function normalizeOutlinePages(pages: Page[]): Page[] {
+  if (!Array.isArray(pages)) return []
+
+  return pages.map((page, idx) => {
+    const extracted = extractEmbeddedImageSuggestion(String(page?.content || ''))
+    const explicitSuggestion = String((page as any)?.image_suggestion || (page as any)?.imageSuggestion || '').trim()
+    const mergedSuggestion = mergeImageSuggestion(explicitSuggestion, extracted.suggestion)
+
+    const type = page?.type === 'cover' || page?.type === 'summary' ? page.type : 'content'
+
+    return {
+      ...page,
+      index: typeof page?.index === 'number' ? page.index : idx,
+      type,
+      content: extracted.content,
+      image_suggestion: mergedSuggestion || undefined
+    }
+  })
+}
+
+function buildRawFromPages(pages: Page[]): string {
+  return pages.map(page => String(page.content || '').trim()).join('\n\n<page>\n\n')
+}
+
 export const useGeneratorStore = defineStore('generator', {
   state: (): GeneratorState => {
     const saved = loadState()
+    const normalizedSavedPages = normalizeOutlinePages((saved.outline?.pages || []) as Page[])
+    const normalizedSavedOutline = normalizedSavedPages.length > 0
+      ? {
+          raw: buildRawFromPages(normalizedSavedPages),
+          pages: normalizedSavedPages
+        }
+      : {
+          raw: saved.outline?.raw || '',
+          pages: []
+        }
+
     return {
       // 当前阶段
       stage: saved.stage || 'input',
@@ -135,10 +227,7 @@ export const useGeneratorStore = defineStore('generator', {
       topic: saved.topic || '',
 
       // 大纲数据
-      outline: saved.outline || {
-        raw: '',
-        pages: []
-      },
+      outline: normalizedSavedOutline,
 
       // 图片生成进度
       progress: saved.progress || {
@@ -190,8 +279,9 @@ export const useGeneratorStore = defineStore('generator', {
      * @param pages 解析后的页面数组
      */
     setOutline(raw: string, pages: Page[]) {
-      this.outline.raw = raw
-      this.outline.pages = pages
+      const normalizedPages = normalizeOutlinePages(pages)
+      this.outline.pages = normalizedPages
+      this.outline.raw = normalizedPages.length > 0 ? buildRawFromPages(normalizedPages) : raw
       this.stage = 'outline'
       this.outlineStatus = 'done'  // 设置大纲为已完成状态
     },
