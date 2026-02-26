@@ -187,6 +187,7 @@ class ImageService:
         index = page["index"]
         page_type = page["type"]
         page_content = page["content"]
+        image_suggestion = self._extract_image_suggestion(page)
         page_specific_image_data = None
 
         # 页面级参考图（Base64）优先于封面参考图
@@ -220,6 +221,15 @@ class ImageService:
                     page_type=page_type,
                     full_outline=full_outline,
                     user_topic=user_topic if user_topic else "未提供"
+                )
+
+            # 本页配图建议（来自大纲阶段 AI 结果）：
+            # 高优先级注入到图片 prompt，兼容 image_suggestion / imageSuggestion 两种字段名。
+            if image_suggestion:
+                prompt += (
+                    "\n\n【本页配图建议（高优先级）】\n"
+                    f"{image_suggestion}\n"
+                    "请严格参考以上建议生成本页图片，同时保持与整组图片的风格一致。"
                 )
 
             prompt_fingerprint = hashlib.sha1(prompt.encode('utf-8')).hexdigest()[:12]
@@ -331,6 +341,32 @@ class ImageService:
             error_msg = str(e)
             logger.error(f"❌ 图片 [{index}] 生成失败: {error_msg[:200]}")
             return (index, False, None, error_msg, None)
+
+    @staticmethod
+    def _extract_image_suggestion(page: Dict) -> str:
+        """
+        提取并规范化页面配图建议。
+
+        兼容两种命名：
+        - image_suggestion（本项目）
+        - imageSuggestion（外部/商业版常见）
+        """
+        if not isinstance(page, dict):
+            return ""
+
+        raw = page.get("image_suggestion")
+        if raw in (None, ""):
+            raw = page.get("imageSuggestion")
+
+        if not isinstance(raw, str):
+            return ""
+
+        text = raw.strip()
+        if not text:
+            return ""
+
+        # 避免异常超长输入污染提示词
+        return text[:2000]
 
     def _generate_with_heartbeat(
         self,

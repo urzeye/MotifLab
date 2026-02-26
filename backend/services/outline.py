@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import json
 from typing import Dict, List, Any, Optional
 from backend.config import Config
 from backend.utils.text_client import get_text_chat_client
@@ -167,12 +168,280 @@ class OutlineService:
             f"- 风格提示: {style_prompt or '未提供'}\n"
         )
 
+    def _pages_to_outline_text(self, pages: List[Dict[str, Any]]) -> str:
+        """将页面数组序列化为统一的大纲文本格式。"""
+        if not pages:
+            return ""
+        return "\n\n<page>\n\n".join(
+            str(page.get("content", "")).strip()
+            for page in pages
+            if str(page.get("content", "")).strip()
+        )
+
+    def _extract_json_object(self, text: str) -> Optional[Dict[str, Any]]:
+        """从模型返回文本中提取首个 JSON 对象。"""
+        if not text:
+            return None
+
+        raw = text.strip()
+
+        # 兼容 ```json ... ``` 包裹
+        fenced_match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", raw, flags=re.IGNORECASE)
+        if fenced_match:
+            raw = fenced_match.group(1).strip()
+
+        try:
+            data = json.loads(raw)
+            return data if isinstance(data, dict) else None
+        except Exception:
+            pass
+
+        # 回退：提取最外层大括号
+        start = raw.find("{")
+        end = raw.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            return None
+
+        snippet = raw[start:end + 1]
+        try:
+            data = json.loads(snippet)
+            return data if isinstance(data, dict) else None
+        except Exception:
+            return None
+
+    def _fallback_image_suggestion(
+        self,
+        page: Dict[str, Any],
+        page_index: int,
+        topic: str,
+        style_hint: str
+    ) -> str:
+        """模型失败时的兜底配图建议。"""
+        content = str(page.get("content", "")).strip()
+        brief = re.sub(r"\s+", " ", content)[:60] if content else topic[:40]
+        role = {
+            "cover": "封面主视觉",
+            "content": "内容信息表达",
+            "summary": "总结收束页"
+        }.get(str(page.get("type", "content")), "内容信息表达")
+
+        base = (
+            f"第{page_index + 1}页（{role}）：围绕“{brief}”构图；"
+            "3:4竖版，整体保持同一主色调、同一光线方向与同一镜头语言，"
+            "保证系列感与连续性。"
+        )
+        if style_hint:
+            base += f" 风格锚点：{style_hint[:120]}"
+        return base
+
+    def _generate_image_suggestions(
+        self,
+        topic: str,
+        pages: List[Dict[str, Any]],
+        template_ref: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        """调用模型为每一页生成配图建议。"""
+        if not pages:
+            return pages
+
+        style_hint = ""
+        if isinstance(template_ref, dict):
+            style_hint = str(
+                template_ref.get("stylePrompt")
+                or template_ref.get("style_prompt")
+                or template_ref.get("description")
+                or ""
+            ).strip()
+
+        page_payload = []
+        for page in pages:
+            page_payload.append({
+                "index": int(page.get("index", 0)),
+                "type": str(page.get("type", "content")),
+                "content": re.sub(r"\s+", " ", str(page.get("content", ""))).strip()[:220]
+            })
+
+        prompt = (
+            "你是小红书图文编导，请为每一页生成“配图建议”。\n"
+            "要求：\n"
+            "1. 每页建议必须具体到主体、场景、构图、镜头/光线。\n"
+            "2. 强调整组图片风格一致（统一色调、光线、镜头语言、氛围）。\n"
+            "3. 中文输出，不要解释过程。\n"
+            "4. 仅输出 JSON 对象，不要 Markdown 代码块。\n\n"
+            f"主题：{topic}\n"
+            f"风格锚点：{style_hint or '3:4竖版，小红书高质感，整组统一风格'}\n"
+            f"页面数据：{json.dumps(page_payload, ensure_ascii=False)}\n\n"
+            "输出格式：\n"
+            "{\n"
+            '  "suggestions": [\n'
+            '    {"index": 0, "image_suggestion": "..."},\n'
+            '    {"index": 1, "image_suggestion": "..."}\n'
+            "  ]\n"
+            "}\n"
+        )
+
+        try:
+            client, provider_name, provider_config = self._get_client(needs_image_support=False)
+            model = provider_config.get('model', 'gemini-2.0-flash-exp')
+            temperature = provider_config.get('temperature', 0.7)
+            max_output_tokens = provider_config.get('max_output_tokens', 6000)
+
+            logger.info(
+                f"调用配图建议生成: provider={provider_name}, model={model}, pages={len(pages)}"
+            )
+
+            raw = client.generate_text(
+                prompt=prompt,
+                model=model,
+                temperature=temperature,
+                max_output_tokens=max_output_tokens
+            )
+
+            data = self._extract_json_object(raw)
+            suggestions = data.get("suggestions", []) if isinstance(data, dict) else []
+            if not isinstance(suggestions, list):
+                suggestions = []
+
+            suggestion_map: Dict[int, str] = {}
+            for item in suggestions:
+                if not isinstance(item, dict):
+                    continue
+                index = item.get("index")
+                text = item.get("image_suggestion")
+                if isinstance(index, int) and isinstance(text, str) and text.strip():
+                    suggestion_map[index] = text.strip()
+
+            for idx, page in enumerate(pages):
+                page["image_suggestion"] = suggestion_map.get(
+                    idx,
+                    self._fallback_image_suggestion(page, idx, topic, style_hint)
+                )
+
+            return pages
+
+        except Exception as e:
+            logger.warning(f"生成配图建议失败，使用兜底建议: {e}")
+            for idx, page in enumerate(pages):
+                page["image_suggestion"] = self._fallback_image_suggestion(
+                    page, idx, topic, style_hint
+                )
+            return pages
+
+    def _build_revision_prompt(
+        self,
+        topic: str,
+        current_outline: str,
+        revision_request: str,
+        template_ref: Optional[Dict[str, Any]]
+    ) -> str:
+        """构建“修改需求重写大纲”提示词。"""
+        outline_text = (current_outline or "").strip()
+        if len(outline_text) > 14000:
+            outline_text = outline_text[:14000] + "\n\n...(当前大纲过长，已截断)"
+
+        prompt = self.prompt_template.format(topic=topic)
+        prompt += self._build_template_reference(template_ref)
+        prompt += (
+            "\n\n【当前大纲】\n"
+            f"{outline_text or '（为空）'}\n"
+            "\n【修改需求】\n"
+            f"{revision_request.strip()}\n"
+            "\n【执行要求】\n"
+            "请基于“修改需求”重写完整大纲，并保持清晰的页间逻辑与节奏。\n"
+            "输出必须使用 <page> 作为页面分隔符；每页开头保留类型标记 [封面]/[内容]/[总结]。\n"
+        )
+        return prompt
+
+    def edit_outline_with_suggestions(
+        self,
+        topic: str,
+        current_outline: str,
+        current_pages: Optional[List[Dict[str, Any]]] = None,
+        revision_request: str = "",
+        mode: str = "revise",
+        template_ref: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        编辑大纲并生成每页配图建议。
+
+        mode:
+        - suggest_only: 不改文案，只补全配图建议
+        - revise: 根据修改需求重写大纲并补全配图建议
+        """
+        normalized_mode = (mode or "revise").strip().lower()
+        if normalized_mode not in {"suggest_only", "revise"}:
+            normalized_mode = "revise"
+
+        pages_input = current_pages or []
+        pages_input = [p for p in pages_input if isinstance(p, dict)]
+        for idx, p in enumerate(pages_input):
+            p["index"] = idx
+            p["type"] = str(p.get("type", "content"))
+            p["content"] = str(p.get("content", "")).strip()
+
+        if normalized_mode == "suggest_only":
+            pages = pages_input if pages_input else self._parse_outline(current_outline or "")
+            pages = self._generate_image_suggestions(topic, pages, template_ref)
+            return {
+                "success": True,
+                "outline": current_outline or self._pages_to_outline_text(pages),
+                "pages": pages,
+                "mode": normalized_mode
+            }
+
+        if not revision_request.strip():
+            return {
+                "success": False,
+                "error": "revision_request 不能为空（revise 模式）"
+            }
+
+        try:
+            client, provider_name, provider_config = self._get_client(needs_image_support=False)
+            model = provider_config.get('model', 'gemini-2.0-flash-exp')
+            temperature = provider_config.get('temperature', 0.8)
+            max_output_tokens = provider_config.get('max_output_tokens', 8000)
+
+            prompt = self._build_revision_prompt(topic, current_outline, revision_request, template_ref)
+            logger.info(
+                f"开始重写大纲: provider={provider_name}, model={model}, revision_len={len(revision_request)}"
+            )
+
+            outline_text = client.generate_text(
+                prompt=prompt,
+                model=model,
+                temperature=temperature,
+                max_output_tokens=max_output_tokens
+            )
+            pages = self._parse_outline(outline_text)
+            if not pages:
+                return {
+                    "success": False,
+                    "error": "模型未返回可解析的大纲，请重试或调整修改需求"
+                }
+
+            pages = self._generate_image_suggestions(topic, pages, template_ref)
+
+            return {
+                "success": True,
+                "outline": outline_text,
+                "pages": pages,
+                "mode": normalized_mode
+            }
+
+        except Exception as e:
+            logger.error(f"编辑大纲失败: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
     def generate_outline(
         self,
         topic: str,
         images: Optional[List[bytes]] = None,
         source_content: Optional[str] = None,
         template_ref: Optional[Dict[str, Any]] = None,
+        enable_search: bool = False,
     ) -> Dict[str, Any]:
         try:
             logger.info(
@@ -180,7 +449,8 @@ class OutlineService:
                 f"topic={topic[:50]}..., "
                 f"images={len(images) if images else 0}, "
                 f"has_source={bool(source_content)}, "
-                f"has_template_ref={bool(template_ref)}"
+                f"has_template_ref={bool(template_ref)}, "
+                f"enable_search={enable_search}"
             )
             needs_image_support = bool(images and len(images) > 0)
             client, selected_provider_name, provider_config = self._get_client(
@@ -207,7 +477,8 @@ class OutlineService:
                 model=model,
                 temperature=temperature,
                 max_output_tokens=max_output_tokens,
-                images=images
+                images=images,
+                use_search=enable_search
             )
 
             logger.debug(f"API 返回文本长度: {len(outline_text)} 字符")
