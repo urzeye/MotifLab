@@ -1,11 +1,36 @@
-# 文本生成服务配置
-# 请在 Web 界面的"设置"页面中配置 API Key
+# 文本生成服务配置（Docker 镜像内默认文件）
+# 说明：
+# 1) 容器启动后可通过 Web 设置页修改并持久化（建议挂载配置文件）。
+# 2) API Key 支持直接明文，或使用 ${ENV_VAR} 从 .env / 环境变量读取。
+# 3) active_provider 必须是 providers 中存在的名称。
+
 active_provider: default
+
 providers:
   default:
+    type: openai_compatible
     api_key: ${OPENAI_API_KEY}
     base_url: https://api.openai.com
+    model: gpt-4o-mini
+    endpoint_type: /v1/chat/completions
+    temperature: 1.0
     max_output_tokens: 8000
-    model: gpt-4o
-    temperature: 1
-    type: openai_compatible
+    supports_images: true
+
+  # openrouter:
+  #   type: openai_compatible
+  #   api_key: ${OPENROUTER_API_KEY}
+  #   base_url: https://openrouter.ai/api/v1
+  #   model: google/gemini-2.0-flash-001
+  #   endpoint_type: /v1/chat/completions
+  #   temperature: 1.0
+  #   max_output_tokens: 8000
+  #   supports_images: true
+
+  # gemini:
+  #   type: google_gemini
+  #   api_key: ${GEMINI_TEXT_API_KEY}
+  #   model: gemini-2.0-flash-exp
+  #   temperature: 1.0
+  #   max_output_tokens: 8000
+  #   supports_images: true

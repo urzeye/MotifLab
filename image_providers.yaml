@@ -1,30 +1,82 @@
-# 图片生成服务商配置
-# 复制此文件为 image_providers.yaml 并填写你的配置
+# 图片生成服务配置
+# 说明：
+# 1) 推荐通过 Web 设置页维护，保存后会回写本文件。
+# 2) API Key 支持直接明文，或使用 ${ENV_VAR} 从 .env / 环境变量读取。
+# 3) active_provider 必须是 providers 中存在的名称。
 
-# 当前激活的服务商（填写下方 providers 中的名称）
-active_provider: gemini
+active_provider: default
 
-# 服务商列表
-# API Key 使用 ${ENV_VAR} 格式引用 .env 文件中的环境变量
 providers:
-  # Google Imagen 4.0 图片生成（Nano Banana Pro）
-  gemini:
-    type: google_genai
-    api_key: ${GEMINI_IMAGE_API_KEY}
-    model: imagen-4.0-generate-001
-    high_concurrency: false  # 是否启用高并发，GCP 300$ 试用账号不建议启用
-
-  # Google Vertex AI（需要配置 GCP 凭证）
-  vertex:
-    type: google_genai
-    api_key: ${VERTEX_API_KEY}
-    model: gemini-2.0-flash-exp-image-generation
-    high_concurrency: true  # 付费账号可以启用高并发
-
-  # OpenAI 兼容接口（如支持图片生成的第三方 API）
-  openai_image:
+  default:
     type: image_api
-    api_key: ${OPENAI_IMAGE_API_KEY}
-    base_url: https://your-api-endpoint.com
-    model: dall-e-3
+    api_key: ${OPENAI_API_KEY}
+    base_url: https://api.openai.com
+    model: gpt-image-1
+    endpoint_type: /v1/images/generations
+    default_aspect_ratio: "3:4"
+    image_size: 1024x1024
+    use_size_tag: false
     high_concurrency: false
+    short_prompt: false
+
+  # gemini:
+  #   type: google_genai
+  #   api_key: ${GEMINI_IMAGE_API_KEY}
+  #   model: imagen-3.0-generate-002
+  #   high_concurrency: false
+
+  # dashscope:
+  #   type: dashscope
+  #   api_key: ${DASHSCOPE_API_KEY}
+  #   base_url: https://dashscope.aliyuncs.com
+  #   model: qwen-image-max
+  #   size: 1104*1472
+  #   use_style_transfer: false
+  #   edit_model: wan2.5-i2i-preview
+  #   negative_prompt: ""
+  #   prompt_extend: true
+  #   watermark: false
+  #   n: 1
+  #   max_retries: 2
+
+  # modelscope:
+  #   type: modelscope
+  #   api_key: ${MODELSCOPE_API_KEY}
+  #   base_url: https://api-inference.modelscope.cn
+  #   model: Tongyi-MAI/Z-Image-Turbo
+  #   polling_interval: 2
+  #   timeout: 120
+  #   high_concurrency: false
+
+  # replicate:
+  #   type: replicate
+  #   api_key: ${REPLICATE_API_KEY}
+  #   model: prunaai/z-image-turbo:0870559624690b3709350177b9d521d84e54d297026d725358b8f73193429e91
+  #   default_aspect_ratio: "3:4"
+  #   steps: 9
+  #   guidance: 0.0
+  #   high_concurrency: false
+
+  # siliconflow:
+  #   type: image_api
+  #   api_key: ${SILICONFLOW_API_KEY}
+  #   base_url: https://api.siliconflow.cn
+  #   model: Qwen/Qwen-Image
+  #   text_model: Qwen/Qwen-Image
+  #   edit_model: Qwen/Qwen-Image-Edit
+  #   endpoint_type: /v1/images/generations
+  #   size: 1024x1024
+  #   default_aspect_ratio: "3:4"
+  #   use_size_tag: false
+  #   high_concurrency: false
+  #   short_prompt: false
+
+  # jimeng:
+  #   type: image_api
+  #   api_key: ${JIMENG_API_KEY}
+  #   base_url: https://api.jimeng.jianying.com
+  #   model: jimeng-2.0-pro
+  #   endpoint_type: /v1/chat/completions
+  #   use_size_tag: false
+  #   high_concurrency: false
+  #   short_prompt: true
