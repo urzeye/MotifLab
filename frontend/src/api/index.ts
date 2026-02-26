@@ -534,6 +534,12 @@ export async function scanAllTasks(): Promise<{
 export interface Config {
   text_generation: { active_provider: string; providers: Record<string, any> }
   image_generation: { active_provider: string; providers: Record<string, any> }
+  firecrawl?: {
+    enabled: boolean
+    api_key_masked?: string
+    base_url?: string
+    _has_api_key?: boolean
+  }
 }
 
 export async function getConfig(): Promise<{ success: boolean; config?: Config; error?: string }> {
@@ -551,7 +557,7 @@ export async function testConnection(config: {
   provider_name?: string
   api_key?: string
   base_url?: string
-  model: string
+  model?: string
   endpoint_type?: string
 }): Promise<{ success: boolean; message?: string; error?: string }> {
   const response = await axios.post(`${API_BASE_URL}/config/test`, config)

@@ -32,6 +32,14 @@ export interface ProviderForm {
   _has_api_key: boolean
 }
 
+export interface FirecrawlConfig {
+  enabled: boolean
+  api_key: string
+  api_key_masked: string
+  base_url: string
+  _has_api_key: boolean
+}
+
 // 文本生成服务商预设配置
 export const textProviderPresets: Record<string, {
   label: string
@@ -282,9 +290,17 @@ export function useProviderForm() {
   const saving = ref(false)
   const testingText = ref(false)
   const testingImage = ref(false)
+  const testingFirecrawl = ref(false)
 
   const textConfig = ref<ProviderConfig>({ active_provider: '', providers: {} })
   const imageConfig = ref<ProviderConfig>({ active_provider: '', providers: {} })
+  const firecrawlConfig = ref<FirecrawlConfig>({
+    enabled: false,
+    api_key: '',
+    api_key_masked: '',
+    base_url: '',
+    _has_api_key: false
+  })
 
   const showTextModal = ref(false)
   const editingTextProvider = ref<string | null>(null)
@@ -304,6 +320,13 @@ export function useProviderForm() {
           providers: result.config.text_generation.providers
         }
         imageConfig.value = result.config.image_generation
+        firecrawlConfig.value = {
+          enabled: result.config.firecrawl?.enabled || false,
+          api_key: '',
+          api_key_masked: result.config.firecrawl?.api_key_masked || '',
+          base_url: result.config.firecrawl?.base_url || '',
+          _has_api_key: result.config.firecrawl?._has_api_key || false
+        }
       } else {
         alert('加载配置失败: ' + (result.error || '未知错误'))
       }
@@ -327,12 +350,62 @@ export function useProviderForm() {
     }
   }
 
+  async function saveFirecrawlConfig() {
+    saving.value = true
+    try {
+      const payload: NonNullable<Config['firecrawl']> & { api_key?: string } = {
+        enabled: !!firecrawlConfig.value.enabled,
+        base_url: firecrawlConfig.value.base_url.trim()
+      }
+      if (firecrawlConfig.value.api_key.trim()) {
+        payload.api_key = firecrawlConfig.value.api_key.trim()
+      }
+      const result = await updateConfig({ firecrawl: payload })
+      if (!result.success) {
+        alert('保存 Firecrawl 配置失败: ' + (result.error || '未知错误'))
+        return
+      }
+      await loadConfig()
+    } catch (e) {
+      alert('保存 Firecrawl 配置失败: ' + String(e))
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function testFirecrawlConnection() {
+    testingFirecrawl.value = true
+    try {
+      const result = await testConnection({
+        type: 'firecrawl',
+        api_key: firecrawlConfig.value.api_key.trim() || undefined,
+        base_url: firecrawlConfig.value.base_url.trim() || undefined
+      })
+      if (result.success) {
+        alert('✅ ' + result.message)
+      } else {
+        alert('❌ 连接失败：' + (result.error || '未知错误'))
+      }
+    } catch (e: any) {
+      alert('❌ 连接失败：' + (e.response?.data?.error || e.message))
+    } finally {
+      testingFirecrawl.value = false
+    }
+  }
+
+  function updateFirecrawlConfig(data: Partial<FirecrawlConfig>) {
+    firecrawlConfig.value = {
+      ...firecrawlConfig.value,
+      ...data
+    }
+  }
+
   const textHandler = createProviderHandler(textConfig, textForm, showTextModal, editingTextProvider, testingText, false, autoSaveConfig)
   const imageHandler = createProviderHandler(imageConfig, imageForm, showImageModal, editingImageProvider, testingImage, true, autoSaveConfig)
 
   return {
-    loading, saving, testingText, testingImage,
-    textConfig, imageConfig,
+    loading, saving, testingText, testingImage, testingFirecrawl,
+    textConfig, imageConfig, firecrawlConfig,
     showTextModal, editingTextProvider, textForm,
     showImageModal, editingImageProvider, imageForm,
     loadConfig,
@@ -355,7 +428,10 @@ export function useProviderForm() {
     deleteImageProvider: imageHandler.remove,
     testImageConnection: imageHandler.test,
     testImageProviderInList: imageHandler.testInList,
-    updateImageForm: (data: ProviderForm) => { imageForm.value = data }
+    updateImageForm: (data: ProviderForm) => { imageForm.value = data },
+    saveFirecrawlConfig,
+    testFirecrawlConnection,
+    updateFirecrawlConfig
   }
 }
 
