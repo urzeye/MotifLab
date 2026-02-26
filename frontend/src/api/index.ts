@@ -230,6 +230,26 @@ export interface HealthResponse {
   rate_limit?: string
 }
 
+export interface FirecrawlStatusResponse {
+  success: boolean
+  enabled?: boolean
+  configured?: boolean
+  error?: string
+}
+
+export interface ScrapeResultData {
+  title: string
+  content: string
+  word_count: number
+  url: string
+}
+
+export interface ScrapeResult {
+  success: boolean
+  data?: ScrapeResultData
+  error?: string
+}
+
 export async function getHealth(): Promise<HealthResponse> {
   try {
     const response = await fetch(`${API_BASE_URL}/health`, {
@@ -253,19 +273,50 @@ export async function verifyAccessToken(): Promise<boolean> {
   }
 }
 
+export async function getFirecrawlStatus(): Promise<FirecrawlStatusResponse> {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/firecrawl/status`, { timeout: 8000 })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '获取 Firecrawl 状态失败', {
+      enabled: false,
+      configured: false
+    })
+  }
+}
+
+export async function scrapeUrl(url: string): Promise<ScrapeResult> {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/firecrawl/scrape`, { url }, { timeout: 90000 })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '抓取网页失败')
+  }
+}
+
 // ==================== 大纲生成 API ====================
 
-export async function generateOutline(topic: string, images?: File[]): Promise<OutlineResponse> {
+export async function generateOutline(
+  topic: string,
+  images?: File[],
+  sourceContent?: string
+): Promise<OutlineResponse> {
   if (images && images.length > 0) {
     const formData = new FormData()
     formData.append('topic', topic)
+    if (sourceContent) {
+      formData.append('source_content', sourceContent)
+    }
     images.forEach(file => formData.append('images', file))
     const response = await axios.post<OutlineResponse>(`${API_BASE_URL}/outline`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
     return response.data
   }
-  const response = await axios.post<OutlineResponse>(`${API_BASE_URL}/outline`, { topic })
+  const response = await axios.post<OutlineResponse>(`${API_BASE_URL}/outline`, {
+    topic,
+    source_content: sourceContent || undefined
+  })
   return response.data
 }
 

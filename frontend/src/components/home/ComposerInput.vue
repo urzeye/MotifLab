@@ -40,6 +40,49 @@
       </div>
     </div>
 
+    <!-- 网页引用 -->
+    <div v-if="firecrawlEnabled && showUrlInput" class="url-input-section">
+      <div class="url-input-header">
+        <div class="url-input-title">网页引用</div>
+        <button class="url-close-btn" @click="closeUrlInput" title="关闭网页引用">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="url-input-wrapper">
+        <input
+          type="url"
+          v-model="urlInput"
+          class="url-input"
+          placeholder="粘贴文章链接（https://...）"
+          :disabled="loading || scrapeStatus === 'loading'"
+          @input="handleUrlInput"
+          @blur="handleUrlBlur"
+        />
+        <button
+          v-if="urlInput && scrapeStatus !== 'loading'"
+          class="url-clear-btn"
+          @click="clearUrl"
+          title="清空链接"
+        >
+          清空
+        </button>
+        <span v-if="scrapeStatus === 'loading'" class="spinner-xs"></span>
+      </div>
+
+      <div v-if="scrapeStatus === 'success' && scrapeResult" class="scrape-result success">
+        <div class="scrape-title">{{ scrapeResult.data?.title || '网页抓取成功' }}</div>
+        <div class="scrape-meta">已抓取 {{ scrapeResult.data?.word_count ?? 0 }} 字</div>
+      </div>
+
+      <div v-if="scrapeStatus === 'error'" class="scrape-result error">
+        {{ scrapeError }}
+      </div>
+    </div>
+
     <!-- 工具栏 -->
     <div class="composer-toolbar">
       <div class="toolbar-left">
@@ -59,6 +102,20 @@
           </svg>
           <span v-if="uploadedImages.length > 0" class="badge-count">{{ uploadedImages.length }}</span>
         </label>
+        <button
+          v-if="firecrawlEnabled"
+          class="tool-btn"
+          :class="{ 'active': showUrlInput || scrapeStatus === 'success' }"
+          @click="toggleUrlInput"
+          title="添加网页引用"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
+          <span v-if="scrapeStatus === 'success'" class="badge-check">✓</span>
+        </button>
       </div>
       <div class="toolbar-right">
         <button
@@ -76,6 +133,7 @@
 
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue'
+import { scrapeUrl, type ScrapeResult } from '../../api'
 
 /**
  * 主题输入组合框组件
@@ -96,6 +154,7 @@ interface UploadedImage {
 const props = defineProps<{
   modelValue: string
   loading: boolean
+  firecrawlEnabled: boolean
 }>()
 
 // 定义 Emits
@@ -103,6 +162,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
   (e: 'generate'): void
   (e: 'imagesChange', images: File[]): void
+  (e: 'urlContentChange', content: ScrapeResult | null): void
 }>()
 
 // 输入框引用
@@ -110,6 +170,12 @@ const textareaRef = ref<HTMLTextAreaElement | null>(null)
 
 // 已上传的图片
 const uploadedImages = ref<UploadedImage[]>([])
+const showUrlInput = ref(false)
+const urlInput = ref('')
+const scrapeStatus = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
+const scrapeResult = ref<ScrapeResult | null>(null)
+const scrapeError = ref('')
+let scrapeDebounceTimer: number | null = null
 
 /**
  * 处理输入变化
@@ -200,14 +266,93 @@ function clearPreviews() {
   uploadedImages.value = []
 }
 
+function toggleUrlInput() {
+  showUrlInput.value = !showUrlInput.value
+}
+
+function closeUrlInput() {
+  showUrlInput.value = false
+}
+
+function handleUrlInput() {
+  if (scrapeDebounceTimer !== null) {
+    clearTimeout(scrapeDebounceTimer)
+  }
+
+  if (!urlInput.value.trim()) {
+    clearUrl()
+    return
+  }
+
+  scrapeDebounceTimer = window.setTimeout(() => {
+    doScrape()
+    scrapeDebounceTimer = null
+  }, 1200)
+}
+
+function handleUrlBlur() {
+  if (!urlInput.value.trim()) return
+  if (scrapeStatus.value === 'loading') return
+  if (scrapeStatus.value === 'success') return
+  doScrape()
+}
+
+async function doScrape() {
+  const url = urlInput.value.trim()
+  if (!url) return
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    scrapeStatus.value = 'error'
+    scrapeError.value = '请输入有效链接（必须以 http:// 或 https:// 开头）'
+    emit('urlContentChange', null)
+    return
+  }
+
+  scrapeStatus.value = 'loading'
+  scrapeError.value = ''
+  scrapeResult.value = null
+
+  const result = await scrapeUrl(url)
+  if (result.success && result.data) {
+    scrapeStatus.value = 'success'
+    scrapeResult.value = result
+    emit('urlContentChange', result)
+    return
+  }
+
+  scrapeStatus.value = 'error'
+  scrapeError.value = result.error || '网页抓取失败'
+  emit('urlContentChange', null)
+}
+
+function clearUrl() {
+  if (scrapeDebounceTimer !== null) {
+    clearTimeout(scrapeDebounceTimer)
+    scrapeDebounceTimer = null
+  }
+  urlInput.value = ''
+  scrapeStatus.value = 'idle'
+  scrapeResult.value = null
+  scrapeError.value = ''
+  emit('urlContentChange', null)
+}
+
+function clearUrlState() {
+  clearUrl()
+  showUrlInput.value = false
+}
+
 // 组件卸载时清理
 onUnmounted(() => {
   clearPreviews()
+  if (scrapeDebounceTimer !== null) {
+    clearTimeout(scrapeDebounceTimer)
+  }
 })
 
 // 暴露方法给父组件
 defineExpose({
-  clearPreviews
+  clearPreviews,
+  clearUrlState
 })
 </script>
 
@@ -382,6 +527,139 @@ defineExpose({
   justify-content: center;
   padding: 0 5px;
   border: 2px solid var(--bg-card);
+}
+
+.badge-check {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  background: #22c55e;
+  color: var(--text-inverse);
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg-card);
+}
+
+.url-input-section {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+}
+
+.url-input-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.url-input-title {
+  font-size: var(--small-size);
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.url-close-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-sub);
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.url-close-btn:hover {
+  background: var(--bg-card);
+}
+
+.url-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  background: var(--bg-card);
+}
+
+.url-input-wrapper:focus-within {
+  border-color: var(--primary);
+}
+
+.url-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-main);
+  font-size: var(--small-size);
+}
+
+.url-input::placeholder {
+  color: var(--text-placeholder);
+}
+
+.url-clear-btn {
+  border: none;
+  background: var(--bg-elevated);
+  color: var(--text-sub);
+  border-radius: var(--radius-xs);
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.url-clear-btn:hover {
+  color: var(--text-main);
+}
+
+.scrape-result {
+  margin-top: 10px;
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  font-size: var(--small-size);
+}
+
+.scrape-result.success {
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.08);
+  color: var(--text-main);
+}
+
+.scrape-result.error {
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+}
+
+.scrape-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.scrape-meta {
+  color: var(--text-sub);
+}
+
+.spinner-xs {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
 /* 生成按钮 */

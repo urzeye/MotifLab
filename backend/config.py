@@ -116,6 +116,57 @@ class Config:
         return cls._load_providers_config('text', 'google_gemini')
 
     @classmethod
+    def load_firecrawl_config(cls) -> Dict[str, Any]:
+        """加载 Firecrawl 配置"""
+        cache_key = 'firecrawl'
+        if cache_key in cls._configs:
+            return cls._configs[cache_key]
+
+        config_path = _get_project_root() / 'firecrawl_config.yaml'
+        logger.debug(f"加载 Firecrawl 配置: {config_path}")
+
+        default = {
+            'enabled': False,
+            'api_key': '',
+            'base_url': '',
+        }
+
+        if not config_path.exists():
+            logger.debug(f"Firecrawl 配置文件不存在: {config_path}，使用默认禁用配置")
+            cls._configs[cache_key] = default
+            return cls._configs[cache_key]
+
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                raw_config = yaml.safe_load(f) or {}
+            config = _resolve_env_vars(raw_config)
+            if not isinstance(config, dict):
+                config = {}
+            cls._configs[cache_key] = {
+                'enabled': bool(config.get('enabled', False)),
+                'api_key': config.get('api_key') or '',
+                'base_url': config.get('base_url') or '',
+            }
+            logger.debug(f"Firecrawl 配置加载成功: enabled={cls._configs[cache_key]['enabled']}")
+        except yaml.YAMLError as e:
+            logger.error(f"Firecrawl 配置文件 YAML 格式错误: {e}")
+            raise ValueError(f"配置文件格式错误: firecrawl_config.yaml\nYAML 解析错误: {e}")
+
+        return cls._configs[cache_key]
+
+    @classmethod
+    def get_firecrawl_config(cls) -> Optional[Dict[str, Any]]:
+        """获取 Firecrawl 运行配置；未启用时返回 None"""
+        config = cls.load_firecrawl_config()
+        if not config.get('enabled'):
+            return None
+        return {
+            'enabled': True,
+            'api_key': config.get('api_key', ''),
+            'base_url': (config.get('base_url') or '').strip() or 'https://api.firecrawl.dev',
+        }
+
+    @classmethod
     def get_active_image_provider(cls) -> str:
         config = cls.load_image_providers_config()
         return cls._resolve_active_provider(config, 'google_genai')

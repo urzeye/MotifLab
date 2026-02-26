@@ -123,18 +123,46 @@ class OutlineService:
 
         return pages
 
+    def _build_source_reference(self, source_content: Optional[str]) -> str:
+        """构造网页参考素材片段，避免超长输入导致模型失败。"""
+        if not source_content:
+            return ""
+
+        content = source_content.strip()
+        if not content:
+            return ""
+
+        max_chars = 12000
+        if len(content) > max_chars:
+            logger.info(f"网页参考内容过长（{len(content)} 字符），已截断到 {max_chars} 字符")
+            content = content[:max_chars] + "\n\n...(网页正文过长，已截断)"
+
+        return (
+            "\n\n【网页参考素材】\n"
+            "以下内容来自用户提供的网页正文，请优先吸收其中的关键观点、数据和案例，"
+            "并在大纲中自然融合：\n\n"
+            f"{content}"
+        )
+
     def generate_outline(
         self,
         topic: str,
-        images: Optional[List[bytes]] = None
+        images: Optional[List[bytes]] = None,
+        source_content: Optional[str] = None,
     ) -> Dict[str, Any]:
         try:
-            logger.info(f"开始生成大纲: topic={topic[:50]}..., images={len(images) if images else 0}")
+            logger.info(
+                "开始生成大纲: "
+                f"topic={topic[:50]}..., "
+                f"images={len(images) if images else 0}, "
+                f"has_source={bool(source_content)}"
+            )
             needs_image_support = bool(images and len(images) > 0)
             client, selected_provider_name, provider_config = self._get_client(
                 needs_image_support=needs_image_support
             )
             prompt = self.prompt_template.format(topic=topic)
+            prompt += self._build_source_reference(source_content)
 
             if images and len(images) > 0:
                 prompt += f"\n\n注意：用户提供了 {len(images)} 张参考图片，请在生成大纲时考虑这些图片的内容和风格。这些图片可能是产品图、个人照片或场景图，请根据图片内容来优化大纲，使生成的内容与图片相关联。"
