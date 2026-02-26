@@ -122,6 +122,11 @@ export const imageProviderPresets: Record<string, {
     base_url: 'https://dashscope.aliyuncs.com',
     model: 'qwen-image-max'
   },
+  modelscope: {
+    label: 'ModelScope Z-Image',
+    base_url: 'https://api-inference.modelscope.cn',
+    model: 'Tongyi-MAI/Z-Image-Turbo'
+  },
   image_api: {
     label: '自定义 OpenAI 兼容',
     base_url: '',
