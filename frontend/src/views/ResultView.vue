@@ -160,13 +160,14 @@
 </style>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useGeneratorStore } from '../stores/generator'
-import { downloadHistoryZip, regenerateImage, updateHistory } from '../api'
+import { downloadHistoryZip, getHistory, regenerateImage, updateHistory } from '../api'
 import ContentDisplay from '../components/result/ContentDisplay.vue'
 
 const router = useRouter()
+const route = useRoute()
 const store = useGeneratorStore()
 const regeneratingIndex = ref<number | null>(null)
 
@@ -314,4 +315,62 @@ const handleRegenerate = async (image: any) => {
     regeneratingIndex.value = null
   }
 }
+
+function resolveRouteRecordId() {
+  const queryId = typeof route.query.recordId === 'string' ? route.query.recordId.trim() : ''
+  if (queryId) return queryId
+
+  const paramId = typeof route.params.recordId === 'string' ? route.params.recordId.trim() : ''
+  return paramId
+}
+
+async function hydrateFromHistoryRecord(recordId: string) {
+  const res = await getHistory(recordId)
+  if (!res.success || !res.record) {
+    alert('无法加载结果页：历史记录不存在或已被删除')
+    router.push('/history')
+    return
+  }
+
+  const record = res.record
+  store.setTopic(record.title)
+  store.setOutline(record.outline.raw, record.outline.pages)
+  store.setRecordId(record.id)
+
+  if (record.content) {
+    store.setContent(
+      record.content.titles || [],
+      record.content.copywriting || '',
+      record.content.tags || []
+    )
+  } else {
+    store.clearContent()
+  }
+
+  const taskId = record.images?.task_id || null
+  const generated = Array.isArray(record.images?.generated) ? record.images.generated : []
+  store.taskId = taskId
+
+  if (taskId) {
+    store.images = record.outline.pages.map((_, idx) => {
+      const filename = generated[idx]
+      return {
+        index: idx,
+        url: filename ? `/api/images/${taskId}/${filename}` : '',
+        status: filename ? 'done' : 'error',
+        retryable: !filename
+      }
+    })
+    store.finishGeneration(taskId)
+  } else {
+    store.images = []
+    store.stage = 'result'
+  }
+}
+
+onMounted(async () => {
+  const recordId = resolveRouteRecordId()
+  if (!recordId) return
+  await hydrateFromHistoryRecord(recordId)
+})
 </script>

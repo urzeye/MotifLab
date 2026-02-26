@@ -22,6 +22,13 @@
         <button class="overlay-btn primary" @click.stop="$emit('edit', record.id)">
           {{ record.recordType === 'concept' ? '查看' : '编辑' }}
         </button>
+        <button
+          v-if="record.recordType !== 'concept'"
+          class="overlay-btn"
+          @click.stop="$emit('result', record.id)"
+        >
+          成片
+        </button>
       </div>
 
       <!-- 类型标识 -->
@@ -37,21 +44,22 @@
 
     <!-- 底部信息 -->
     <div class="card-footer">
-      <div class="card-title" :title="record.title">{{ record.title }}</div>
-      <div class="card-meta">
-        <span>{{ record.page_count }}P</span>
-        <span class="dot">·</span>
-        <span>{{ formattedDate }}</span>
+      <div class="card-title" :title="displayTitle">{{ displayTitle }}</div>
 
-        <div class="more-actions-wrapper">
-          <button class="more-btn" @click.stop="$emit('delete', record)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-          </button>
+      <div class="card-meta">
+        <div class="meta-left">
+          <span class="meta-chip">{{ record.page_count }}页</span>
+          <span class="meta-time">{{ formattedDateTime }}</span>
         </div>
+
+        <button class="more-btn" @click.stop="$emit('delete', record)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
       </div>
+
     </div>
   </div>
 </template>
@@ -72,6 +80,7 @@ interface Record {
   title: string
   status: 'draft' | 'completed' | 'generating' | 'error' | 'in_progress'
   page_count: number
+  created_at: string
   updated_at: string
   thumbnail?: string
   task_id?: string
@@ -87,6 +96,7 @@ const props = defineProps<{
 defineEmits<{
   (e: 'preview', id: string): void
   (e: 'edit', id: string): void
+  (e: 'result', id: string): void
   (e: 'delete', record: Record): void
 }>()
 
@@ -129,9 +139,19 @@ const typeLabel = computed(() => {
 /**
  * 格式化日期
  */
-const formattedDate = computed(() => {
+function pad2(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+const formattedDateTime = computed(() => {
   const d = new Date(props.record.updated_at)
-  return `${d.getMonth() + 1}/${d.getDate()}`
+  if (Number.isNaN(d.getTime())) return '--/-- --:--'
+  return `${pad2(d.getMonth() + 1)}/${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+})
+
+const displayTitle = computed(() => {
+  const text = String(props.record.title || '').trim()
+  return text || '未命名图文'
 })
 </script>
 
@@ -295,33 +315,50 @@ const formattedDate = computed(() => {
 
 /* 底部区域 */
 .card-footer {
-  padding: 16px;
+  padding: 14px 16px 12px;
 }
 
 .card-title {
   font-size: 15px;
   font-weight: 600;
-  margin-bottom: 8px;
-  white-space: nowrap;
+  margin-bottom: 6px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text-main, #1a1a1a);
+  color: #1f2937;
 }
 
 .card-meta {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
   font-size: 12px;
   color: var(--text-sub, #666);
 }
 
-.dot {
-  margin: 0 6px;
+.meta-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-/* 更多操作 */
-.more-actions-wrapper {
-  margin-left: auto;
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 9px;
+  font-size: 12px;
+  color: #6f7683;
+  background: #f0f2f5;
+}
+
+.meta-time {
+  color: #8f95a3;
+  letter-spacing: 0.2px;
 }
 
 .more-btn {
