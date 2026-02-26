@@ -26,8 +26,9 @@
 
     <!-- 生成结果 -->
     <div v-else-if="content.status === 'done'" class="result-section">
-      <div class="result-actions">
-        <button class="copy-btn" @click="copyFullContent" :class="{ copied: copiedFullContent }">
+      <div class="content-toolbar">
+        <span class="toolbar-label">内容操作</span>
+        <button class="copy-btn copy-full-btn" @click="copyFullContent" :class="{ copied: copiedFullContent }">
           <svg v-if="!copiedFullContent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
@@ -35,7 +36,7 @@
           <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="20 6 9 17 4 12"/>
           </svg>
-          {{ copiedFullContent ? '已复制全文' : '复制全文' }}
+          {{ copiedFullContent ? '已复制全部文案' : '复制全部文案（标题+正文+标签）' }}
         </button>
       </div>
 
@@ -116,7 +117,7 @@
             <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
-            {{ copiedTags ? '已复制' : '复制全部' }}
+            {{ copiedTags ? '已复制' : '复制' }}
           </button>
         </div>
         <div class="tags-list">
@@ -302,12 +303,6 @@ async function copyTag(tag: string, index: number) {
   margin-top: 32px;
 }
 
-.result-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 12px;
-}
-
 .generate-section {
   text-align: center;
   padding: 40px 20px;
@@ -385,6 +380,19 @@ async function copyTag(tag: string, index: number) {
   gap: 24px;
 }
 
+.content-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 4px 0;
+}
+
+.toolbar-label {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
 .content-card {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
@@ -446,6 +454,18 @@ async function copyTag(tag: string, index: number) {
 .copy-btn svg {
   width: 14px;
   height: 14px;
+}
+
+.copy-btn.copy-full-btn {
+  color: var(--primary);
+  border-color: rgba(0, 255, 153, 0.35);
+  background: rgba(0, 255, 153, 0.06);
+}
+
+.copy-btn.copy-full-btn:hover {
+  background: rgba(0, 255, 153, 0.12);
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
 /* 标题列表 */
@@ -565,6 +585,23 @@ async function copyTag(tag: string, index: number) {
 .regenerate-section .btn svg {
   width: 16px;
   height: 16px;
+}
+
+@media (max-width: 768px) {
+  .content-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    padding-top: 0;
+  }
+
+  .copy-btn.copy-full-btn {
+    justify-content: center;
+  }
+
+  .card-header {
+    align-items: flex-start;
+    gap: 10px;
+  }
 }
 
 /* 动画 */

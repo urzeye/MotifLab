@@ -426,6 +426,9 @@ def create_history_blueprint():
         """
         下载历史记录的所有图片为 ZIP 文件
 
+        如果该记录包含已生成文案（标题/正文/标签），
+        会在压缩包内额外附带 `full_content.txt`，内容与前端“复制全文”一致。
+
         支持两种存储模式：
         - local: 从本地 history/{task_id}/ 目录读取
         - supabase: 从 Supabase Storage 下载
@@ -449,6 +452,7 @@ def create_history_blueprint():
 
             task_id = record.get('images', {}).get('task_id')
             images = record.get('images', {}).get('generated', [])
+            content_text = _build_full_content_text(record.get('content'))
 
             if not task_id:
                 return jsonify({
@@ -481,6 +485,10 @@ def create_history_blueprint():
                     "success": False,
                     "error": "无法获取图片文件，可能图片已被删除"
                 }), 404
+
+            # 附带全文文案（如果有）
+            if content_text:
+                _append_text_to_zip(zip_buffer, "full_content.txt", content_text)
 
             # 生成安全的下载文件名
             title = record.get('title', 'images')
@@ -539,6 +547,67 @@ def _create_images_zip(task_dir: str) -> io.BytesIO:
     # 将指针移到开始位置
     memory_file.seek(0)
     return memory_file
+
+
+def _append_text_to_zip(zip_buffer: io.BytesIO, archive_name: str, text: str) -> None:
+    """
+    向已有 ZIP 内追加文本文件（UTF-8 BOM，便于 Windows 直接打开）。
+
+    Args:
+        zip_buffer: 内存中的 ZIP 文件
+        archive_name: 压缩包内文件名
+        text: 文本内容
+    """
+    if not text:
+        return
+
+    zip_buffer.seek(0)
+    with zipfile.ZipFile(zip_buffer, 'a', zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(archive_name, text.encode('utf-8-sig'))
+    zip_buffer.seek(0)
+
+
+def _build_full_content_text(content: dict) -> str:
+    """
+    构造与前端“复制全文”一致的文本格式。
+
+    格式：
+    - 【标题】推荐/备选
+    - 【正文】
+    - 【话题标签】
+    """
+    if not isinstance(content, dict):
+        return ""
+
+    raw_titles = content.get('titles', [])
+    raw_copywriting = content.get('copywriting', '')
+    raw_tags = content.get('tags', [])
+
+    titles = [str(item).strip() for item in raw_titles if str(item).strip()] if isinstance(raw_titles, list) else []
+    copywriting = str(raw_copywriting or '').strip()
+    tags = [str(item).strip().lstrip('#') for item in raw_tags if str(item).strip()] if isinstance(raw_tags, list) else []
+
+    lines = []
+
+    if titles:
+        lines.append('【标题】')
+        for index, title in enumerate(titles):
+            label = '推荐' if index == 0 else f'备选{index}'
+            lines.append(f'{label}：{title}')
+
+    if copywriting:
+        if lines:
+            lines.append('')
+        lines.append('【正文】')
+        lines.append(copywriting)
+
+    if tags:
+        if lines:
+            lines.append('')
+        lines.append('【话题标签】')
+        lines.append(' '.join(f'#{tag}' for tag in tags))
+
+    return '\n'.join(lines).strip()
 
 
 def _create_images_zip_from_supabase(task_id: str, images: list) -> io.BytesIO:
