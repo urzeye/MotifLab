@@ -6,10 +6,31 @@
       @click.self="$emit('close')"
     >
       <div class="template-modal-panel">
-        <button class="close-btn" @click="$emit('close')" title="关闭预览">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
+        <button
+          class="close-btn"
+          @click="$emit('close')"
+          title="关闭预览"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <line
+              x1="18"
+              y1="6"
+              x2="6"
+              y2="18"
+            ></line>
+            <line
+              x1="6"
+              y1="6"
+              x2="18"
+              y2="18"
+            ></line>
           </svg>
         </button>
 
@@ -26,8 +47,16 @@
         <div class="preview-right">
           <div class="top-meta">
             <span class="category-badge">{{ template.category }}</span>
-            <span v-if="template.isNew" class="meta-chip chip-new">NEW</span>
-            <span v-if="template.isHot" class="meta-chip chip-hot">HOT</span>
+            <span
+              v-if="template.isNew"
+              class="meta-chip chip-new"
+              >NEW</span
+            >
+            <span
+              v-if="template.isHot"
+              class="meta-chip chip-hot"
+              >HOT</span
+            >
           </div>
 
           <h3 class="template-title">{{ template.title }}</h3>
@@ -35,11 +64,20 @@
 
           <div class="usage-row">
             <span class="usage-label">使用次数</span>
-            <strong class="usage-value">{{ formatUsageCount(template.usageCount) }}</strong>
+            <strong class="usage-value">{{
+              formatUsageCount(template.usageCount)
+            }}</strong>
           </div>
 
-          <div v-if="template.tags?.length" class="tags-wrap">
-            <span v-for="tag in template.tags" :key="`${template.id}-${tag}`" class="tag-item">
+          <div
+            v-if="template.tags?.length"
+            class="tags-wrap"
+          >
+            <span
+              v-for="tag in template.tags"
+              :key="`${template.id}-${tag}`"
+              class="tag-item"
+            >
               #{{ tag }}
             </span>
           </div>
@@ -50,9 +88,21 @@
           </div>
 
           <div class="actions">
-            <button class="btn btn-secondary" @click="$emit('close')">返回列表</button>
-            <button class="btn btn-primary" :disabled="applying" @click="$emit('apply', template)">
-              <span v-if="applying" class="spinner spinner-sm"></span>
+            <button
+              class="btn btn-secondary"
+              @click="$emit('close')"
+            >
+              返回列表
+            </button>
+            <button
+              class="btn btn-primary"
+              :disabled="applying"
+              @click="$emit('apply', template)"
+            >
+              <span
+                v-if="applying"
+                class="spinner spinner-sm"
+              ></span>
               <span v-else>使用此模板</span>
             </button>
           </div>
@@ -63,37 +113,37 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
-import type { TemplateItem } from '../../api'
+import { onMounted, onUnmounted } from "vue";
+import type { TemplateItem } from "../../api";
 
 defineProps<{
-  visible: boolean
-  template: TemplateItem | null
-  applying?: boolean
-}>()
+  visible: boolean;
+  template: TemplateItem | null;
+  applying?: boolean;
+}>();
 
 const emit = defineEmits<{
-  (e: 'close'): void
-  (e: 'apply', template: TemplateItem): void
-}>()
+  (e: "close"): void;
+  (e: "apply", template: TemplateItem): void;
+}>();
 
 function formatUsageCount(value: number | undefined): string {
-  return Number(value || 0).toLocaleString('zh-CN')
+  return Number(value || 0).toLocaleString("zh-CN");
 }
 
 function handleEsc(event: KeyboardEvent) {
-  if (event.key === 'Escape') {
-    emit('close')
+  if (event.key === "Escape") {
+    emit("close");
   }
 }
 
 onMounted(() => {
-  window.addEventListener('keydown', handleEsc)
-})
+  window.addEventListener("keydown", handleEsc);
+});
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleEsc)
-})
+  window.removeEventListener("keydown", handleEsc);
+});
 </script>
 
 <style scoped>
@@ -202,15 +252,13 @@ onUnmounted(() => {
 }
 
 .chip-new {
-  color: #67e8f9;
-  background: rgba(103, 232, 249, 0.12);
-  border: 1px solid rgba(103, 232, 249, 0.5);
+  color: var(--color-cyan);
+  background: var(--color-info-bg);
 }
 
 .chip-hot {
-  color: #fb7185;
-  background: rgba(251, 113, 133, 0.12);
-  border: 1px solid rgba(251, 113, 133, 0.45);
+  color: var(--color-rose);
+  background: var(--color-error-bg);
 }
 
 .template-title {

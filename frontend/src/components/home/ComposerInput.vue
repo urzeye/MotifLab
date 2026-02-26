@@ -4,8 +4,20 @@
     <!-- 输入区域 -->
     <div class="composer-input-wrapper">
       <div class="search-icon-static">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
       </div>
       <textarea
@@ -21,33 +33,81 @@
     </div>
 
     <!-- 已上传图片预览 -->
-    <div v-if="uploadedImages.length > 0" class="uploaded-images-preview">
+    <div
+      v-if="uploadedImages.length > 0"
+      class="uploaded-images-preview"
+    >
       <div
         v-for="(img, idx) in uploadedImages"
         :key="idx"
         class="uploaded-image-item"
       >
-        <img :src="img.preview" :alt="`图片 ${idx + 1}`" />
-        <button class="remove-image-btn" @click="removeImage(idx)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
+        <img
+          :src="img.preview"
+          :alt="`图片 ${idx + 1}`"
+        />
+        <button
+          class="remove-image-btn"
+          @click="removeImage(idx)"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <line
+              x1="18"
+              y1="6"
+              x2="6"
+              y2="18"
+            ></line>
+            <line
+              x1="6"
+              y1="6"
+              x2="18"
+              y2="18"
+            ></line>
           </svg>
         </button>
       </div>
-      <div class="upload-hint">
-        这些图片将用于生成封面和内容参考
-      </div>
+      <div class="upload-hint">这些图片将用于生成封面和内容参考</div>
     </div>
 
     <!-- 网页引用 -->
-    <div v-if="firecrawlEnabled && showUrlInput" class="url-input-section">
+    <div
+      v-if="firecrawlEnabled && showUrlInput"
+      class="url-input-section"
+    >
       <div class="url-input-header">
         <div class="url-input-title">网页引用</div>
-        <button class="url-close-btn" @click="closeUrlInput" title="关闭网页引用">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
+        <button
+          class="url-close-btn"
+          @click="closeUrlInput"
+          title="关闭网页引用"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <line
+              x1="18"
+              y1="6"
+              x2="6"
+              y2="18"
+            ></line>
+            <line
+              x1="6"
+              y1="6"
+              x2="18"
+              y2="18"
+            ></line>
           </svg>
         </button>
       </div>
@@ -70,22 +130,38 @@
         >
           清空
         </button>
-        <span v-if="scrapeStatus === 'loading'" class="spinner-xs"></span>
+        <span
+          v-if="scrapeStatus === 'loading'"
+          class="spinner-xs"
+        ></span>
       </div>
 
-      <div v-if="scrapeStatus === 'success' && scrapeResult" class="scrape-result success">
-        <div class="scrape-title">{{ scrapeResult.data?.title || '网页抓取成功' }}</div>
-        <div class="scrape-meta">已抓取 {{ scrapeResult.data?.word_count ?? 0 }} 字</div>
+      <div
+        v-if="scrapeStatus === 'success' && scrapeResult"
+        class="scrape-result success"
+      >
+        <div class="scrape-title">
+          {{ scrapeResult.data?.title || "网页抓取成功" }}
+        </div>
+        <div class="scrape-meta">
+          已抓取 {{ scrapeResult.data?.word_count ?? 0 }} 字
+        </div>
       </div>
 
-      <div v-if="scrapeStatus === 'error'" class="scrape-result error">
+      <div
+        v-if="scrapeStatus === 'error'"
+        class="scrape-result error"
+      >
         {{ scrapeError }}
       </div>
     </div>
 
     <!-- 生成设置 -->
     <div class="generation-settings">
-      <label class="setting-item page-count-setting" title="控制本次大纲总页数（包含封面和总结）">
+      <label
+        class="setting-item page-count-setting"
+        title="控制本次大纲总页数（包含封面和总结）"
+      >
         <span class="setting-label">页数</span>
         <div class="page-count-control">
           <select
@@ -102,13 +178,28 @@
               {{ count }}
             </option>
           </select>
-          <svg class="page-count-caret" width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <svg
+            class="page-count-caret"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <path
+              d="M6 9L12 15L18 9"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
         </div>
       </label>
 
-      <label class="setting-item search-toggle" title="开启后，模型会在生成大纲时联网检索（取决于当前文本模型是否支持）">
+      <label
+        class="setting-item search-toggle"
+        title="开启后，模型会在生成大纲时联网检索（取决于当前文本模型是否支持）"
+      >
         <input
           type="checkbox"
           class="switch-input"
@@ -124,35 +215,83 @@
     <!-- 工具栏 -->
     <div class="composer-toolbar">
       <div class="toolbar-left">
-        <label class="tool-btn" :class="{ 'active': uploadedImages.length > 0 }" title="上传参考图">
+        <label
+          class="tool-btn"
+          :class="{ active: uploadedImages.length > 0 }"
+          title="上传参考图"
+        >
           <input
             type="file"
             accept="image/*"
             multiple
             @change="handleImageUpload"
             :disabled="loading"
-            style="display: none;"
+            style="display: none"
           />
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <rect
+              x="3"
+              y="3"
+              width="18"
+              height="18"
+              rx="2"
+              ry="2"
+            ></rect>
+            <circle
+              cx="8.5"
+              cy="8.5"
+              r="1.5"
+            ></circle>
             <polyline points="21 15 16 10 5 21"></polyline>
           </svg>
-          <span v-if="uploadedImages.length > 0" class="badge-count">{{ uploadedImages.length }}</span>
+          <span
+            v-if="uploadedImages.length > 0"
+            class="badge-count"
+            >{{ uploadedImages.length }}</span
+          >
         </label>
         <button
           v-if="firecrawlEnabled"
           class="tool-btn"
-          :class="{ 'active': showUrlInput || scrapeStatus === 'success' }"
+          :class="{ active: showUrlInput || scrapeStatus === 'success' }"
           @click="toggleUrlInput"
           title="添加网页引用"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="2" y1="12" x2="22" y2="12"></line>
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+            ></circle>
+            <line
+              x1="2"
+              y1="12"
+              x2="22"
+              y2="12"
+            ></line>
+            <path
+              d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+            ></path>
           </svg>
-          <span v-if="scrapeStatus === 'success'" class="badge-check">✓</span>
+          <span
+            v-if="scrapeStatus === 'success'"
+            class="badge-check"
+            >✓</span
+          >
         </button>
       </div>
       <div class="toolbar-right">
@@ -161,7 +300,10 @@
           @click="$emit('generate')"
           :disabled="!modelValue.trim() || loading"
         >
-          <span v-if="loading" class="spinner-sm"></span>
+          <span
+            v-if="loading"
+            class="spinner-sm"
+          ></span>
           <span v-else>生成大纲</span>
         </button>
       </div>
@@ -169,9 +311,14 @@
   </div>
 </template>
 
+<script lang="ts">
+import { defineComponent } from "vue";
+export default defineComponent({ name: "ComposerInput" });
+</script>
+
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue'
-import { scrapeUrl, type ScrapeResult } from '../../api'
+import { ref, onUnmounted } from "vue";
+import { scrapeUrl, type ScrapeResult } from "../../api";
 
 /**
  * 主题输入组合框组件
@@ -184,240 +331,240 @@ import { scrapeUrl, type ScrapeResult } from '../../api'
 
 // 定义上传的图片类型
 interface UploadedImage {
-  file: File
-  preview: string
+  file: File;
+  preview: string;
 }
 
 // 定义 Props
 const props = defineProps<{
-  modelValue: string
-  loading: boolean
-  firecrawlEnabled: boolean
-  pageCount: number
-  enableSearch: boolean
-}>()
+  modelValue: string;
+  loading: boolean;
+  firecrawlEnabled: boolean;
+  pageCount: number;
+  enableSearch: boolean;
+}>();
 
 // 定义 Emits
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void
-  (e: 'update:pageCount', value: number): void
-  (e: 'update:enableSearch', value: boolean): void
-  (e: 'generate'): void
-  (e: 'imagesChange', images: File[]): void
-  (e: 'urlContentChange', content: ScrapeResult | null): void
-}>()
+  (e: "update:modelValue", value: string): void;
+  (e: "update:pageCount", value: number): void;
+  (e: "update:enableSearch", value: boolean): void;
+  (e: "generate"): void;
+  (e: "imagesChange", images: File[]): void;
+  (e: "urlContentChange", content: ScrapeResult | null): void;
+}>();
 
 // 输入框引用
-const textareaRef = ref<HTMLTextAreaElement | null>(null)
+const textareaRef = ref<HTMLTextAreaElement | null>(null);
 
 // 已上传的图片
-const uploadedImages = ref<UploadedImage[]>([])
-const showUrlInput = ref(false)
-const urlInput = ref('')
-const scrapeStatus = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
-const scrapeResult = ref<ScrapeResult | null>(null)
-const scrapeError = ref('')
-let scrapeDebounceTimer: number | null = null
-const PAGE_COUNT_MIN = 1
-const PAGE_COUNT_MAX = 15
+const uploadedImages = ref<UploadedImage[]>([]);
+const showUrlInput = ref(false);
+const urlInput = ref("");
+const scrapeStatus = ref<"idle" | "loading" | "success" | "error">("idle");
+const scrapeResult = ref<ScrapeResult | null>(null);
+const scrapeError = ref("");
+let scrapeDebounceTimer: number | null = null;
+const PAGE_COUNT_MIN = 1;
+const PAGE_COUNT_MAX = 15;
 const PAGE_COUNT_OPTIONS = Array.from(
   { length: PAGE_COUNT_MAX - PAGE_COUNT_MIN + 1 },
-  (_, idx) => PAGE_COUNT_MIN + idx
-)
+  (_, idx) => PAGE_COUNT_MIN + idx,
+);
 
 /**
  * 处理输入变化
  */
 function handleInput(event: Event) {
-  const target = event.target as HTMLTextAreaElement
-  emit('update:modelValue', target.value)
-  adjustHeight()
+  const target = event.target as HTMLTextAreaElement;
+  emit("update:modelValue", target.value);
+  adjustHeight();
 }
 
 /**
  * 处理回车键
  */
 function handleEnter(e: KeyboardEvent) {
-  if (e.shiftKey) return // 允许 Shift+Enter 换行
-  emit('generate')
+  if (e.shiftKey) return; // 允许 Shift+Enter 换行
+  emit("generate");
 }
 
 /**
  * 自动调整输入框高度
  */
 function adjustHeight() {
-  const el = textareaRef.value
-  if (!el) return
+  const el = textareaRef.value;
+  if (!el) return;
 
-  el.style.height = 'auto'
-  const newHeight = Math.max(64, Math.min(el.scrollHeight, 200))
-  el.style.height = newHeight + 'px'
+  el.style.height = "auto";
+  const newHeight = Math.max(64, Math.min(el.scrollHeight, 200));
+  el.style.height = newHeight + "px";
 }
 
 /**
  * 处理图片上传
  */
 function handleImageUpload(event: Event) {
-  const target = event.target as HTMLInputElement
-  if (!target.files) return
+  const target = event.target as HTMLInputElement;
+  if (!target.files) return;
 
-  const files = Array.from(target.files)
+  const files = Array.from(target.files);
   files.forEach((file) => {
     // 单张图片限制 20MB
     if (file.size > 20 * 1024 * 1024) {
-      alert(`图片 ${file.name} 大小不能超过 20MB`)
-      return
+      alert(`图片 ${file.name} 大小不能超过 20MB`);
+      return;
     }
 
     // 限制最多 5 张图片
     if (uploadedImages.value.length >= 5) {
-      return
+      return;
     }
     // 创建预览 URL
-    const preview = URL.createObjectURL(file)
-    uploadedImages.value.push({ file, preview })
-  })
+    const preview = URL.createObjectURL(file);
+    uploadedImages.value.push({ file, preview });
+  });
 
   // 通知父组件
-  emitImagesChange()
+  emitImagesChange();
 
   // 清空 input，允许重复选择同一文件
-  target.value = ''
+  target.value = "";
 }
 
 /**
  * 移除图片
  */
 function removeImage(index: number) {
-  const img = uploadedImages.value[index]
+  const img = uploadedImages.value[index];
   // 释放预览 URL
-  URL.revokeObjectURL(img.preview)
-  uploadedImages.value.splice(index, 1)
+  URL.revokeObjectURL(img.preview);
+  uploadedImages.value.splice(index, 1);
 
   // 通知父组件
-  emitImagesChange()
+  emitImagesChange();
 }
 
 /**
  * 通知父组件图片变化
  */
 function emitImagesChange() {
-  const files = uploadedImages.value.map(img => img.file)
-  emit('imagesChange', files)
+  const files = uploadedImages.value.map((img) => img.file);
+  emit("imagesChange", files);
 }
 
 /**
  * 清理所有预览 URL
  */
 function clearPreviews() {
-  uploadedImages.value.forEach(img => URL.revokeObjectURL(img.preview))
-  uploadedImages.value = []
+  uploadedImages.value.forEach((img) => URL.revokeObjectURL(img.preview));
+  uploadedImages.value = [];
 }
 
 function toggleUrlInput() {
-  showUrlInput.value = !showUrlInput.value
+  showUrlInput.value = !showUrlInput.value;
 }
 
 function closeUrlInput() {
-  showUrlInput.value = false
+  showUrlInput.value = false;
 }
 
 function handleUrlInput() {
   if (scrapeDebounceTimer !== null) {
-    clearTimeout(scrapeDebounceTimer)
+    clearTimeout(scrapeDebounceTimer);
   }
 
   if (!urlInput.value.trim()) {
-    clearUrl()
-    return
+    clearUrl();
+    return;
   }
 
   scrapeDebounceTimer = window.setTimeout(() => {
-    doScrape()
-    scrapeDebounceTimer = null
-  }, 1200)
+    doScrape();
+    scrapeDebounceTimer = null;
+  }, 1200);
 }
 
 function handleUrlBlur() {
-  if (!urlInput.value.trim()) return
-  if (scrapeStatus.value === 'loading') return
-  if (scrapeStatus.value === 'success') return
-  doScrape()
+  if (!urlInput.value.trim()) return;
+  if (scrapeStatus.value === "loading") return;
+  if (scrapeStatus.value === "success") return;
+  doScrape();
 }
 
 async function doScrape() {
-  const url = urlInput.value.trim()
-  if (!url) return
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
-    scrapeStatus.value = 'error'
-    scrapeError.value = '请输入有效链接（必须以 http:// 或 https:// 开头）'
-    emit('urlContentChange', null)
-    return
+  const url = urlInput.value.trim();
+  if (!url) return;
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    scrapeStatus.value = "error";
+    scrapeError.value = "请输入有效链接（必须以 http:// 或 https:// 开头）";
+    emit("urlContentChange", null);
+    return;
   }
 
-  scrapeStatus.value = 'loading'
-  scrapeError.value = ''
-  scrapeResult.value = null
+  scrapeStatus.value = "loading";
+  scrapeError.value = "";
+  scrapeResult.value = null;
 
-  const result = await scrapeUrl(url)
+  const result = await scrapeUrl(url);
   if (result.success && result.data) {
-    scrapeStatus.value = 'success'
-    scrapeResult.value = result
-    emit('urlContentChange', result)
-    return
+    scrapeStatus.value = "success";
+    scrapeResult.value = result;
+    emit("urlContentChange", result);
+    return;
   }
 
-  scrapeStatus.value = 'error'
-  scrapeError.value = result.error || '网页抓取失败'
-  emit('urlContentChange', null)
+  scrapeStatus.value = "error";
+  scrapeError.value = result.error || "网页抓取失败";
+  emit("urlContentChange", null);
 }
 
 function clearUrl() {
   if (scrapeDebounceTimer !== null) {
-    clearTimeout(scrapeDebounceTimer)
-    scrapeDebounceTimer = null
+    clearTimeout(scrapeDebounceTimer);
+    scrapeDebounceTimer = null;
   }
-  urlInput.value = ''
-  scrapeStatus.value = 'idle'
-  scrapeResult.value = null
-  scrapeError.value = ''
-  emit('urlContentChange', null)
+  urlInput.value = "";
+  scrapeStatus.value = "idle";
+  scrapeResult.value = null;
+  scrapeError.value = "";
+  emit("urlContentChange", null);
 }
 
 function clearUrlState() {
-  clearUrl()
-  showUrlInput.value = false
+  clearUrl();
+  showUrlInput.value = false;
 }
 
 function clampPageCount(value: number): number {
-  if (Number.isNaN(value)) return PAGE_COUNT_MIN
-  return Math.max(PAGE_COUNT_MIN, Math.min(PAGE_COUNT_MAX, Math.trunc(value)))
+  if (Number.isNaN(value)) return PAGE_COUNT_MIN;
+  return Math.max(PAGE_COUNT_MIN, Math.min(PAGE_COUNT_MAX, Math.trunc(value)));
 }
 
 function handlePageCountChange(event: Event) {
-  const target = event.target as HTMLSelectElement
-  const next = clampPageCount(Number(target.value))
-  emit('update:pageCount', next)
+  const target = event.target as HTMLSelectElement;
+  const next = clampPageCount(Number(target.value));
+  emit("update:pageCount", next);
 }
 
 function handleEnableSearchChange(event: Event) {
-  const target = event.target as HTMLInputElement
-  emit('update:enableSearch', !!target.checked)
+  const target = event.target as HTMLInputElement;
+  emit("update:enableSearch", !!target.checked);
 }
 
 // 组件卸载时清理
 onUnmounted(() => {
-  clearPreviews()
+  clearPreviews();
   if (scrapeDebounceTimer !== null) {
-    clearTimeout(scrapeDebounceTimer)
+    clearTimeout(scrapeDebounceTimer);
   }
-})
+});
 
 // 暴露方法给父组件
 defineExpose({
   clearPreviews,
-  clearUrlState
-})
+  clearUrlState,
+});
 </script>
 
 <style scoped>
@@ -430,6 +577,9 @@ defineExpose({
   transition: all var(--transition-base);
 }
 
+.topic-input-container.has-error {
+  border-color: var(--color-error);
+}
 .composer-container:focus-within {
   border-color: var(--primary);
   box-shadow: var(--shadow-glow);
@@ -523,7 +673,7 @@ defineExpose({
 }
 
 .remove-image-btn:hover {
-  background: #EF4444;
+  background: #ef4444;
 }
 
 .upload-hint {
@@ -633,7 +783,7 @@ defineExpose({
 }
 
 .switch-ui::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 2px;
   left: 2px;
@@ -724,7 +874,7 @@ defineExpose({
   right: -6px;
   min-width: 20px;
   height: 20px;
-  background: #22c55e;
+  background: var(--color-success);
   color: var(--text-inverse);
   border-radius: 10px;
   font-size: 11px;
@@ -805,8 +955,8 @@ defineExpose({
   background: var(--bg-elevated);
   color: var(--text-sub);
   border-radius: var(--radius-xs);
-  font-size: 12px;
   padding: 4px 8px;
+  font-size: 12px;
   cursor: pointer;
 }
 
@@ -822,15 +972,15 @@ defineExpose({
 }
 
 .scrape-result.success {
-  border: 1px solid rgba(34, 197, 94, 0.35);
-  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid var(--color-success-border);
+  background: var(--color-success-bg);
   color: var(--text-main);
 }
 
 .scrape-result.error {
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  background: rgba(239, 68, 68, 0.08);
-  color: #ef4444;
+  border: 1px solid var(--color-error-border);
+  background: var(--color-error-bg);
+  color: var(--color-error);
 }
 
 .scrape-title {
@@ -867,7 +1017,7 @@ defineExpose({
 .generate-btn:hover:not(:disabled) {
   background: var(--primary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 0 30px rgba(0, 255, 136, 0.4);
+  box-shadow: var(--shadow-md);
 }
 
 .generate-btn:disabled {
@@ -875,6 +1025,17 @@ defineExpose({
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+
+.status-indicator.ready {
+  background: var(--color-success);
+}
+
+.input-error-msg {
+  color: var(--color-error);
+  font-size: 14px;
+  margin-top: 8px;
+  animation: slideIn 0.3s ease-out;
 }
 
 /* 加载动画 */
@@ -890,6 +1051,52 @@ defineExpose({
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 移动端适配 */
+@media (max-width: 640px) {
+  .generation-settings {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .composer-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .toolbar-left,
+  .toolbar-right {
+    width: 100%;
+  }
+
+  .generate-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>

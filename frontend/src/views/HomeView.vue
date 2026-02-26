@@ -7,24 +7,58 @@
     <div class="hero-section">
       <div class="hero-content">
         <div class="brand-pill">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="margin-right: 6px"
+          >
+            <path
+              d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"
+            />
+          </svg>
           AI 驱动的图文创作助手
         </div>
         <div class="platform-slogan">
           让传播不再需要门槛，让创作从未如此简单
         </div>
         <h1 class="page-title">灵感一触即发</h1>
-        <p class="page-subtitle">输入你的创意主题，让 AI 帮你生成爆款标题、正文和封面图</p>
+        <p class="page-subtitle">
+          输入你的创意主题，让 AI 帮你生成爆款标题、正文和封面图
+        </p>
       </div>
 
-      <div v-if="appliedTemplate" class="template-applied-banner">
+      <div
+        v-if="appliedTemplate"
+        class="template-applied-banner"
+      >
         <div class="banner-left">
           <div class="banner-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <path d="M20 7h-9"></path>
               <path d="M14 17H5"></path>
-              <circle cx="17" cy="17" r="3"></circle>
-              <circle cx="7" cy="7" r="3"></circle>
+              <circle
+                cx="17"
+                cy="17"
+                r="3"
+              ></circle>
+              <circle
+                cx="7"
+                cy="7"
+                r="3"
+              ></circle>
             </svg>
           </div>
           <div class="banner-text">
@@ -32,14 +66,25 @@
               已应用模板：{{ appliedTemplate.title }}
             </div>
             <div class="banner-sub">
-              分类：{{ appliedTemplate.category }} · 将参考此模板的布局和风格，主题请自行输入
+              分类：{{ appliedTemplate.category }} ·
+              将参考此模板的布局和风格，主题请自行输入
             </div>
           </div>
         </div>
 
         <div class="banner-actions">
-          <button class="banner-btn" @click="openTemplateMarket">切换模板</button>
-          <button class="banner-btn ghost" @click="clearTemplate">取消使用</button>
+          <button
+            class="banner-btn"
+            @click="openTemplateMarket"
+          >
+            切换模板
+          </button>
+          <button
+            class="banner-btn ghost"
+            @click="clearTemplate"
+          >
+            取消使用
+          </button>
         </div>
       </div>
 
@@ -61,29 +106,59 @@
 
     <!-- 版权信息 -->
     <div class="page-footer">
-      <div class="footer-tip">
-        渲染AI - 让创作更简单
-      </div>
-      <div class="footer-copyright">
-        © 2025 渲染AI (RenderAI)
-      </div>
+      <div class="footer-tip">渲染AI - 让创作更简单</div>
+      <div class="footer-copyright">© 2025 渲染AI (RenderAI)</div>
       <div class="footer-license">
-        Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a>
+        Licensed under
+        <a
+          href="https://creativecommons.org/licenses/by-nc-sa/4.0/"
+          target="_blank"
+          rel="noopener noreferrer"
+          >CC BY-NC-SA 4.0</a
+        >
       </div>
     </div>
 
     <!-- 错误提示 -->
-    <div v-if="error" class="error-toast">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+    <div
+      v-if="error"
+      class="error-toast"
+    >
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+        ></circle>
+        <line
+          x1="12"
+          y1="8"
+          x2="12"
+          y2="12"
+        ></line>
+        <line
+          x1="12"
+          y1="16"
+          x2="12.01"
+          y2="16"
+        ></line>
+      </svg>
       {{ error }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useGeneratorStore } from '../stores/generator'
+import { ref, onMounted, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { useGeneratorStore } from "../stores/generator";
 import {
   generateOutlineStream,
   createHistory,
@@ -91,109 +166,116 @@ import {
   getTemplateDetail,
   type OutlineStreamFinishEvent,
   type ScrapeResult,
-  type TemplateItem
-} from '../api'
+  type TemplateItem,
+} from "../api";
 
 // 引入组件
-import ShowcaseBackground from '../components/home/ShowcaseBackground.vue'
-import ComposerInput from '../components/home/ComposerInput.vue'
+import ShowcaseBackground from "../components/home/ShowcaseBackground.vue";
+import ComposerInput from "../components/home/ComposerInput.vue";
 
-const router = useRouter()
-const route = useRoute()
-const store = useGeneratorStore()
+const router = useRouter();
+const route = useRoute();
+const store = useGeneratorStore();
 
 // 状态
-const topic = ref('')
-const loading = ref(false)
-const error = ref('')
-const composerRef = ref<InstanceType<typeof ComposerInput> | null>(null)
+const topic = ref("");
+const loading = ref(false);
+const error = ref("");
+interface ComposerInputRef {
+  clearPreviews: () => void;
+  clearUrlState?: () => void;
+}
+const composerRef = ref<ComposerInputRef | null>(null);
 
 // 上传的图片文件
-const uploadedImageFiles = ref<File[]>([])
+const uploadedImageFiles = ref<File[]>([]);
 // Firecrawl 状态
-const firecrawlEnabled = ref(false)
-const urlContent = ref<ScrapeResult | null>(null)
-const appliedTemplate = ref<TemplateItem | null>(null)
-const pageCount = ref(5)
-const enableSearch = ref(false)
+const firecrawlEnabled = ref(false);
+const urlContent = ref<ScrapeResult | null>(null);
+const appliedTemplate = ref<TemplateItem | null>(null);
+const pageCount = ref(5);
+const enableSearch = ref(false);
 
-let templateRequestSeq = 0
+let templateRequestSeq = 0;
 
 async function checkFirecrawlStatus() {
-  const result = await getFirecrawlStatus()
-  firecrawlEnabled.value = result.success && !!result.enabled && !!result.configured
+  const result = await getFirecrawlStatus();
+  firecrawlEnabled.value =
+    result.success && !!result.enabled && !!result.configured;
 }
 
 async function applyTemplateById(templateId: string) {
-  const reqId = ++templateRequestSeq
-  const result = await getTemplateDetail(templateId)
-  if (reqId !== templateRequestSeq) return
+  const reqId = ++templateRequestSeq;
+  const result = await getTemplateDetail(templateId);
+  if (reqId !== templateRequestSeq) return;
 
   if (result.success && result.template) {
-    appliedTemplate.value = result.template
-    error.value = ''
+    appliedTemplate.value = result.template;
+    error.value = "";
   } else {
-    appliedTemplate.value = null
-    error.value = result.error || '模板加载失败，请重试'
+    appliedTemplate.value = null;
+    error.value = result.error || "模板加载失败，请重试";
   }
 }
 
 function openTemplateMarket() {
-  router.push('/templates')
+  router.push("/templates");
 }
 
 function clearTemplate() {
-  appliedTemplate.value = null
-  const query = { ...route.query }
-  delete query.template_id
-  router.replace({ path: '/redbook', query })
+  appliedTemplate.value = null;
+  const query = { ...route.query };
+  delete query.template_id;
+  router.replace({ path: "/redbook", query });
 }
 
 /**
  * 处理图片变化
  */
 function handleImagesChange(images: File[]) {
-  uploadedImageFiles.value = images
+  uploadedImageFiles.value = images;
 }
 
 function handleUrlContentChange(content: ScrapeResult | null) {
-  urlContent.value = content
+  urlContent.value = content;
 }
 
 function handlePageCountChange(value: number) {
   if (!Number.isFinite(value)) {
-    pageCount.value = 5
-    return
+    pageCount.value = 5;
+    return;
   }
-  pageCount.value = Math.max(1, Math.min(15, Math.trunc(value)))
+  pageCount.value = Math.max(1, Math.min(15, Math.trunc(value)));
 }
 
 function handleEnableSearchChange(value: boolean) {
-  enableSearch.value = !!value
+  enableSearch.value = !!value;
 }
 
 function buildTopicWithPageCount(rawTopic: string, totalPages: number): string {
-  const normalizedPages = Math.max(1, Math.min(15, Math.trunc(totalPages)))
+  const normalizedPages = Math.max(1, Math.min(15, Math.trunc(totalPages)));
   return (
     `${rawTopic}\n\n` +
     `【页数要求】必须严格生成 ${normalizedPages} 页（包括封面和总结页），总计 ${normalizedPages} 页，不得多也不得少。`
-  )
+  );
 }
 
 /**
  * 生成大纲
  */
 async function handleGenerate() {
-  const rawTopic = topic.value.trim()
-  if (!rawTopic) return
+  const rawTopic = topic.value.trim();
+  if (!rawTopic) return;
 
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = "";
 
   try {
-    const imageFiles = uploadedImageFiles.value
-    const sourceContent = urlContent.value?.success ? urlContent.value.data?.content : undefined
-    const topicForOutline = buildTopicWithPageCount(rawTopic, pageCount.value)
+    const imageFiles = uploadedImageFiles.value;
+    const sourceContent = urlContent.value?.success
+      ? urlContent.value.data?.content
+      : undefined;
+    const topicForOutline = buildTopicWithPageCount(rawTopic, pageCount.value);
     const templateRef = appliedTemplate.value
       ? {
           id: appliedTemplate.value.id,
@@ -202,96 +284,96 @@ async function handleGenerate() {
           description: appliedTemplate.value.description,
           prompt: appliedTemplate.value.prompt,
           stylePrompt: appliedTemplate.value.stylePrompt,
-          tags: appliedTemplate.value.tags
+          tags: appliedTemplate.value.tags,
         }
-      : undefined
+      : undefined;
 
-    const result = await new Promise<OutlineStreamFinishEvent>((resolve, reject) => {
-      void generateOutlineStream(
-        {
-          topic: topicForOutline,
-          images: imageFiles.length > 0 ? imageFiles : undefined,
-          sourceContent,
-          templateRef,
-          enableSearch: enableSearch.value
-        },
-        () => {},
-        (event) => resolve(event),
-        (event) => resolve({ success: false, error: event.error || '生成大纲失败' }),
-        (streamError) => reject(streamError)
-      )
-    })
+    const result = await new Promise<OutlineStreamFinishEvent>(
+      (resolve, reject) => {
+        void generateOutlineStream(
+          {
+            topic: topicForOutline,
+            images: imageFiles.length > 0 ? imageFiles : undefined,
+            sourceContent,
+            templateRef,
+            enableSearch: enableSearch.value,
+          },
+          () => {},
+          (event) => resolve(event),
+          (event) =>
+            resolve({ success: false, error: event.error || "生成大纲失败" }),
+          (streamError) => reject(streamError),
+        );
+      },
+    );
 
     if (result.success && result.pages) {
       // 设置主题和大纲到 store
-      store.setTopic(rawTopic)
-      store.setOutline(result.outline || '', result.pages)
+      store.setTopic(rawTopic);
+      store.setOutline(result.outline || "", result.pages);
 
       // 大纲生成成功后，立即创建历史记录
       // 这样即使用户刷新页面或关闭浏览器，大纲也不会丢失
       try {
-        const historyResult = await createHistory(
-          rawTopic,
-          {
-            raw: result.outline || '',
-            pages: result.pages
-          }
-        )
+        const historyResult = await createHistory(rawTopic, {
+          raw: result.outline || "",
+          pages: result.pages,
+        });
 
         // 保存历史记录 ID 到 store，后续生成正文和图片时会使用
         if (historyResult.success && historyResult.record_id) {
-          store.setRecordId(historyResult.record_id)
+          store.setRecordId(historyResult.record_id);
         } else {
           // 创建历史记录失败，记录错误但不阻断流程
-          console.error('创建历史记录失败:', historyResult.error || '未知错误')
-          store.setRecordId(null)
+          console.error("创建历史记录失败:", historyResult.error || "未知错误");
+          store.setRecordId(null);
         }
       } catch (err: any) {
         // 创建历史记录异常，记录错误但不阻断流程
-        console.error('创建历史记录异常:', err.message || err)
-        store.setRecordId(null)
+        console.error("创建历史记录异常:", err.message || err);
+        store.setRecordId(null);
       }
 
       // 保存用户上传的图片到 store
       if (imageFiles.length > 0) {
-        store.userImages = imageFiles
+        store.userImages = imageFiles;
       } else {
-        store.userImages = []
+        store.userImages = [];
       }
 
       // 清理 ComposerInput 的预览
-      composerRef.value?.clearPreviews()
-      composerRef.value?.clearUrlState?.()
-      uploadedImageFiles.value = []
-      urlContent.value = null
+      composerRef.value?.clearPreviews();
+      composerRef.value?.clearUrlState?.();
+      uploadedImageFiles.value = [];
+      urlContent.value = null;
 
-      router.push('/redbook/outline')
+      router.push("/redbook/outline");
     } else {
-      error.value = result.error || '生成大纲失败'
+      error.value = result.error || "生成大纲失败";
     }
   } catch (err: any) {
-    error.value = err.message || '网络错误，请重试'
+    error.value = err.message || "网络错误，请重试";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 onMounted(() => {
-  checkFirecrawlStatus()
-})
+  checkFirecrawlStatus();
+});
 
 watch(
   () => route.query.template_id,
   (value) => {
-    const templateId = Array.isArray(value) ? value[0] : value
-    if (templateId && typeof templateId === 'string') {
-      applyTemplateById(templateId)
+    const templateId = Array.isArray(value) ? value[0] : value;
+    if (templateId && typeof templateId === "string") {
+      applyTemplateById(templateId);
     } else {
-      appliedTemplate.value = null
+      appliedTemplate.value = null;
     }
   },
-  { immediate: true }
-)
+  { immediate: true },
+);
 </script>
 
 <style scoped>
@@ -326,7 +408,11 @@ watch(
   padding: 14px 16px;
   border: 1px solid var(--primary);
   border-radius: var(--radius-md);
-  background: linear-gradient(90deg, var(--primary-light), rgba(56, 189, 248, 0.08));
+  background: linear-gradient(
+    90deg,
+    var(--primary-light),
+    rgba(56, 189, 248, 0.08)
+  );
 }
 
 .banner-left {
@@ -453,38 +539,31 @@ watch(
 }
 
 .footer-tip {
-  font-size: var(--small-size);
+  margin-bottom: 8px;
   color: var(--text-sub);
-  margin-bottom: 12px;
-}
-
-/* Error Toast */
-.error-toast {
-  position: fixed;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #EF4444;
-  color: white;
-  padding: 14px 28px;
-  border-radius: var(--radius-sm);
-  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  z-index: 1000;
-  animation: slideUp 0.3s ease-out;
 }
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 900px) {

@@ -7,30 +7,58 @@
   /* ========== 深色主题（默认）========== */
 
   /* 背景色 */
-  --bg-body: #0A0A0B;
+  --bg-body: #0a0a0b;
   --bg-sidebar: #111113;
-  --bg-card: #16161A;
-  --bg-elevated: #1C1C21;
-  --bg-input: #0D0D0E;
+  --bg-card: #16161a;
+  --bg-elevated: #1c1c21;
+  --bg-input: #0d0d0e;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-active: rgba(255, 255, 255, 0.1);
 
   /* 强调色 - 荧光绿 (仅用于关键交互和品牌识别) */
-  --primary: #00FF88;
-  --primary-hover: #33FF9F;
-  --primary-active: #00CC6E;
+  --primary: #00ff88;
+  --primary-hover: #33ff9f;
+  --primary-active: #00cc6e;
   --primary-light: rgba(0, 255, 136, 0.12);
   --primary-fade: rgba(0, 255, 136, 0.06);
   --primary-glow: 0 0 20px rgba(0, 255, 136, 0.3);
 
+  /* 状态色 - 成功 */
+  --color-success: #10b981;
+  --color-success-bg: rgba(16, 185, 129, 0.15);
+  --color-success-border: rgba(16, 185, 129, 0.3);
+
+  /* 状态色 - 错误 */
+  --color-error: #ef4444;
+  --color-error-bg: rgba(239, 68, 68, 0.15);
+  --color-error-border: rgba(239, 68, 68, 0.3);
+
+  /* 状态色 - 警告 */
+  --color-warning: #f59e0b;
+  --color-warning-bg: rgba(245, 158, 11, 0.15);
+  --color-warning-border: rgba(245, 158, 11, 0.3);
+
+  /* 状态色 - 信息 */
+  --color-info: #3b82f6;
+  --color-info-bg: rgba(59, 130, 246, 0.15);
+  --color-info-border: rgba(59, 130, 246, 0.3);
+
+  /* 特殊图表/高亮颜色 (深色模式适用) */
+  --color-pink: #ec4899;
+  --color-cyan: #06b6d4;
+  --color-purple: #8b5cf6;
+  --color-rose: #f43f5e;
+
   /* 文本色 - WCAG AA 对比度 */
-  --text-main: #FFFFFF;
-  --text-sub: #A1A1AA;
-  --text-secondary: #71717A;
-  --text-placeholder: #52525B;
-  --text-inverse: #0A0A0B;
+  --text-main: #ffffff;
+  --text-sub: #a1a1aa;
+  --text-secondary: #71717a;
+  --text-placeholder: #52525b;
+  --text-inverse: #0a0a0b;
 
   /* 边框色 */
-  --border-color: #27272A;
-  --border-hover: #3F3F46;
+  --border-color: #27272a;
+  --border-hover: #3f3f46;
   --border-focus: var(--primary);
 
   /* 圆角 - 现代感 */
@@ -53,7 +81,9 @@
   --grid-gap: 24px;
 
   /* 排版 - 字体层级 */
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-family:
+    "Inter", -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Microsoft YaHei", sans-serif;
 
   /* H1 - 最大最醒目 */
   --h1-size: 48px;
@@ -99,30 +129,58 @@
 /* ========== 浅色主题 ========== */
 [data-theme="light"] {
   /* 背景色 */
-  --bg-body: #FAFAFA;
-  --bg-sidebar: #FFFFFF;
-  --bg-card: #FFFFFF;
-  --bg-elevated: #F5F5F5;
-  --bg-input: #FFFFFF;
+  --bg-body: #fafafb;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+  --bg-elevated: #f4f4f5;
+  --bg-input: #ffffff;
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-active: rgba(0, 0, 0, 0.08);
 
   /* 强调色 - 淡绿色 */
-  --primary: #10B981;
+  --primary: #10b981;
   --primary-hover: #059669;
   --primary-active: #047857;
   --primary-light: rgba(16, 185, 129, 0.1);
   --primary-fade: rgba(16, 185, 129, 0.05);
   --primary-glow: 0 0 20px rgba(16, 185, 129, 0.2);
 
+  /* 状态色 - 成功 */
+  --color-success: #059669;
+  --color-success-bg: rgba(16, 185, 129, 0.1);
+  --color-success-border: rgba(16, 185, 129, 0.2);
+
+  /* 状态色 - 错误 */
+  --color-error: #dc2626;
+  --color-error-bg: rgba(239, 68, 68, 0.1);
+  --color-error-border: rgba(239, 68, 68, 0.2);
+
+  /* 状态色 - 警告 */
+  --color-warning: #d97706;
+  --color-warning-bg: rgba(245, 158, 11, 0.1);
+  --color-warning-border: rgba(245, 158, 11, 0.2);
+
+  /* 状态色 - 信息 */
+  --color-info: #2563eb;
+  --color-info-bg: rgba(59, 130, 246, 0.1);
+  --color-info-border: rgba(59, 130, 246, 0.2);
+
+  /* 特殊图表/高亮颜色 (浅色模式适用) */
+  --color-pink: #db2777;
+  --color-cyan: #0891b2;
+  --color-purple: #7c3aed;
+  --color-rose: #e11d48;
+
   /* 文本色 */
-  --text-main: #18181B;
-  --text-sub: #52525B;
-  --text-secondary: #71717A;
-  --text-placeholder: #A1A1AA;
-  --text-inverse: #FFFFFF;
+  --text-main: #18181b;
+  --text-sub: #52525b;
+  --text-secondary: #71717a;
+  --text-placeholder: #a1a1aa;
+  --text-inverse: #ffffff;
 
   /* 边框色 */
-  --border-color: #E4E4E7;
-  --border-hover: #D4D4D8;
+  --border-color: #e4e4e7;
+  --border-hover: #d4d4d8;
   --border-focus: var(--primary);
 
   /* 阴影 - 浅色模式 */
