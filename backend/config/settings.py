@@ -22,8 +22,14 @@ DEFAULT_CONFIG_SUPABASE_TABLE = "app_configs"
 
 SEARCH_PROVIDER_FIRECRAWL = "firecrawl"
 SEARCH_PROVIDER_EXA = "exa"
+SEARCH_PROVIDER_TAVILY = "tavily"
+SEARCH_PROVIDER_PERPLEXITY = "perplexity"
+SEARCH_PROVIDER_BING = "bing"
 DEFAULT_FIRECRAWL_BASE_URL = "https://api.firecrawl.dev"
 DEFAULT_EXA_BASE_URL = "https://api.exa.ai"
+DEFAULT_TAVILY_BASE_URL = "https://api.tavily.com"
+DEFAULT_PERPLEXITY_BASE_URL = "https://api.perplexity.ai"
+DEFAULT_BING_BASE_URL = "https://www.bing.com"
 
 
 def _get_project_root() -> Path:
@@ -346,7 +352,7 @@ class Config:
     @classmethod
     def _default_search_providers_config(cls) -> Dict[str, Any]:
         return {
-            "active_provider": SEARCH_PROVIDER_FIRECRAWL,
+            "active_provider": SEARCH_PROVIDER_BING,
             "providers": {
                 SEARCH_PROVIDER_FIRECRAWL: {
                     "type": SEARCH_PROVIDER_FIRECRAWL,
@@ -357,6 +363,25 @@ class Config:
                 SEARCH_PROVIDER_EXA: {
                     "type": SEARCH_PROVIDER_EXA,
                     "enabled": False,
+                    "api_key": "",
+                    "base_url": "",
+                },
+                SEARCH_PROVIDER_TAVILY: {
+                    "type": SEARCH_PROVIDER_TAVILY,
+                    "enabled": False,
+                    "api_key": "",
+                    "base_url": "",
+                },
+                SEARCH_PROVIDER_PERPLEXITY: {
+                    "type": SEARCH_PROVIDER_PERPLEXITY,
+                    "enabled": False,
+                    "api_key": "",
+                    "base_url": "",
+                    "model": "sonar",
+                },
+                SEARCH_PROVIDER_BING: {
+                    "type": SEARCH_PROVIDER_BING,
+                    "enabled": True,
                     "api_key": "",
                     "base_url": "",
                 },
@@ -371,6 +396,8 @@ class Config:
         normalized["enabled"] = bool(normalized.get("enabled", False))
         normalized["api_key"] = (normalized.get("api_key") or "").strip()
         normalized["base_url"] = (normalized.get("base_url") or "").strip()
+        if normalized.get("model") is not None:
+            normalized["model"] = str(normalized.get("model") or "").strip()
         return normalized
 
     @classmethod
@@ -387,23 +414,17 @@ class Config:
         else:
             providers = deepcopy(cls._default_search_providers_config()["providers"])
 
-        # 保证 firecrawl/exa 至少存在
-        if SEARCH_PROVIDER_FIRECRAWL not in providers:
-            providers[SEARCH_PROVIDER_FIRECRAWL] = cls._normalize_search_provider_item(
-                SEARCH_PROVIDER_FIRECRAWL,
-                cls._default_search_providers_config()["providers"][SEARCH_PROVIDER_FIRECRAWL],
-            )
-        if SEARCH_PROVIDER_EXA not in providers:
-            providers[SEARCH_PROVIDER_EXA] = cls._normalize_search_provider_item(
-                SEARCH_PROVIDER_EXA,
-                cls._default_search_providers_config()["providers"][SEARCH_PROVIDER_EXA],
-            )
+        # 保证默认搜索服务商都存在
+        default_providers = cls._default_search_providers_config()["providers"]
+        for provider_name, provider_item in default_providers.items():
+            if provider_name not in providers:
+                providers[provider_name] = cls._normalize_search_provider_item(provider_name, provider_item)
 
         active_provider = str(config.get("active_provider") or "").strip()
         if not active_provider or active_provider not in providers:
             active_provider = cls._resolve_active_provider(
                 {"active_provider": active_provider, "providers": providers},
-                SEARCH_PROVIDER_FIRECRAWL,
+                SEARCH_PROVIDER_BING,
             )
 
         return {
@@ -430,7 +451,7 @@ class Config:
     @classmethod
     def get_active_search_provider(cls) -> str:
         config = cls.load_search_providers_config()
-        return cls._resolve_active_provider(config, SEARCH_PROVIDER_FIRECRAWL)
+        return cls._resolve_active_provider(config, SEARCH_PROVIDER_BING)
 
     @classmethod
     def get_search_provider_config(
@@ -443,6 +464,7 @@ class Config:
         if not providers:
             raise ValueError("未找到任何搜索服务商配置")
 
+        requested_provider_name = provider_name
         provider_name = provider_name or cls.get_active_search_provider()
         if provider_name not in providers:
             available = ", ".join(providers.keys())
@@ -453,16 +475,39 @@ class Config:
         provider_config["type"] = provider_type
 
         if require_enabled and not bool(provider_config.get("enabled", False)):
+            # 未显式指定 provider 时，自动回退到默认 bing
+            if requested_provider_name is None and provider_name != SEARCH_PROVIDER_BING:
+                fallback = providers.get(SEARCH_PROVIDER_BING) or {}
+                if bool(fallback.get("enabled", False)):
+                    provider_name = SEARCH_PROVIDER_BING
+                    provider_config = fallback.copy()
+                    provider_type = (provider_config.get("type") or provider_name).strip().lower()
+                    provider_config["type"] = provider_type
+                else:
+                    raise ValueError(f"搜索服务商 [{provider_name}] 未启用")
+            else:
+                raise ValueError(f"搜索服务商 [{provider_name}] 未启用")
+
+        if require_enabled and not bool(provider_config.get("enabled", False)):
             raise ValueError(f"搜索服务商 [{provider_name}] 未启用")
 
-        if provider_type == SEARCH_PROVIDER_EXA and not (provider_config.get("api_key") or "").strip():
+        requires_api_key = {
+            SEARCH_PROVIDER_EXA,
+            SEARCH_PROVIDER_TAVILY,
+            SEARCH_PROVIDER_PERPLEXITY,
+        }
+        if provider_type in requires_api_key and not (provider_config.get("api_key") or "").strip():
             raise ValueError(f"搜索服务商 [{provider_name}] 未配置 API Key")
 
+        default_base_urls = {
+            SEARCH_PROVIDER_FIRECRAWL: DEFAULT_FIRECRAWL_BASE_URL,
+            SEARCH_PROVIDER_EXA: DEFAULT_EXA_BASE_URL,
+            SEARCH_PROVIDER_TAVILY: DEFAULT_TAVILY_BASE_URL,
+            SEARCH_PROVIDER_PERPLEXITY: DEFAULT_PERPLEXITY_BASE_URL,
+            SEARCH_PROVIDER_BING: DEFAULT_BING_BASE_URL,
+        }
         if not (provider_config.get("base_url") or "").strip():
-            if provider_type == SEARCH_PROVIDER_FIRECRAWL:
-                provider_config["base_url"] = DEFAULT_FIRECRAWL_BASE_URL
-            elif provider_type == SEARCH_PROVIDER_EXA:
-                provider_config["base_url"] = DEFAULT_EXA_BASE_URL
+            provider_config["base_url"] = default_base_urls.get(provider_type, "")
 
         return provider_config
 

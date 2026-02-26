@@ -65,7 +65,7 @@ def create_config_blueprint():
             search_config = Config.load_search_providers_config()
             search_providers = search_config.get("providers", {})
             search_response = {
-                "active_provider": search_config.get("active_provider", "firecrawl"),
+                "active_provider": search_config.get("active_provider", "bing"),
                 "providers": _prepare_search_providers_for_response(search_providers),
             }
 
@@ -157,7 +157,7 @@ def create_config_blueprint():
         测试服务商连接
 
         请求体：
-        - type: 服务商类型（google_genai/google_gemini/openai_compatible/image_api/firecrawl/exa）
+        - type: 服务商类型（google_genai/google_gemini/openai_compatible/image_api/firecrawl/exa/tavily/perplexity/bing）
         - provider_name: 服务商名称（用于从配置读取 API Key）
         - api_key: API Key（可选，若不提供则从配置读取）
         - base_url: Base URL（可选）
@@ -189,7 +189,7 @@ def create_config_blueprint():
             if not config['api_key'] and provider_name:
                 config = _load_provider_config(provider_type, provider_name, config)
 
-            if not config['api_key'] and provider_type != 'firecrawl':
+            if not config['api_key'] and provider_type not in {'firecrawl', 'bing'}:
                 return jsonify({"success": False, "error": "API Key 未配置"}), 400
 
             # 根据类型执行测试
@@ -381,8 +381,8 @@ def _load_provider_config(provider_type: str, provider_name: str, config: dict) 
     Returns:
         dict: 合并后的配置
     """
-    # 搜索服务商配置独立保存（firecrawl/exa）
-    if provider_type in ['firecrawl', 'exa']:
+    # 搜索服务商配置独立保存（firecrawl/exa/tavily/perplexity/bing）
+    if provider_type in ['firecrawl', 'exa', 'tavily', 'perplexity', 'bing']:
         from backend.config import Config
         search_config = Config.load_search_providers_config()
         providers = search_config.get("providers", {})
@@ -396,6 +396,8 @@ def _load_provider_config(provider_type: str, provider_name: str, config: dict) 
             config['enabled'] = saved.get('enabled')
         if not config.get('type'):
             config['type'] = saved.get('type') or provider_type
+        if not config.get('model'):
+            config['model'] = saved.get('model')
         return config
 
     # 确定配置文件路径
@@ -460,6 +462,15 @@ def _test_provider_connection(provider_type: str, config: dict) -> dict:
 
     elif provider_type == 'exa':
         return _test_exa(config)
+
+    elif provider_type == 'tavily':
+        return _test_tavily(config)
+
+    elif provider_type == 'perplexity':
+        return _test_perplexity(config)
+
+    elif provider_type == 'bing':
+        return _test_bing(config)
 
     else:
         raise ValueError(f"不支持的类型: {provider_type}")
@@ -716,6 +727,48 @@ def _test_exa(config: dict) -> dict:
     })
     if not result.get("success"):
         raise Exception(result.get("message") or "Exa 连接失败")
+    return result
+
+
+def _test_tavily(config: dict) -> dict:
+    """测试 Tavily 连接。"""
+    from backend.services.search_service import test_provider
+
+    result = test_provider("tavily", {
+        "type": "tavily",
+        "api_key": config.get("api_key"),
+        "base_url": config.get("base_url"),
+    })
+    if not result.get("success"):
+        raise Exception(result.get("message") or "Tavily 连接失败")
+    return result
+
+
+def _test_perplexity(config: dict) -> dict:
+    """测试 Perplexity 连接。"""
+    from backend.services.search_service import test_provider
+
+    result = test_provider("perplexity", {
+        "type": "perplexity",
+        "api_key": config.get("api_key"),
+        "base_url": config.get("base_url"),
+        "model": config.get("model"),
+    })
+    if not result.get("success"):
+        raise Exception(result.get("message") or "Perplexity 连接失败")
+    return result
+
+
+def _test_bing(config: dict) -> dict:
+    """测试 Bing 抓取能力。"""
+    from backend.services.search_service import test_provider
+
+    result = test_provider("bing", {
+        "type": "bing",
+        "base_url": config.get("base_url"),
+    })
+    if not result.get("success"):
+        raise Exception(result.get("message") or "Bing 连接失败")
     return result
 
 
