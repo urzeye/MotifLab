@@ -22,14 +22,14 @@ export interface ProviderForm {
   name: string
   type: string
   api_key: string
-  api_key_masked: string
+  api_key_masked?: string
   base_url: string
   model: string
-  endpoint_type: string
+  endpoint_type?: string
   high_concurrency?: boolean
   short_prompt?: boolean
   use_size_tag?: boolean
-  _has_api_key: boolean
+  _has_api_key?: boolean
 }
 
 export interface FirecrawlConfig {
