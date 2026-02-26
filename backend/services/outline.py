@@ -17,6 +17,7 @@ class OutlineService:
         # 启动时校验至少有一个可用服务商
         self._get_client()
         self.prompt_template = self._load_prompt_template()
+        self.image_suggestion_prompt_template = self._load_image_suggestion_prompt_template()
         logger.info(f"OutlineService 初始化完成，使用服务商: {self.text_config.get('active_provider')}")
 
     def _is_provider_usable(self, provider_config: Dict[str, Any]) -> bool:
@@ -89,6 +90,35 @@ class OutlineService:
         )
         with open(prompt_path, "r", encoding="utf-8") as f:
             return f.read()
+
+    def _load_image_suggestion_prompt_template(self) -> str:
+        prompt_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            "prompts",
+            "outline_image_suggestion_prompt.txt"
+        )
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            return f.read()
+
+    def _build_image_suggestion_prompt(
+        self,
+        topic: str,
+        style_hint: str,
+        page_payload: List[Dict[str, Any]]
+    ) -> str:
+        normalized_topic = (topic or "").strip() or "（未提供主题）"
+        normalized_style_hint = (
+            (style_hint or "").strip()
+            or "3:4竖版，小红书高质感，整组统一风格"
+        )
+        payload_json = json.dumps(page_payload, ensure_ascii=False)
+
+        return (
+            self.image_suggestion_prompt_template
+            .replace("__TOPIC__", normalized_topic)
+            .replace("__STYLE_HINT__", normalized_style_hint)
+            .replace("__PAGE_PAYLOAD_JSON__", payload_json)
+        )
 
     def _parse_outline(self, outline_text: str) -> List[Dict[str, Any]]:
         # 按 <page> 分割页面（兼容旧的 --- 分隔符）
@@ -348,24 +378,7 @@ class OutlineService:
                 "content": re.sub(r"\s+", " ", str(page.get("content", ""))).strip()[:220]
             })
 
-        prompt = (
-            "你是小红书图文编导，请为每一页生成“配图建议”。\n"
-            "要求：\n"
-            "1. 每页建议必须具体到主体、场景、构图、镜头/光线。\n"
-            "2. 强调整组图片风格一致（统一色调、光线、镜头语言、氛围）。\n"
-            "3. 中文输出，不要解释过程。\n"
-            "4. 仅输出 JSON 对象，不要 Markdown 代码块。\n\n"
-            f"主题：{topic}\n"
-            f"风格锚点：{style_hint or '3:4竖版，小红书高质感，整组统一风格'}\n"
-            f"页面数据：{json.dumps(page_payload, ensure_ascii=False)}\n\n"
-            "输出格式：\n"
-            "{\n"
-            '  "suggestions": [\n'
-            '    {"index": 0, "image_suggestion": "..."},\n'
-            '    {"index": 1, "image_suggestion": "..."}\n'
-            "  ]\n"
-            "}\n"
-        )
+        prompt = self._build_image_suggestion_prompt(topic, style_hint, page_payload)
 
         try:
             client, provider_name, provider_config = self._get_client(needs_image_support=False)
