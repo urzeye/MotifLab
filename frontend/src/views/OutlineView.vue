@@ -25,11 +25,11 @@
         v-for="(page, idx) in store.outline.pages"
         :key="page.index"
         class="card outline-card"
-        :draggable="true"
+        :draggable="!revising && !isPageLoading(page.index)"
         @dragstart="onDragStart($event, idx)"
         @dragover.prevent="onDragOver($event, idx)"
         @drop="onDrop($event, idx)"
-        :class="{ 'dragging-over': dragOverIndex === idx }"
+        :class="{ 'dragging-over': dragOverIndex === idx, 'card-loading': isPageLoading(page.index) }"
       >
         <div class="card-top-bar">
           <div class="page-info">
@@ -42,6 +42,7 @@
               class="icon-btn mode-btn"
               @click="togglePageMode(page.index)"
               :title="isPageInEditMode(page.index) ? '切换为预览模式' : '切换为编辑模式'"
+              :disabled="isPageLoading(page.index)"
             >
               <svg v-if="isPageInEditMode(page.index)" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
@@ -53,7 +54,7 @@
               </svg>
             </button>
 
-            <button class="icon-btn" @click="triggerUpload(page.index)" title="上传参考图">
+            <button class="icon-btn" @click="triggerUpload(page.index)" title="上传参考图" :disabled="isPageLoading(page.index)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="3" width="18" height="18" rx="2"></rect>
                 <circle cx="8.5" cy="8.5" r="1.5"></circle>
@@ -72,7 +73,7 @@
               </svg>
             </div>
 
-            <button class="icon-btn danger" @click="deletePage(idx)" title="删除此页">
+            <button class="icon-btn danger" @click="deletePage(idx)" title="删除此页" :disabled="isPageLoading(page.index)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -100,6 +101,7 @@
             v-model="page.content"
             class="textarea-paper"
             placeholder="在此输入文案..."
+            :disabled="isPageLoading(page.index)"
             @input="store.updatePage(page.index, page.content)"
           />
           <div
@@ -124,6 +126,11 @@
         </div>
 
         <div class="word-count">{{ getContentWordCount(page.content) }} 字</div>
+
+        <div v-if="isPageLoading(page.index)" class="page-loading-overlay">
+          <div class="loading-orb"></div>
+          <div class="loading-text">重生成中...</div>
+        </div>
       </div>
 
       <div class="card add-card-dashed" @click="addPage('content')">
@@ -175,6 +182,7 @@ const revisionRequest = ref('')
 const revising = ref(false)
 const revisionMessage = ref('')
 const suggestionSyncing = ref(false)
+const revisingPageMap = ref<Record<number, boolean>>({})
 
 const setFileInputRef = (el: any, index: number) => {
   if (el) {
@@ -219,6 +227,10 @@ const getPageTypeName = (type: string) => {
 }
 
 const onDragStart = (e: DragEvent, index: number) => {
+  if (revising.value || isPageLoading(store.outline.pages[index]?.index ?? -1)) {
+    e.preventDefault()
+    return
+  }
   draggedIndex.value = index
   if (e.dataTransfer) {
     e.dataTransfer.effectAllowed = 'move'
@@ -227,11 +239,13 @@ const onDragStart = (e: DragEvent, index: number) => {
 }
 
 const onDragOver = (_e: DragEvent, index: number) => {
+  if (revising.value) return
   if (draggedIndex.value === index) return
   dragOverIndex.value = index
 }
 
 const onDrop = (_e: DragEvent, index: number) => {
+  if (revising.value) return
   dragOverIndex.value = null
   if (draggedIndex.value !== null && draggedIndex.value !== index) {
     store.movePage(draggedIndex.value, index)
@@ -276,7 +290,43 @@ const syncPageEditModeMap = () => {
 const isPageInEditMode = (index: number) => !!pageEditModeMap.value[index]
 
 const togglePageMode = (index: number) => {
+  if (isPageLoading(index)) return
   pageEditModeMap.value[index] = !pageEditModeMap.value[index]
+}
+
+const isPageLoading = (index: number) => !!revisingPageMap.value[index]
+
+const initRevisingPageLoading = (pages: Page[]) => {
+  const next: Record<number, boolean> = {}
+  pages.forEach((page, idx) => {
+    const key = typeof page?.index === 'number' ? page.index : idx
+    next[key] = true
+  })
+  revisingPageMap.value = next
+}
+
+const markPageLoaded = (index: number) => {
+  revisingPageMap.value = {
+    ...revisingPageMap.value,
+    [index]: false
+  }
+}
+
+const clearRevisingPageLoading = () => {
+  revisingPageMap.value = {}
+}
+
+const upsertPageFromStream = (incoming: Page) => {
+  const target = store.outline.pages.find((p) => p.index === incoming.index)
+  if (target) {
+    target.type = incoming.type
+    target.content = incoming.content
+    target.image_suggestion = incoming.image_suggestion
+    return
+  }
+
+  store.outline.pages.push({ ...incoming })
+  store.outline.pages.sort((a, b) => a.index - b.index)
 }
 
 const escapeHtml = (value: string) => value
@@ -408,6 +458,26 @@ const getImageSuggestionText = (page: Page, idx: number) => {
 }
 
 let saveTimer: number | null = null
+let revisionMessageTimer: number | null = null
+
+const clearRevisionMessage = () => {
+  if (revisionMessageTimer !== null) {
+    clearTimeout(revisionMessageTimer)
+    revisionMessageTimer = null
+  }
+  revisionMessage.value = ''
+}
+
+const showRevisionMessage = (message: string, duration = 2600) => {
+  clearRevisionMessage()
+  revisionMessage.value = message
+  if (duration > 0) {
+    revisionMessageTimer = window.setTimeout(() => {
+      revisionMessage.value = ''
+      revisionMessageTimer = null
+    }, duration)
+  }
+}
 
 const autoSaveOutline = async () => {
   if (!store.recordId) {
@@ -487,7 +557,8 @@ const mergeSuggestionsIntoCurrentPages = (pages: Page[]) => {
 
 const runOutlineEditStream = async (
   mode: 'suggest_only' | 'revise',
-  revisionText: string
+  revisionText: string,
+  onPageEvent?: (page: Page) => void
 ): Promise<{ outline: string; pages: Page[] }> => {
   const streamedPages: Page[] = []
 
@@ -500,14 +571,11 @@ const runOutlineEditStream = async (
         revision_request: revisionText,
         mode
       },
-      () => {
-        revisionMessage.value = mode === 'suggest_only'
-          ? '正在生成配图建议...'
-          : '正在根据修改需求重写大纲...'
-      },
+      () => {},
       (event) => {
         const normalized = normalizeStreamPage(event.page, streamedPages.length)
         streamedPages[normalized.index] = normalized
+        onPageEvent?.(normalized)
 
         if (mode === 'suggest_only') {
           const target = store.outline.pages.find(p => p.index === normalized.index)
@@ -541,7 +609,7 @@ const syncSuggestionsWithAI = async () => {
   if (!missing) return
 
   suggestionSyncing.value = true
-  revisionMessage.value = ''
+  clearRevisionMessage()
   try {
     const result = await runOutlineEditStream('suggest_only', '')
     mergeSuggestionsIntoCurrentPages(result.pages)
@@ -550,9 +618,9 @@ const syncSuggestionsWithAI = async () => {
         outline: { raw: store.outline.raw, pages: store.outline.pages }
       })
     }
-    revisionMessage.value = '已生成配图建议'
+    showRevisionMessage('已生成配图建议')
   } catch (error: any) {
-    revisionMessage.value = error?.message || '生成配图建议失败'
+    showRevisionMessage(error?.message || '生成配图建议失败', 4200)
   } finally {
     suggestionSyncing.value = false
   }
@@ -561,7 +629,7 @@ const syncSuggestionsWithAI = async () => {
 const applyRevisionRequest = async () => {
   if (!revisionRequest.value.trim() || revising.value) return
   if (!store.topic.trim()) {
-    revisionMessage.value = '缺少主题，无法重生成，请先返回首页输入主题。'
+    showRevisionMessage('缺少主题，无法重生成，请先返回首页输入主题。', 4200)
     return
   }
 
@@ -573,12 +641,16 @@ const applyRevisionRequest = async () => {
 
   revising.value = true
   suggestionSyncing.value = true
-  revisionMessage.value = ''
+  clearRevisionMessage()
+  initRevisingPageLoading(store.outline.pages)
 
   try {
     const oldImages = store.outline.pages.map(page => page.user_image)
     const requestText = revisionRequest.value.trim()
-    const result = await runOutlineEditStream('revise', requestText)
+    const result = await runOutlineEditStream('revise', requestText, (streamedPage) => {
+      upsertPageFromStream(streamedPage)
+      markPageLoaded(streamedPage.index)
+    })
 
     if (!result.pages.length) {
       throw new Error('未返回有效页面数据')
@@ -601,12 +673,13 @@ const applyRevisionRequest = async () => {
       })
     }
 
-    revisionMessage.value = '已根据修改需求重新生成大纲'
+    showRevisionMessage('已根据修改需求重新生成大纲')
   } catch (error: any) {
-    revisionMessage.value = error?.message || '重新生成失败，请稍后重试'
+    showRevisionMessage(error?.message || '重新生成失败，请稍后重试', 4200)
   } finally {
     revising.value = false
     suggestionSyncing.value = false
+    clearRevisingPageLoading()
   }
 }
 
@@ -621,13 +694,16 @@ onUnmounted(() => {
     clearTimeout(saveTimer)
     saveTimer = null
   }
+  clearRevisionMessage()
 })
 
 watch(
   () => store.outline.pages,
   () => {
     syncPageEditModeMap()
-    debouncedSave()
+    if (!revising.value) {
+      debouncedSave()
+    }
   },
   { deep: true }
 )
@@ -690,6 +766,13 @@ watch(
   box-shadow: var(--shadow-sm);
   min-height: 620px;
   position: relative;
+}
+
+.outline-card.card-loading .content-panel,
+.outline-card.card-loading .image-suggestion-card,
+.outline-card.card-loading .word-count {
+  filter: grayscale(0.16);
+  opacity: 0.66;
 }
 
 .outline-card:hover {
@@ -792,6 +875,16 @@ watch(
   transition: color 0.2s;
 }
 
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  color: var(--text-placeholder);
+}
+
+.icon-btn:disabled:hover {
+  color: var(--text-placeholder);
+}
+
 .icon-btn:hover {
   color: var(--primary);
 }
@@ -845,12 +938,15 @@ watch(
 .content-panel {
   flex: 1;
   min-height: 250px;
+  display: flex;
+  flex-direction: column;
 }
 
 .textarea-paper {
   width: 100%;
-  min-height: 280px;
-  max-height: 420px;
+  flex: 1;
+  min-height: 300px;
+  height: 100%;
   border: 1px solid var(--border-color);
   background: transparent;
   padding: 12px;
@@ -874,7 +970,8 @@ watch(
 }
 
 .markdown-preview {
-  min-height: 280px;
+  flex: 1;
+  min-height: 300px;
   border: 1px solid rgba(255, 95, 109, 0.2);
   border-radius: 12px;
   padding: 12px;
@@ -882,6 +979,7 @@ watch(
   line-height: 1.75;
   font-size: 16px;
   color: var(--text-main);
+  overflow: auto;
 }
 
 .markdown-preview :deep(h1) {
@@ -967,6 +1065,54 @@ watch(
   font-size: 12px;
   color: var(--text-secondary);
   margin-top: 8px;
+}
+
+.page-loading-overlay {
+  position: absolute;
+  inset: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 95, 109, 0.28);
+  background: linear-gradient(145deg, rgba(19, 20, 30, 0.78), rgba(28, 22, 30, 0.78));
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  z-index: 30;
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+.page-loading-overlay::after {
+  content: '';
+  position: absolute;
+  inset: -40% -10%;
+  background: linear-gradient(
+    110deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 62%
+  );
+  transform: translateX(-120%);
+  animation: pageSheen 1.8s ease-in-out infinite;
+}
+
+.loading-orb {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 95, 109, 0.24);
+  border-top-color: #ff6e7f;
+  box-shadow: 0 0 20px rgba(255, 95, 109, 0.3);
+  animation: pageSpin 0.9s linear infinite;
+}
+
+.loading-text {
+  font-size: 13px;
+  color: #ffd6dc;
+  font-weight: 600;
+  letter-spacing: 0.03em;
 }
 
 .add-card-dashed {
@@ -1066,6 +1212,7 @@ watch(
   padding: 6px 14px;
   font-size: 12px;
   z-index: 91;
+  pointer-events: none;
 }
 
 .bottom-space {
@@ -1095,6 +1242,27 @@ watch(
 
   .revision-btn {
     min-width: 102px;
+  }
+}
+
+@keyframes pageSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pageSheen {
+  0% {
+    transform: translateX(-120%);
+  }
+  60% {
+    transform: translateX(120%);
+  }
+  100% {
+    transform: translateX(120%);
   }
 }
 </style>
