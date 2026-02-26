@@ -40,7 +40,7 @@ class OutlineService:
                 "未找到任何文本生成服务商配置。\n"
                 "解决方案：\n"
                 "1. 在系统设置页面添加文本生成服务商\n"
-                "2. 或手动编辑 text_providers.yaml 文件"
+                "2. 或检查当前配置存储中的文本服务商配置"
             )
 
         ordered_provider_names = []
@@ -653,7 +653,7 @@ class OutlineService:
                     "1. Text API 配置错误或密钥无效\n"
                     "2. 网络连接问题\n"
                     "3. 模型无法访问或不存在\n"
-                    "建议：检查配置文件 text_providers.yaml"
+                    "建议：检查文本服务商配置（系统设置）"
                 )
 
             return {

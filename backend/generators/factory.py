@@ -15,9 +15,9 @@ class ImageGeneratorFactory:
 
     # 注册的生成器类型
     GENERATORS = {
-        'google_genai': GoogleGenAIGenerator,
-        'openai': OpenAICompatibleGenerator,
         'openai_compatible': OpenAICompatibleGenerator,
+        'openai': OpenAICompatibleGenerator,
+        'google_genai': GoogleGenAIGenerator,
         'image_api': ImageApiGenerator,
         'dashscope': DashScopeSdkGenerator,
         'dashscope_edit': DashScopeImageEditGenerator,
@@ -46,7 +46,7 @@ class ImageGeneratorFactory:
                 f"不支持的图片生成服务商: {provider}\n"
                 f"支持的服务商类型: {available}\n"
                 "解决方案：\n"
-                "1. 检查 image_providers.yaml 中的 active_provider 配置\n"
+                "1. 检查系统设置中的图片服务商 active_provider 配置\n"
                 "2. 确认 provider.type 字段是否正确\n"
                 "3. 或使用环境变量 IMAGE_PROVIDER 指定服务商"
             )

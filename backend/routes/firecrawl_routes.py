@@ -53,7 +53,7 @@ def create_firecrawl_blueprint():
             if not config:
                 return jsonify({
                     "success": False,
-                    "error": "Firecrawl 未启用。请在 firecrawl_config.yaml 中设置 enabled: true"
+                    "error": "Firecrawl 未启用。请在系统设置中启用并配置抓取服务。"
                 }), 400
 
             result = _scrape_with_firecrawl(url, config)

@@ -51,5 +51,9 @@ CREATE TRIGGER update_xiaohongshu_posts_updated_at
 -- RLS 策略
 ALTER TABLE xiaohongshu_posts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Enable all access for service role" ON xiaohongshu_posts;
 CREATE POLICY "Enable all access for service role" ON xiaohongshu_posts
   FOR ALL USING (true) WITH CHECK (true);
+
+-- 输出成功信息
+SELECT 'xiaohongshu_posts 表创建成功' as message;

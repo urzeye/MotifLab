@@ -72,5 +72,28 @@ DROP POLICY IF EXISTS "Enable all access for service role" ON history_records;
 CREATE POLICY "Enable all access for service role" ON history_records
   FOR ALL USING (true) WITH CHECK (true);
 
+-- ==================== 配置存储表（可选） ====================
+-- 用于在 CONFIG_STORAGE_MODE=supabase 时持久化配置
+CREATE TABLE IF NOT EXISTS app_configs (
+  config_key TEXT PRIMARY KEY,
+  config_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_app_configs_updated_at
+  ON app_configs(updated_at DESC);
+
+DROP TRIGGER IF EXISTS update_app_configs_updated_at ON app_configs;
+CREATE TRIGGER update_app_configs_updated_at
+  BEFORE UPDATE ON app_configs
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+ALTER TABLE app_configs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable all access for service role" ON app_configs;
+CREATE POLICY "Enable all access for service role" ON app_configs
+  FOR ALL USING (true) WITH CHECK (true);
+
 -- 输出成功信息
-SELECT 'history_records 表创建成功' as message;
+SELECT 'history_records/app_configs 表创建成功' as message;
