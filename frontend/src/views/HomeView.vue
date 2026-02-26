@@ -379,7 +379,11 @@ watch(
 <style scoped>
 .home-container {
   max-width: 1100px;
-  padding-top: 16px;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin: 0 auto;
   position: relative;
   z-index: 1;
 }
@@ -387,7 +391,7 @@ watch(
 /* Hero Section - 深色模式优化 */
 .hero-section {
   text-align: center;
-  margin-bottom: 48px;
+  margin: auto 0; /* 垂直居中核心窗体 */
   padding: 56px 64px;
   animation: fadeIn 0.6s ease-out;
   background: var(--bg-card);
@@ -503,8 +507,8 @@ watch(
 /* Page Footer */
 .page-footer {
   text-align: center;
-  padding: 32px 0 20px;
-  margin-top: 32px;
+  padding: 0 0 16px;
+  margin-top: 0;
 }
 
 .footer-copyright {

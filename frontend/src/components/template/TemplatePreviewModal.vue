@@ -6,33 +6,37 @@
       @click.self="$emit('close')"
     >
       <div class="template-modal-panel">
-        <button
-          class="close-btn"
-          @click="$emit('close')"
-          title="关闭预览"
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <line
-              x1="18"
-              y1="6"
-              x2="6"
-              y2="18"
-            ></line>
-            <line
-              x1="6"
-              y1="6"
-              x2="18"
-              y2="18"
-            ></line>
-          </svg>
-        </button>
+        <n-tooltip trigger="hover">
+          <template #trigger>
+            <button
+              class="close-btn"
+              @click="$emit('close')"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line
+                  x1="18"
+                  y1="6"
+                  x2="6"
+                  y2="18"
+                ></line>
+                <line
+                  x1="6"
+                  y1="6"
+                  x2="18"
+                  y2="18"
+                ></line>
+              </svg>
+            </button>
+          </template>
+          关闭预览
+        </n-tooltip>
 
         <div class="preview-left">
           <img
@@ -115,6 +119,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from "vue";
 import type { TemplateItem } from "../../api";
+import { NTooltip } from "naive-ui";
 
 defineProps<{
   visible: boolean;

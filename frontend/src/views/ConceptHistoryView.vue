@@ -1,13 +1,42 @@
 <template>
-  <div class="container" style="max-width: 1200px;">
+  <div
+    class="container"
+    style="max-width: 1200px"
+  >
     <!-- Header -->
     <div class="page-header">
       <div>
         <h1 class="page-title">概念可视化历史</h1>
         <p class="page-subtitle">查看之前生成的概念图</p>
       </div>
-      <button class="btn btn-primary" @click="router.push('/concept')">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      <button
+        class="btn btn-primary"
+        @click="router.push('/concept')"
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          style="margin-right: 6px"
+        >
+          <line
+            x1="12"
+            y1="5"
+            x2="12"
+            y2="19"
+          ></line>
+          <line
+            x1="5"
+            y1="12"
+            x2="19"
+            y2="12"
+          ></line>
+        </svg>
         新建概念图
       </button>
     </div>
@@ -38,17 +67,39 @@
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="loading-state">
+    <div
+      v-if="loading"
+      class="loading-state"
+    >
       <div class="spinner"></div>
     </div>
 
     <!-- Empty State -->
-    <div v-else-if="records.length === 0" class="empty-state">
+    <div
+      v-else-if="records.length === 0"
+      class="empty-state"
+    >
       <div class="empty-icon">
-        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+        <svg
+          width="64"
+          height="64"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+          ></path>
           <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-          <line x1="12" y1="22.08" x2="12" y2="12"></line>
+          <line
+            x1="12"
+            y1="22.08"
+            x2="12"
+            y2="12"
+          ></line>
         </svg>
       </div>
       <h3>暂无概念图记录</h3>
@@ -56,7 +107,10 @@
     </div>
 
     <!-- Record Grid -->
-    <div v-else class="record-grid">
+    <div
+      v-else
+      class="record-grid"
+    >
       <div
         v-for="record in records"
         :key="record.id"
@@ -69,10 +123,31 @@
             :src="`/${record.thumbnail}`"
             :alt="record.title"
           />
-          <div v-else class="no-thumbnail">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <div
+            v-else
+            class="no-thumbnail"
+          >
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <rect
+                x="3"
+                y="3"
+                width="18"
+                height="18"
+                rx="2"
+                ry="2"
+              ></rect>
+              <circle
+                cx="8.5"
+                cy="8.5"
+                r="1.5"
+              ></circle>
               <polyline points="21 15 16 10 5 21"></polyline>
             </svg>
           </div>
@@ -82,9 +157,27 @@
           <p class="card-preview">{{ record.article_preview }}</p>
           <div class="card-meta">
             <span class="meta-item">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="2"
+                  ry="2"
+                ></rect>
+                <circle
+                  cx="8.5"
+                  cy="8.5"
+                  r="1.5"
+                ></circle>
                 <polyline points="21 15 16 10 5 21"></polyline>
               </svg>
               {{ record.image_count }} 张
@@ -97,53 +190,139 @@
             </span>
           </div>
         </div>
-        <button class="delete-btn" @click.stop="confirmDelete(record)">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button
+          class="delete-btn"
+          @click.stop="confirmDelete(record)"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <path
+              d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+            ></path>
           </svg>
         </button>
       </div>
     </div>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="pagination">
-      <button :disabled="currentPage === 1" @click="changePage(currentPage - 1)">上一页</button>
+    <div
+      v-if="totalPages > 1"
+      class="pagination"
+    >
+      <button
+        :disabled="currentPage === 1"
+        @click="changePage(currentPage - 1)"
+      >
+        上一页
+      </button>
       <span>{{ currentPage }} / {{ totalPages }}</span>
-      <button :disabled="currentPage === totalPages" @click="changePage(currentPage + 1)">下一页</button>
+      <button
+        :disabled="currentPage === totalPages"
+        @click="changePage(currentPage + 1)"
+      >
+        下一页
+      </button>
     </div>
 
     <!-- Detail Modal -->
-    <div v-if="selectedRecord" class="modal-overlay" @click.self="closeModal">
+    <div
+      v-if="selectedRecord"
+      class="modal-overlay"
+      @click.self="closeModal"
+    >
       <div class="modal-content">
         <div class="modal-header">
           <h2>{{ selectedRecord.title }}</h2>
-          <button class="close-btn" @click="closeModal">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
+          <button
+            class="close-btn"
+            @click="closeModal"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line
+                x1="18"
+                y1="6"
+                x2="6"
+                y2="18"
+              ></line>
+              <line
+                x1="6"
+                y1="6"
+                x2="18"
+                y2="18"
+              ></line>
             </svg>
           </button>
         </div>
 
         <div class="modal-body">
           <!-- Images -->
-          <div v-if="selectedRecord.pipeline_data?.generate?.results" class="images-section">
-            <h3>生成的图片 ({{ selectedRecord.pipeline_data.generate.results.length }})</h3>
+          <div
+            v-if="selectedRecord.pipeline_data?.generate?.results"
+            class="images-section"
+          >
+            <h3>
+              生成的图片 ({{
+                selectedRecord.pipeline_data.generate.results.length
+              }})
+            </h3>
             <div class="images-grid">
               <div
-                v-for="(img, idx) in selectedRecord.pipeline_data.generate.results"
+                v-for="(img, idx) in selectedRecord.pipeline_data.generate
+                  .results"
                 :key="idx"
                 class="image-item"
-                @click="openLightbox(idx)"
+                @click="openLightbox(Number(idx))"
               >
-                <img :src="`/${img.output_path}`" :alt="`概念图 ${idx + 1}`" />
+                <img
+                  :src="`/${img.output_path}`"
+                  :alt="`概念图 ${Number(idx) + 1}`"
+                />
                 <div class="image-overlay">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    <line x1="11" y1="8" x2="11" y2="14"></line>
-                    <line x1="8" y1="11" x2="14" y2="11"></line>
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle
+                      cx="11"
+                      cy="11"
+                      r="8"
+                    ></circle>
+                    <line
+                      x1="21"
+                      y1="21"
+                      x2="16.65"
+                      y2="16.65"
+                    ></line>
+                    <line
+                      x1="11"
+                      y1="8"
+                      x2="11"
+                      y2="14"
+                    ></line>
+                    <line
+                      x1="8"
+                      y1="11"
+                      x2="14"
+                      y2="11"
+                    ></line>
                   </svg>
                 </div>
               </div>
@@ -151,25 +330,38 @@
           </div>
 
           <!-- Analysis Results -->
-          <div v-if="selectedRecord.pipeline_data?.analyze" class="analysis-section">
+          <div
+            v-if="selectedRecord.pipeline_data?.analyze"
+            class="analysis-section"
+          >
             <h3>分析结果</h3>
             <div class="theme-info">
-              <strong>主题：</strong>{{ selectedRecord.pipeline_data.analyze.main_theme }}
+              <strong>主题：</strong
+              >{{ selectedRecord.pipeline_data.analyze.main_theme }}
             </div>
-            <div v-if="selectedRecord.pipeline_data.analyze.key_concepts" class="concepts-list">
+            <div
+              v-if="selectedRecord.pipeline_data.analyze.key_concepts"
+              class="concepts-list"
+            >
               <div
-                v-for="concept in selectedRecord.pipeline_data.analyze.key_concepts"
+                v-for="concept in selectedRecord.pipeline_data.analyze
+                  .key_concepts"
                 :key="concept.id"
                 class="concept-item"
               >
-                <span class="concept-name">{{ concept.name_cn || concept.name }}</span>
+                <span class="concept-name">{{
+                  concept.name_cn || concept.name
+                }}</span>
                 <span class="concept-desc">{{ concept.description }}</span>
               </div>
             </div>
           </div>
 
           <!-- Original Article -->
-          <div v-if="selectedRecord.article_full" class="article-section">
+          <div
+            v-if="selectedRecord.article_full"
+            class="article-section"
+          >
             <h3>原始文章</h3>
             <div class="article-content">{{ selectedRecord.article_full }}</div>
           </div>
@@ -178,15 +370,50 @@
     </div>
 
     <!-- Image Lightbox -->
-    <div v-if="lightboxOpen" class="lightbox-overlay" @click.self="closeLightbox">
-      <button class="lightbox-close" @click="closeLightbox">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
+    <div
+      v-if="lightboxOpen"
+      class="lightbox-overlay"
+      @click.self="closeLightbox"
+    >
+      <button
+        class="lightbox-close"
+        @click="closeLightbox"
+      >
+        <svg
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <line
+            x1="18"
+            y1="6"
+            x2="6"
+            y2="18"
+          ></line>
+          <line
+            x1="6"
+            y1="6"
+            x2="18"
+            y2="18"
+          ></line>
         </svg>
       </button>
-      <button class="lightbox-nav lightbox-prev" @click="prevImage" :disabled="lightboxIndex === 0">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <button
+        class="lightbox-nav lightbox-prev"
+        @click="prevImage"
+        :disabled="lightboxIndex === 0"
+      >
+        <svg
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
           <polyline points="15 18 9 12 15 6"></polyline>
         </svg>
       </button>
@@ -198,13 +425,27 @@
         />
         <div class="lightbox-info">
           {{ lightboxIndex + 1 }} / {{ lightboxImages.length }}
-          <span v-if="currentLightboxImage?.filename" class="lightbox-filename">
+          <span
+            v-if="currentLightboxImage?.filename"
+            class="lightbox-filename"
+          >
             {{ currentLightboxImage.filename }}
           </span>
         </div>
       </div>
-      <button class="lightbox-nav lightbox-next" @click="nextImage" :disabled="lightboxIndex >= lightboxImages.length - 1">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <button
+        class="lightbox-nav lightbox-next"
+        @click="nextImage"
+        :disabled="lightboxIndex >= lightboxImages.length - 1"
+      >
+        <svg
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
           <polyline points="9 18 15 12 9 6"></polyline>
         </svg>
       </button>
@@ -213,142 +454,150 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 import {
   getConceptHistoryList,
   getConceptHistory,
   deleteConceptHistory,
   type ConceptHistoryRecord,
-  type ConceptHistoryDetail
-} from '../api'
+  type ConceptHistoryDetail,
+} from "../api";
+import { useMessage } from "naive-ui";
 
-const router = useRouter()
+const router = useRouter();
+const message = useMessage();
 
-const records = ref<ConceptHistoryRecord[]>([])
-const loading = ref(false)
-const currentTab = ref('all')
-const currentPage = ref(1)
-const totalPages = ref(1)
-const selectedRecord = ref<ConceptHistoryDetail | null>(null)
+const records = ref<ConceptHistoryRecord[]>([]);
+const loading = ref(false);
+const currentTab = ref("all");
+const currentPage = ref(1);
+const totalPages = ref(1);
+const selectedRecord = ref<ConceptHistoryDetail | null>(null);
 
 // Lightbox state
-const lightboxOpen = ref(false)
-const lightboxIndex = ref(0)
+const lightboxOpen = ref(false);
+const lightboxIndex = ref(0);
 
 const lightboxImages = computed(() => {
-  return selectedRecord.value?.pipeline_data?.generate?.results || []
-})
+  return selectedRecord.value?.pipeline_data?.generate?.results || [];
+});
 
 const currentLightboxImage = computed(() => {
-  return lightboxImages.value[lightboxIndex.value] || null
-})
+  return lightboxImages.value[lightboxIndex.value] || null;
+});
 
 function openLightbox(index: number) {
-  lightboxIndex.value = index
-  lightboxOpen.value = true
+  lightboxIndex.value = index;
+  lightboxOpen.value = true;
 }
 
 function closeLightbox() {
-  lightboxOpen.value = false
+  lightboxOpen.value = false;
 }
 
 function prevImage() {
   if (lightboxIndex.value > 0) {
-    lightboxIndex.value--
+    lightboxIndex.value--;
   }
 }
 
 function nextImage() {
   if (lightboxIndex.value < lightboxImages.value.length - 1) {
-    lightboxIndex.value++
+    lightboxIndex.value++;
   }
 }
 
 function handleKeydown(e: KeyboardEvent) {
-  if (!lightboxOpen.value) return
-  if (e.key === 'Escape') closeLightbox()
-  if (e.key === 'ArrowLeft') prevImage()
-  if (e.key === 'ArrowRight') nextImage()
+  if (!lightboxOpen.value) return;
+  if (e.key === "Escape") closeLightbox();
+  if (e.key === "ArrowLeft") prevImage();
+  if (e.key === "ArrowRight") nextImage();
 }
 
 async function loadData() {
-  loading.value = true
+  loading.value = true;
   try {
-    const statusFilter = currentTab.value === 'all' ? undefined : currentTab.value
-    const res = await getConceptHistoryList(currentPage.value, 12, statusFilter)
+    const statusFilter =
+      currentTab.value === "all" ? undefined : currentTab.value;
+    const res = await getConceptHistoryList(
+      currentPage.value,
+      12,
+      statusFilter,
+    );
     if (res.success && res.data) {
-      records.value = res.data.records
-      totalPages.value = res.data.total_pages
+      records.value = res.data.records;
+      totalPages.value = res.data.total_pages;
     }
   } catch (e) {
-    console.error('加载历史失败:', e)
+    console.error("加载历史失败:", e);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 function switchTab(tab: string) {
-  currentTab.value = tab
-  currentPage.value = 1
-  loadData()
+  currentTab.value = tab;
+  currentPage.value = 1;
+  loadData();
 }
 
 function changePage(page: number) {
-  currentPage.value = page
-  loadData()
+  currentPage.value = page;
+  loadData();
 }
 
 async function viewRecord(record: ConceptHistoryRecord) {
-  const res = await getConceptHistory(record.id)
+  const res = await getConceptHistory(record.id);
   if (res.success && res.data) {
-    selectedRecord.value = res.data
+    selectedRecord.value = res.data;
   }
 }
 
 function closeModal() {
-  selectedRecord.value = null
+  selectedRecord.value = null;
 }
 
 async function confirmDelete(record: ConceptHistoryRecord) {
-  if (confirm('确定删除这条记录吗？相关图片也会被删除。')) {
-    const res = await deleteConceptHistory(record.id)
+  if (confirm("确定删除这条记录吗？相关图片也会被删除。")) {
+    const res = await deleteConceptHistory(record.id);
     if (res.success) {
-      loadData()
+      loadData();
+      message.success("已删除");
     } else {
-      alert('删除失败: ' + (res.error || '未知错误'))
+      message.error("删除失败: " + (res.error || "未知错误"));
     }
   }
 }
 
 function formatDate(dateStr: string) {
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('zh-CN', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("zh-CN", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function getStatusText(status: string) {
   const statusMap: Record<string, string> = {
-    'draft': '草稿',
-    'in_progress': '进行中',
-    'completed': '已完成',
-    'error': '失败'
-  }
-  return statusMap[status] || status
+    draft: "草稿",
+    in_progress: "进行中",
+    completed: "已完成",
+    error: "失败",
+  };
+  return statusMap[status] || status;
 }
 
 onMounted(() => {
-  loadData()
-  window.addEventListener('keydown', handleKeydown)
-})
+  loadData();
+  window.addEventListener("keydown", handleKeydown);
+});
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
-})
+  window.removeEventListener("keydown", handleKeydown);
+});
 </script>
 
 <style scoped>
@@ -435,7 +684,7 @@ onUnmounted(() => {
 }
 
 .record-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transform: translateY(-2px);
 }
 
@@ -527,7 +776,7 @@ onUnmounted(() => {
   position: absolute;
   top: 8px;
   right: 8px;
-  background: rgba(255,255,255,0.9);
+  background: rgba(255, 255, 255, 0.9);
   border: none;
   border-radius: 6px;
   padding: 6px;
@@ -573,7 +822,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -755,7 +1004,9 @@ onUnmounted(() => {
   padding: 16px;
   border-radius: 8px;
   opacity: 0.7;
-  transition: opacity 0.2s, background 0.2s;
+  transition:
+    opacity 0.2s,
+    background 0.2s;
 }
 
 .lightbox-nav:hover:not(:disabled) {

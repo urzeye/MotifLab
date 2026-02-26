@@ -158,141 +158,133 @@
 
     <!-- 生成设置 -->
     <div class="generation-settings">
-      <label
-        class="setting-item page-count-setting"
-        title="控制本次大纲总页数（包含封面和总结）"
-      >
-        <span class="setting-label">页数</span>
-        <div class="page-count-control">
-          <select
-            class="page-count-select"
-            :value="pageCount"
-            :disabled="loading"
-            @change="handlePageCountChange"
-          >
-            <option
-              v-for="count in PAGE_COUNT_OPTIONS"
-              :key="count"
-              :value="count"
-            >
-              {{ count }}
-            </option>
-          </select>
-          <svg
-            class="page-count-caret"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-          >
-            <path
-              d="M6 9L12 15L18 9"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </div>
-      </label>
+      <n-tooltip trigger="hover">
+        <template #trigger>
+          <div class="setting-item page-count-setting">
+            <span class="setting-label">页数</span>
+            <div class="page-count-control">
+              <n-select
+                v-model:value="pageCountModel"
+                :options="pageCountSelectOptions"
+                :disabled="loading"
+                size="small"
+                style="width: 76px"
+              />
+            </div>
+          </div>
+        </template>
+        控制本次大纲总页数（包含封面和总结）
+      </n-tooltip>
 
-      <label
-        class="setting-item search-toggle"
-        title="开启后，模型会在生成大纲时联网检索（取决于当前文本模型是否支持）"
-      >
-        <input
-          type="checkbox"
-          class="switch-input"
-          :checked="enableSearch"
-          :disabled="loading"
-          @change="handleEnableSearchChange"
-        />
-        <span class="switch-ui"></span>
-        <span class="setting-label">联网搜索</span>
-      </label>
+      <n-tooltip trigger="hover">
+        <template #trigger>
+          <label class="setting-item search-toggle">
+            <input
+              type="checkbox"
+              class="switch-input"
+              :checked="enableSearch"
+              :disabled="loading"
+              @change="handleEnableSearchChange"
+            />
+            <span class="switch-ui"></span>
+            <span class="setting-label">联网搜索</span>
+          </label>
+        </template>
+        开启后，模型会在生成大纲时联网检索（取决于当前文本模型是否支持）
+      </n-tooltip>
     </div>
 
     <!-- 工具栏 -->
     <div class="composer-toolbar">
       <div class="toolbar-left">
-        <label
-          class="tool-btn"
-          :class="{ active: uploadedImages.length > 0 }"
-          title="上传参考图"
-        >
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            @change="handleImageUpload"
-            :disabled="loading"
-            style="display: none"
-          />
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <rect
-              x="3"
-              y="3"
-              width="18"
-              height="18"
-              rx="2"
-              ry="2"
-            ></rect>
-            <circle
-              cx="8.5"
-              cy="8.5"
-              r="1.5"
-            ></circle>
-            <polyline points="21 15 16 10 5 21"></polyline>
-          </svg>
-          <span
-            v-if="uploadedImages.length > 0"
-            class="badge-count"
-            >{{ uploadedImages.length }}</span
-          >
-        </label>
-        <button
+        <n-tooltip trigger="hover">
+          <template #trigger>
+            <label
+              class="tool-btn"
+              :class="{ active: uploadedImages.length > 0 }"
+            >
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                @change="handleImageUpload"
+                :disabled="loading"
+                style="display: none"
+              />
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="2"
+                  ry="2"
+                ></rect>
+                <circle
+                  cx="8.5"
+                  cy="8.5"
+                  r="1.5"
+                ></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              <span
+                v-if="uploadedImages.length > 0"
+                class="badge-count"
+                >{{ uploadedImages.length }}</span
+              >
+            </label>
+          </template>
+          上传参考图
+        </n-tooltip>
+        <n-tooltip
           v-if="firecrawlEnabled"
-          class="tool-btn"
-          :class="{ active: showUrlInput || scrapeStatus === 'success' }"
-          @click="toggleUrlInput"
-          title="添加网页引用"
+          trigger="hover"
         >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <circle
-              cx="12"
-              cy="12"
-              r="10"
-            ></circle>
-            <line
-              x1="2"
-              y1="12"
-              x2="22"
-              y2="12"
-            ></line>
-            <path
-              d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
-            ></path>
-          </svg>
-          <span
-            v-if="scrapeStatus === 'success'"
-            class="badge-check"
-            >✓</span
-          >
-        </button>
+          <template #trigger>
+            <button
+              class="tool-btn"
+              :class="{ active: showUrlInput || scrapeStatus === 'success' }"
+              @click="toggleUrlInput"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                ></circle>
+                <line
+                  x1="2"
+                  y1="12"
+                  x2="22"
+                  y2="12"
+                ></line>
+                <path
+                  d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+                ></path>
+              </svg>
+              <span
+                v-if="scrapeStatus === 'success'"
+                class="badge-check"
+                >✓</span
+              >
+            </button>
+          </template>
+          添加网页引用
+        </n-tooltip>
       </div>
       <div class="toolbar-right">
         <button
@@ -317,7 +309,8 @@ export default defineComponent({ name: "ComposerInput" });
 </script>
 
 <script setup lang="ts">
-import { ref, onUnmounted } from "vue";
+import { ref, onUnmounted, computed } from "vue";
+import { useMessage, NSelect, NTooltip } from "naive-ui";
 import { scrapeUrl, type ScrapeResult } from "../../api";
 
 /**
@@ -367,10 +360,19 @@ const scrapeError = ref("");
 let scrapeDebounceTimer: number | null = null;
 const PAGE_COUNT_MIN = 1;
 const PAGE_COUNT_MAX = 15;
-const PAGE_COUNT_OPTIONS = Array.from(
+const pageCountSelectOptions = Array.from(
   { length: PAGE_COUNT_MAX - PAGE_COUNT_MIN + 1 },
-  (_, idx) => PAGE_COUNT_MIN + idx,
+  (_, idx) => {
+    const val = PAGE_COUNT_MIN + idx;
+    return { label: String(val), value: val };
+  },
 );
+const pageCountModel = computed({
+  get: () => props.pageCount,
+  set: (val) => emit("update:pageCount", val),
+});
+
+const message = useMessage();
 
 /**
  * 处理输入变化
@@ -412,7 +414,7 @@ function handleImageUpload(event: Event) {
   files.forEach((file) => {
     // 单张图片限制 20MB
     if (file.size > 20 * 1024 * 1024) {
-      alert(`图片 ${file.name} 大小不能超过 20MB`);
+      message.error(`图片 ${file.name} 大小不能超过 20MB`);
       return;
     }
 
@@ -539,12 +541,6 @@ function clearUrlState() {
 function clampPageCount(value: number): number {
   if (Number.isNaN(value)) return PAGE_COUNT_MIN;
   return Math.max(PAGE_COUNT_MIN, Math.min(PAGE_COUNT_MAX, Math.trunc(value)));
-}
-
-function handlePageCountChange(event: Event) {
-  const target = event.target as HTMLSelectElement;
-  const next = clampPageCount(Number(target.value));
-  emit("update:pageCount", next);
 }
 
 function handleEnableSearchChange(event: Event) {
@@ -706,61 +702,7 @@ defineExpose({
 }
 
 .page-count-setting {
-  border: 1px solid var(--border-color);
-  background: var(--bg-elevated);
-  border-radius: 18px;
-  padding: 6px 12px;
-  gap: 10px;
-}
-
-.page-count-control {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.page-count-select {
-  min-width: 46px;
-  height: 34px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-main);
-  padding: 0 22px 0 4px;
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  text-align: center;
-  text-align-last: center;
-}
-
-.page-count-select option {
-  font-size: 16px;
-  font-weight: 500;
-  color: #111827;
-  background: #ffffff;
-}
-
-.page-count-select:focus {
-  outline: none;
-}
-
-.page-count-select:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.page-count-caret {
-  position: absolute;
-  right: 2px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-sub);
-  pointer-events: none;
+  margin-right: 8px;
 }
 
 .search-toggle {

@@ -7,9 +7,19 @@
           {{ currentStepDescription }}
         </p>
       </div>
-      <router-link to="/" class="btn btn-secondary">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M19 12H5M12 19l-7-7 7-7"/>
+      <router-link
+        to="/"
+        class="btn btn-secondary"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>
         返回首页
       </router-link>
@@ -22,9 +32,9 @@
         :key="step.id"
         class="step"
         :class="{
-          'active': currentStep === index,
-          'completed': currentStep > index,
-          'error': step.error
+          active: currentStep === index,
+          completed: currentStep > index,
+          error: step.error,
         }"
       >
         <div class="step-number">
@@ -40,7 +50,10 @@
     </div>
 
     <!-- Step 0: Input -->
-    <div v-if="currentStep === 0" class="card">
+    <div
+      v-if="currentStep === 0"
+      class="card"
+    >
       <h3 class="card-title">输入文章内容</h3>
       <p class="card-desc">粘贴需要可视化的文章内容，支持中英文。</p>
 
@@ -65,7 +78,10 @@
             :class="{ selected: selectedStyle === style.id }"
             @click="selectedStyle = style.id"
           >
-            <div class="style-preview" :style="{ background: style.colors?.primary || '#2F3337' }"></div>
+            <div
+              class="style-preview"
+              :style="{ background: style.colors?.primary || '#2F3337' }"
+            ></div>
             <span class="style-name">{{ style.name }}</span>
           </div>
         </div>
@@ -77,14 +93,20 @@
           @click="startPipeline"
           :disabled="!articleText.trim() || isRunning"
         >
-          <span v-if="isRunning" class="spinner-sm"></span>
-          {{ isRunning ? '处理中...' : '开始分析' }}
+          <span
+            v-if="isRunning"
+            class="spinner-sm"
+          ></span>
+          {{ isRunning ? "处理中..." : "开始分析" }}
         </button>
       </div>
     </div>
 
     <!-- Step 1: Analyze Results -->
-    <div v-else-if="currentStep === 1 && analyzeResult" class="card">
+    <div
+      v-else-if="currentStep === 1 && analyzeResult"
+      class="card"
+    >
       <h3 class="card-title">
         <span class="step-badge">Step 1</span>
         概念分析结果
@@ -98,41 +120,63 @@
       <div class="result-section">
         <h4>核心概念 ({{ analyzeResult.key_concepts?.length || 0 }})</h4>
         <div class="concept-list">
-          <div v-for="concept in analyzeResult.key_concepts" :key="concept.id" class="concept-card">
+          <div
+            v-for="concept in analyzeResult.key_concepts"
+            :key="concept.id"
+            class="concept-card"
+          >
             <div class="concept-header">
-              <span class="concept-name">{{ concept.name_cn || concept.name }}</span>
+              <span class="concept-name">{{
+                concept.name_cn || concept.name
+              }}</span>
               <span class="viz-type">{{ concept.visualization_type }}</span>
             </div>
             <p class="concept-desc">{{ concept.description }}</p>
-            <p class="concept-quote" v-if="concept.key_quote">
+            <p
+              class="concept-quote"
+              v-if="concept.key_quote"
+            >
               "{{ truncate(concept.key_quote, 100) }}"
             </p>
           </div>
         </div>
       </div>
 
-      <div v-if="isRunning" class="processing-indicator">
+      <div
+        v-if="isRunning"
+        class="processing-indicator"
+      >
         <div class="spinner"></div>
         <span>正在映射理论框架...</span>
       </div>
     </div>
 
     <!-- Step 2: Map Results -->
-    <div v-else-if="currentStep === 2 && mapResult" class="card">
+    <div
+      v-else-if="currentStep === 2 && mapResult"
+      class="card"
+    >
       <h3 class="card-title">
         <span class="step-badge">Step 2</span>
         理论框架映射
       </h3>
 
       <div class="mapping-list">
-        <div v-for="mapping in mapResult.mappings" :key="mapping.concept_id" class="mapping-card">
+        <div
+          v-for="mapping in mapResult.mappings"
+          :key="mapping.concept_id"
+          class="mapping-card"
+        >
           <div class="mapping-header">
             <span class="new-title">{{ mapping.new_title }}</span>
             <span class="framework-badge">{{ mapping.framework_name }}</span>
           </div>
           <p class="mapping-insight">{{ mapping.insight }}</p>
           <div class="mapping-meta">
-            <span v-if="mapping.recommended_chart" class="chart-type">
+            <span
+              v-if="mapping.recommended_chart"
+              class="chart-type"
+            >
               📊 {{ mapping.recommended_chart }}
             </span>
             <span class="visual-metaphor">{{ mapping.visual_metaphor }}</span>
@@ -140,28 +184,42 @@
         </div>
       </div>
 
-      <div v-if="isRunning" class="processing-indicator">
+      <div
+        v-if="isRunning"
+        class="processing-indicator"
+      >
         <div class="spinner"></div>
         <span>正在生成设计方案...</span>
       </div>
     </div>
 
     <!-- Step 3: Design Results -->
-    <div v-else-if="currentStep === 3 && designResult" class="card">
+    <div
+      v-else-if="currentStep === 3 && designResult"
+      class="card"
+    >
       <h3 class="card-title">
         <span class="step-badge">Step 3</span>
         可视化设计
       </h3>
 
       <div class="design-list">
-        <div v-for="design in designResult.designs" :key="design.concept_id" class="design-card">
+        <div
+          v-for="design in designResult.designs"
+          :key="design.concept_id"
+          class="design-card"
+        >
           <div class="design-header">
             <span class="design-title">{{ design.title }}</span>
             <span class="chart-badge">{{ design.chart_type }}</span>
           </div>
           <div class="design-visual">
             <div class="visual-elements">
-              <span v-for="elem in design.visual_elements?.slice(0, 4)" :key="elem" class="element-tag">
+              <span
+                v-for="elem in design.visual_elements?.slice(0, 4)"
+                :key="elem"
+                class="element-tag"
+              >
                 {{ elem }}
               </span>
             </div>
@@ -173,82 +231,185 @@
         </div>
       </div>
 
-      <div v-if="isRunning" class="processing-indicator">
+      <div
+        v-if="isRunning"
+        class="processing-indicator"
+      >
         <div class="spinner"></div>
         <span>正在生成图像...</span>
       </div>
     </div>
 
     <!-- Step 4: Generate Results -->
-    <div v-else-if="currentStep === 4" class="card">
+    <div
+      v-else-if="currentStep === 4"
+      class="card"
+    >
       <h3 class="card-title">
         <span class="step-badge">Step 4</span>
         生成结果
       </h3>
 
-      <div class="progress-section" v-if="generateProgress.total > 0">
+      <div
+        class="progress-section"
+        v-if="generateProgress.total > 0"
+      >
         <div class="progress-info">
           <span>生成进度</span>
-          <span class="progress-text">{{ generateProgress.current }} / {{ generateProgress.total }}</span>
+          <span class="progress-text"
+            >{{ generateProgress.current }} / {{ generateProgress.total }}</span
+          >
         </div>
         <div class="progress-container">
-          <div class="progress-bar" :style="{ width: progressPercent + '%' }"></div>
+          <div
+            class="progress-bar"
+            :style="{ width: progressPercent + '%' }"
+          ></div>
         </div>
       </div>
 
       <div class="image-grid">
-        <div v-for="image in generatedImages" :key="image.index" class="image-card">
+        <div
+          v-for="image in generatedImages"
+          :key="image.index"
+          class="image-card"
+        >
           <div
             v-if="image.url && image.success"
             class="image-preview"
             @click="openPreview(image)"
           >
-            <img :src="image.url" :alt="image.title" />
+            <img
+              :src="image.url"
+              :alt="image.title"
+            />
             <div class="image-overlay">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                <line x1="11" y1="8" x2="11" y2="14"></line>
-                <line x1="8" y1="11" x2="14" y2="11"></line>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle
+                  cx="11"
+                  cy="11"
+                  r="8"
+                ></circle>
+                <line
+                  x1="21"
+                  y1="21"
+                  x2="16.65"
+                  y2="16.65"
+                ></line>
+                <line
+                  x1="11"
+                  y1="8"
+                  x2="11"
+                  y2="14"
+                ></line>
+                <line
+                  x1="8"
+                  y1="11"
+                  x2="14"
+                  y2="11"
+                ></line>
               </svg>
             </div>
           </div>
-          <div v-else-if="image.status === 'generating'" class="image-placeholder">
+          <div
+            v-else-if="image.status === 'generating'"
+            class="image-placeholder"
+          >
             <div class="spinner"></div>
             <span>生成中...</span>
           </div>
-          <div v-else-if="image.error" class="image-placeholder error">
+          <div
+            v-else-if="image.error"
+            class="image-placeholder error"
+          >
             <span class="error-icon">!</span>
             <span>{{ image.error }}</span>
           </div>
-          <div v-else class="image-placeholder">
+          <div
+            v-else
+            class="image-placeholder"
+          >
             <span>等待中</span>
           </div>
           <div class="image-footer">
-            <span class="image-title">{{ image.title || `图 ${image.index}` }}</span>
+            <span class="image-title">{{
+              image.title || `图 ${image.index}`
+            }}</span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Image Preview Modal -->
-    <div v-if="previewImage" class="preview-modal" @click="closePreview">
-      <div class="preview-content" @click.stop>
-        <button class="preview-close" @click="closePreview">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
+    <div
+      v-if="previewImage"
+      class="preview-modal"
+      @click="closePreview"
+    >
+      <div
+        class="preview-content"
+        @click.stop
+      >
+        <button
+          class="preview-close"
+          @click="closePreview"
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <line
+              x1="18"
+              y1="6"
+              x2="6"
+              y2="18"
+            ></line>
+            <line
+              x1="6"
+              y1="6"
+              x2="18"
+              y2="18"
+            ></line>
           </svg>
         </button>
-        <img :src="previewImage.url" :alt="previewImage.title" />
+        <img
+          :src="previewImage.url"
+          :alt="previewImage.title"
+        />
         <div class="preview-info">
           <h3>{{ previewImage.title }}</h3>
           <div class="preview-actions">
-            <button class="btn btn-secondary btn-sm" @click="downloadImage(previewImage)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button
+              class="btn btn-secondary btn-sm"
+              @click="downloadImage(previewImage)"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
+                <line
+                  x1="12"
+                  y1="15"
+                  x2="12"
+                  y2="3"
+                ></line>
               </svg>
               下载
             </button>
@@ -260,7 +421,14 @@
             @click="navigatePreview(-1)"
             :disabled="!canNavigate(-1)"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
           </button>
@@ -269,7 +437,14 @@
             @click="navigatePreview(1)"
             :disabled="!canNavigate(1)"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
           </button>
@@ -278,143 +453,164 @@
     </div>
 
     <!-- Completion -->
-    <div v-if="isComplete && !isRunning" class="completion-section">
+    <div
+      v-if="isComplete && !isRunning"
+      class="completion-section"
+    >
       <div class="completion-icon">✓</div>
       <h3>生成完成</h3>
-      <p>成功生成 {{ generateProgress.success }} / {{ generateProgress.total }} 张概念图</p>
+      <p>
+        成功生成 {{ generateProgress.success }} /
+        {{ generateProgress.total }} 张概念图
+      </p>
       <div class="completion-actions">
-        <button class="btn btn-primary" @click="resetAndStartNew">
+        <button
+          class="btn btn-primary"
+          @click="resetAndStartNew"
+        >
           生成新的概念图
         </button>
-        <router-link to="/concept/history" class="btn btn-secondary">
+        <router-link
+          to="/concept/history"
+          class="btn btn-secondary"
+        >
           查看历史记录
         </router-link>
       </div>
     </div>
 
     <!-- Error Display -->
-    <div v-if="errorMessage" class="error-card">
+    <div
+      v-if="errorMessage"
+      class="error-card"
+    >
       <h4>出错了</h4>
       <p>{{ errorMessage }}</p>
-      <button class="btn btn-secondary" @click="resetAndStartNew">重新开始</button>
+      <button
+        class="btn btn-secondary"
+        @click="resetAndStartNew"
+      >
+        重新开始
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from "vue";
 
 // State
-const articleText = ref('')
-const selectedStyle = ref('blueprint')
-const visualStyles = ref<any[]>([])
+const articleText = ref("");
+const selectedStyle = ref("blueprint");
+const visualStyles = ref<any[]>([]);
 
-const currentStep = ref(0)
-const isRunning = ref(false)
-const isComplete = ref(false)
-const errorMessage = ref('')
+const currentStep = ref(0);
+const isRunning = ref(false);
+const isComplete = ref(false);
+const errorMessage = ref("");
 
-const analyzeResult = ref<any>(null)
-const mapResult = ref<any>(null)
-const designResult = ref<any>(null)
-const generatedImages = ref<any[]>([])
-const generateProgress = ref({ current: 0, total: 0, success: 0 })
+const analyzeResult = ref<any>(null);
+const mapResult = ref<any>(null);
+const designResult = ref<any>(null);
+const generatedImages = ref<any[]>([]);
+const generateProgress = ref({ current: 0, total: 0, success: 0 });
 
 // Image preview state
-const previewImage = ref<any>(null)
+const previewImage = ref<any>(null);
 
 // Steps definition
 const steps = ref([
-  { id: 'input', name: '输入', description: '粘贴文章', error: false },
-  { id: 'analyze', name: '分析', description: '提取概念', error: false },
-  { id: 'map', name: '映射', description: '理论框架', error: false },
-  { id: 'design', name: '设计', description: '生成方案', error: false },
-  { id: 'generate', name: '生成', description: '输出图像', error: false },
-])
+  { id: "input", name: "输入", description: "粘贴文章", error: false },
+  { id: "analyze", name: "分析", description: "提取概念", error: false },
+  { id: "map", name: "映射", description: "理论框架", error: false },
+  { id: "design", name: "设计", description: "生成方案", error: false },
+  { id: "generate", name: "生成", description: "输出图像", error: false },
+]);
 
 // Computed
 const currentStepDescription = computed(() => {
-  if (isComplete.value) return '概念图生成完成'
-  if (errorMessage.value) return '处理出错'
-  if (!isRunning.value && currentStep.value === 0) return '输入文章内容开始概念可视化'
-  return steps.value[currentStep.value]?.description || ''
-})
+  if (isComplete.value) return "概念图生成完成";
+  if (errorMessage.value) return "处理出错";
+  if (!isRunning.value && currentStep.value === 0)
+    return "输入文章内容开始概念可视化";
+  return steps.value[currentStep.value]?.description || "";
+});
 
 const progressPercent = computed(() => {
-  if (generateProgress.value.total === 0) return 0
-  return (generateProgress.value.current / generateProgress.value.total) * 100
-})
+  if (generateProgress.value.total === 0) return 0;
+  return (generateProgress.value.current / generateProgress.value.total) * 100;
+});
 
 // Methods
 const fetchVisualStyles = async () => {
   try {
-    const res = await fetch('/api/knowledge/visual-styles')
-    const data = await res.json()
+    const res = await fetch("/api/knowledge/visual-styles");
+    const data = await res.json();
     if (data.success) {
-      visualStyles.value = data.visual_styles
+      visualStyles.value = data.visual_styles;
     }
   } catch (e) {
-    console.error('Failed to load visual styles:', e)
+    console.error("Failed to load visual styles:", e);
     // Default styles
     visualStyles.value = [
-      { id: 'blueprint', name: 'Blueprint', colors: { primary: '#2F3337' } },
-      { id: 'vintage', name: 'Vintage', colors: { primary: '#8B7355' } },
-      { id: 'minimalist', name: 'Minimalist', colors: { primary: '#1a1a1a' } },
-    ]
+      { id: "blueprint", name: "Blueprint", colors: { primary: "#2F3337" } },
+      { id: "vintage", name: "Vintage", colors: { primary: "#8B7355" } },
+      { id: "minimalist", name: "Minimalist", colors: { primary: "#1a1a1a" } },
+    ];
   }
-}
+};
 
 const truncate = (text: string, maxLen: number) => {
-  if (!text) return ''
-  return text.length > maxLen ? text.slice(0, maxLen) + '...' : text
-}
+  if (!text) return "";
+  return text.length > maxLen ? text.slice(0, maxLen) + "..." : text;
+};
 
 const startPipeline = async () => {
-  if (!articleText.value.trim()) return
+  if (!articleText.value.trim()) return;
 
-  isRunning.value = true
-  errorMessage.value = ''
-  isComplete.value = false
-  currentStep.value = 1
+  isRunning.value = true;
+  errorMessage.value = "";
+  isComplete.value = false;
+  currentStep.value = 1;
 
   // Reset results
-  analyzeResult.value = null
-  mapResult.value = null
-  designResult.value = null
-  generatedImages.value = []
-  generateProgress.value = { current: 0, total: 0, success: 0 }
+  analyzeResult.value = null;
+  mapResult.value = null;
+  designResult.value = null;
+  generatedImages.value = [];
+  generateProgress.value = { current: 0, total: 0, success: 0 };
 
   try {
-    const response = await fetch('/api/concept/run/stream', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await fetch("/api/concept/run/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         article: articleText.value,
         style: selectedStyle.value,
-        config: { max_concepts: 8 }
-      })
-    })
+        config: { max_concepts: 8 },
+      }),
+    });
 
-    const reader = response.body?.getReader()
-    const decoder = new TextDecoder()
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
 
-    if (!reader) throw new Error('Stream not available')
+    if (!reader) throw new Error("Stream not available");
 
-    let buffer = ''
+    let buffer = "";
 
     while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
+      const { done, value } = await reader.read();
+      if (done) break;
 
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
 
       for (const line of lines) {
-        if (line.startsWith('data: ')) {
+        if (line.startsWith("data: ")) {
           try {
-            const data = JSON.parse(line.slice(6))
-            handlePipelineEvent(data)
+            const data = JSON.parse(line.slice(6));
+            handlePipelineEvent(data);
           } catch (e) {
             // Skip malformed JSON
           }
@@ -422,152 +618,166 @@ const startPipeline = async () => {
       }
     }
   } catch (e: any) {
-    console.error('Pipeline error:', e)
-    errorMessage.value = e.message || '流水线执行失败'
-    steps.value[currentStep.value].error = true
+    console.error("Pipeline error:", e);
+    errorMessage.value = e.message || "流水线执行失败";
+    steps.value[currentStep.value].error = true;
   } finally {
-    isRunning.value = false
+    isRunning.value = false;
   }
-}
+};
 
 const handlePipelineEvent = (event: any) => {
-  console.log('Pipeline event:', event)
+  console.log("Pipeline event:", event);
 
   switch (event.event) {
-    case 'start':
+    case "start":
       // Pipeline started
-      break
+      break;
 
-    case 'step_start':
-      if (event.skill === 'concept_analyze') currentStep.value = 1
-      else if (event.skill === 'concept_map') currentStep.value = 2
-      else if (event.skill === 'concept_design') currentStep.value = 3
-      else if (event.skill === 'concept_generate') currentStep.value = 4
-      break
+    case "step_start":
+      if (event.skill === "concept_analyze") currentStep.value = 1;
+      else if (event.skill === "concept_map") currentStep.value = 2;
+      else if (event.skill === "concept_design") currentStep.value = 3;
+      else if (event.skill === "concept_generate") currentStep.value = 4;
+      break;
 
-    case 'step_complete':
-      if (event.skill === 'concept_analyze') {
+    case "step_complete":
+      if (event.skill === "concept_analyze") {
         // Fetch full analyze result
-        analyzeResult.value = event.result?.main_theme ? event.result : null
-      } else if (event.skill === 'concept_map') {
+        analyzeResult.value = event.result?.main_theme ? event.result : null;
+      } else if (event.skill === "concept_map") {
         // mapResult set via accumulated data
-      } else if (event.skill === 'concept_design') {
+      } else if (event.skill === "concept_design") {
         // designResult set via accumulated data
       }
-      break
+      break;
 
-    case 'generate_start':
-      generateProgress.value.total = event.result?.total || 0
-      generatedImages.value = Array.from({ length: generateProgress.value.total }, (_, i) => ({
-        index: i + 1,
-        status: 'pending',
-        url: null,
-        error: null
-      }))
-      break
+    case "generate_start":
+      generateProgress.value.total = event.result?.total || 0;
+      generatedImages.value = Array.from(
+        { length: generateProgress.value.total },
+        (_, i) => ({
+          index: i + 1,
+          status: "pending",
+          url: null,
+          error: null,
+        }),
+      );
+      break;
 
-    case 'generate_progress':
+    case "generate_progress":
       if (event.result?.index) {
-        const idx = event.result.index - 1
+        const idx = event.result.index - 1;
         if (generatedImages.value[idx]) {
-          generatedImages.value[idx].status = 'generating'
-          generatedImages.value[idx].title = event.result.title
+          generatedImages.value[idx].status = "generating";
+          generatedImages.value[idx].title = event.result.title;
         }
       }
-      break
+      break;
 
-    case 'generate_result':
+    case "generate_result":
       if (event.result?.index) {
-        const idx = event.result.index - 1
-        generateProgress.value.current = event.result.index
+        const idx = event.result.index - 1;
+        generateProgress.value.current = event.result.index;
         if (generatedImages.value[idx]) {
           generatedImages.value[idx] = {
             ...generatedImages.value[idx],
             ...event.result,
-            status: event.result.success ? 'done' : 'error',
-            url: event.result.output_path ? `/${event.result.output_path}` : event.result.url
-          }
+            status: event.result.success ? "done" : "error",
+            url: event.result.output_path
+              ? `/${event.result.output_path}`
+              : event.result.url,
+          };
           if (event.result.success) {
-            generateProgress.value.success++
+            generateProgress.value.success++;
           }
         }
       }
-      break
+      break;
 
-    case 'generate_complete':
-      generateProgress.value.current = event.result?.total || generateProgress.value.total
-      generateProgress.value.success = event.result?.success_count || 0
-      break
+    case "generate_complete":
+      generateProgress.value.current =
+        event.result?.total || generateProgress.value.total;
+      generateProgress.value.success = event.result?.success_count || 0;
+      break;
 
-    case 'complete':
-      isComplete.value = true
+    case "complete":
+      isComplete.value = true;
       // Update results from final output
       if (event.result) {
         analyzeResult.value = {
           main_theme: event.result.main_theme,
-          key_concepts: event.result.concepts
-        }
-        mapResult.value = { mappings: event.result.mappings }
-        designResult.value = { designs: event.result.designs }
+          key_concepts: event.result.concepts,
+        };
+        mapResult.value = { mappings: event.result.mappings };
+        designResult.value = { designs: event.result.designs };
       }
-      break
+      break;
 
-    case 'error':
-    case 'step_error':
-      errorMessage.value = event.error || '处理失败'
-      steps.value[currentStep.value].error = true
-      break
+    case "error":
+    case "step_error":
+      errorMessage.value = event.error || "处理失败";
+      steps.value[currentStep.value].error = true;
+      break;
   }
-}
+};
 
 const resetAndStartNew = () => {
-  currentStep.value = 0
-  isComplete.value = false
-  errorMessage.value = ''
-  analyzeResult.value = null
-  mapResult.value = null
-  designResult.value = null
-  generatedImages.value = []
-  generateProgress.value = { current: 0, total: 0, success: 0 }
-  steps.value.forEach(s => s.error = false)
-}
+  currentStep.value = 0;
+  isComplete.value = false;
+  errorMessage.value = "";
+  analyzeResult.value = null;
+  mapResult.value = null;
+  designResult.value = null;
+  generatedImages.value = [];
+  generateProgress.value = { current: 0, total: 0, success: 0 };
+  steps.value.forEach((s) => (s.error = false));
+};
 
 // Image preview methods
 const openPreview = (image: any) => {
-  previewImage.value = image
-  document.body.style.overflow = 'hidden'
-}
+  previewImage.value = image;
+  document.body.style.overflow = "hidden";
+};
 
 const closePreview = () => {
-  previewImage.value = null
-  document.body.style.overflow = ''
-}
+  previewImage.value = null;
+  document.body.style.overflow = "";
+};
 
 const canNavigate = (direction: number) => {
-  if (!previewImage.value) return false
-  const successImages = generatedImages.value.filter(img => img.url && img.success)
-  const currentIndex = successImages.findIndex(img => img.index === previewImage.value.index)
-  const nextIndex = currentIndex + direction
-  return nextIndex >= 0 && nextIndex < successImages.length
-}
+  if (!previewImage.value) return false;
+  const successImages = generatedImages.value.filter(
+    (img) => img.url && img.success,
+  );
+  const currentIndex = successImages.findIndex(
+    (img) => img.index === previewImage.value.index,
+  );
+  const nextIndex = currentIndex + direction;
+  return nextIndex >= 0 && nextIndex < successImages.length;
+};
 
 const navigatePreview = (direction: number) => {
-  if (!canNavigate(direction)) return
-  const successImages = generatedImages.value.filter(img => img.url && img.success)
-  const currentIndex = successImages.findIndex(img => img.index === previewImage.value.index)
-  previewImage.value = successImages[currentIndex + direction]
-}
+  if (!canNavigate(direction)) return;
+  const successImages = generatedImages.value.filter(
+    (img) => img.url && img.success,
+  );
+  const currentIndex = successImages.findIndex(
+    (img) => img.index === previewImage.value.index,
+  );
+  previewImage.value = successImages[currentIndex + direction];
+};
 
 const downloadImage = (image: any) => {
-  const link = document.createElement('a')
-  link.href = image.url
-  link.download = `${image.title || 'concept'}.png`
-  link.click()
-}
+  const link = document.createElement("a");
+  link.href = image.url;
+  link.download = `${image.title || "concept"}.png`;
+  link.click();
+};
 
 onMounted(() => {
-  fetchVisualStyles()
-})
+  fetchVisualStyles();
+});
 </script>
 
 <style scoped>
@@ -613,7 +823,8 @@ onMounted(() => {
   transition: all 0.3s;
 }
 
-.step.active, .step.completed {
+.step.active,
+.step.completed {
   opacity: 1;
 }
 
@@ -639,15 +850,15 @@ onMounted(() => {
 }
 
 .step.completed .step-number {
-  background: #10b981;
-  border-color: #10b981;
-  color: white;
+  background: var(--color-success, #10b981);
+  border-color: var(--color-success, #10b981);
+  color: var(--text-on-primary, white);
 }
 
 .step.error .step-number {
-  background: #ef4444;
-  border-color: #ef4444;
-  color: white;
+  background: var(--color-error, #ef4444);
+  border-color: var(--color-error, #ef4444);
+  color: var(--text-on-primary, white);
 }
 
 .step-info {
@@ -888,8 +1099,8 @@ onMounted(() => {
 .framework-badge {
   font-size: 11px;
   padding: 3px 8px;
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
+  background: var(--color-success-bg, rgba(16, 185, 129, 0.1));
+  color: var(--color-success, #10b981);
   border-radius: var(--radius-sm);
 }
 
@@ -1095,8 +1306,8 @@ onMounted(() => {
   width: 64px;
   height: 64px;
   margin: 0 auto 16px;
-  background: #10b981;
-  color: white;
+  background: var(--color-success, #10b981);
+  color: var(--text-on-primary, white);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1162,7 +1373,9 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Responsive */
