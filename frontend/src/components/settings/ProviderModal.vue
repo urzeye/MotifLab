@@ -38,6 +38,25 @@
           </span>
         </div>
 
+        <div
+          class="form-group"
+          v-if="providerCategory === 'search'"
+        >
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              :checked="!!formData.enabled"
+              @change="
+                updateField(
+                  'enabled',
+                  ($event.target as HTMLInputElement).checked,
+                )
+              "
+            />
+            启用该搜索服务
+          </label>
+        </div>
+
         <!-- API Key -->
         <div class="form-group">
           <label>API Key</label>
@@ -50,6 +69,15 @@
           />
           <span class="form-hint" v-if="isEditing && formData._has_api_key">
             已配置 API Key，留空表示不修改
+          </span>
+          <span
+            class="form-hint"
+            v-if="
+              providerCategory === 'search' &&
+              ['bing', 'firecrawl'].includes(formData.type)
+            "
+          >
+            Bing 和 Firecrawl 支持无 API Key 测试与运行。
           </span>
         </div>
 
@@ -69,7 +97,10 @@
         </div>
 
         <!-- 模型 -->
-        <div class="form-group">
+        <div
+          class="form-group"
+          v-if="showModel"
+        >
           <label>模型</label>
           <input
             type="text"
@@ -101,7 +132,7 @@
         <button
           class="btn btn-secondary"
           @click="$emit('test')"
-          :disabled="testing || (!formData.api_key && !isEditing)"
+          :disabled="testing || (!formData.api_key && !isEditing && !allowEmptyApiKey)"
         >
           <span v-if="testing" class="spinner-small"></span>
           {{ testing ? '测试中...' : '测试连接' }}
@@ -116,7 +147,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { textProviderPresets } from '../../composables/useProviderForm'
+import {
+  textProviderPresets,
+  imageProviderPresets,
+  searchProviderPresets
+} from '../../composables/useProviderForm'
 
 /**
  * 服务商编辑/添加弹窗组件
@@ -138,6 +173,7 @@ interface FormData {
   base_url: string
   model: string
   endpoint_type?: string
+  enabled?: boolean
 }
 
 // 定义类型选项
@@ -153,7 +189,7 @@ const props = defineProps<{
   formData: FormData
   testing: boolean
   typeOptions: TypeOption[]
-  providerCategory: 'text' | 'image'
+  providerCategory: 'text' | 'image' | 'search'
 }>()
 
 // 定义 Emits
@@ -164,13 +200,19 @@ const emit = defineEmits<{
   (e: 'update:formData', data: FormData): void
 }>()
 
+const presetMap = computed(() => {
+  if (props.providerCategory === 'image') return imageProviderPresets
+  if (props.providerCategory === 'search') return searchProviderPresets
+  return textProviderPresets
+})
+
 // 当前选中的预设
 const currentPreset = computed(() => {
-  return textProviderPresets[props.formData.type]
+  return presetMap.value[props.formData.type]
 })
 
 // 更新表单字段
-function updateField(field: keyof FormData, value: string) {
+function updateField(field: keyof FormData, value: string | boolean) {
   emit('update:formData', {
     ...props.formData,
     [field]: value
@@ -179,7 +221,7 @@ function updateField(field: keyof FormData, value: string) {
 
 // 处理类型变更（自动填充预设配置）
 function handleTypeChange(newType: string) {
-  const preset = textProviderPresets[newType]
+  const preset = presetMap.value[newType]
 
   // 如果是编辑模式，只更新类型
   if (props.isEditing) {
@@ -194,7 +236,8 @@ function handleTypeChange(newType: string) {
       type: newType,
       base_url: preset.base_url || props.formData.base_url,
       model: preset.model || props.formData.model,
-      endpoint_type: preset.endpoint || props.formData.endpoint_type
+      endpoint_type: preset.endpoint || props.formData.endpoint_type,
+      enabled: props.providerCategory === 'search' ? !!preset.enabled : props.formData.enabled
     })
   } else {
     updateField('type', newType)
@@ -203,13 +246,24 @@ function handleTypeChange(newType: string) {
 
 // 是否显示 Base URL（所有类型都显示，方便自定义）
 const showBaseUrl = computed(() => {
+  if (props.providerCategory === 'search') return true
   // google_gemini 使用原生 SDK，不需要 base_url
   return props.formData.type !== 'google_gemini'
 })
 
 // 是否显示端点类型（仅自定义 OpenAI 兼容接口）
 const showEndpointType = computed(() => {
+  if (props.providerCategory !== 'text') return false
   return props.formData.type === 'openai_compatible'
+})
+
+const showModel = computed(() => {
+  if (props.providerCategory !== 'search') return true
+  return props.formData.type === 'perplexity'
+})
+
+const allowEmptyApiKey = computed(() => {
+  return props.providerCategory === 'search' && ['bing', 'firecrawl'].includes(props.formData.type)
 })
 
 // Base URL 占位符
@@ -218,6 +272,7 @@ const baseUrlPlaceholder = computed(() => {
   if (preset?.base_url) {
     return preset.base_url
   }
+  if (props.providerCategory === 'search') return '例如: https://www.bing.com'
   return '例如: https://api.openai.com'
 })
 
@@ -233,6 +288,10 @@ const modelPlaceholder = computed(() => {
 // 预览 URL
 const previewUrl = computed(() => {
   if (!props.formData.base_url) return ''
+
+  if (props.providerCategory === 'search') {
+    return props.formData.base_url
+  }
 
   const baseUrl = props.formData.base_url.replace(/\/$/, '').replace(/\/v1$/, '')
   const endpoint = props.formData.endpoint_type || '/v1/chat/completions'
@@ -385,6 +444,13 @@ const previewUrl = computed(() => {
   color: var(--text-sub);
   margin-top: 6px;
   line-height: 1.5;
+}
+
+.checkbox-label {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0 !important;
 }
 
 /* 底部 */

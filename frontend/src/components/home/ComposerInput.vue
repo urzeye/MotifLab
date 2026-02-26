@@ -78,7 +78,7 @@
 
     <!-- 网页引用 -->
     <div
-      v-if="firecrawlEnabled && showUrlInput"
+      v-if="searchProviderEnabled && showUrlInput"
       class="url-input-section"
     >
       <div class="url-input-header">
@@ -244,7 +244,7 @@
           上传参考图
         </n-tooltip>
         <n-tooltip
-          v-if="firecrawlEnabled"
+          v-if="searchProviderEnabled"
           trigger="hover"
         >
           <template #trigger>
@@ -332,7 +332,7 @@ interface UploadedImage {
 const props = defineProps<{
   modelValue: string;
   loading: boolean;
-  firecrawlEnabled: boolean;
+  searchProviderEnabled: boolean;
   pageCount: number;
   enableSearch: boolean;
 }>();
