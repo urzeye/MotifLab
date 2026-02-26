@@ -421,13 +421,15 @@ def create_history_blueprint():
 
     # ==================== 下载功能 ====================
 
-    @history_bp.route('/history/<record_id>/download', methods=['GET'])
+    @history_bp.route('/history/<record_id>/download', methods=['GET', 'POST'])
     def download_history_zip(record_id):
         """
         下载历史记录的所有图片为 ZIP 文件
 
         如果该记录包含已生成文案（标题/正文/标签），
         会在压缩包内额外附带 `full_content.txt`，内容与前端“复制全文”一致。
+        当使用 POST 且请求体提供 content 时，优先使用请求里的 content 生成全文，
+        用于兜底历史记录尚未落库的场景。
 
         支持两种存储模式：
         - local: 从本地 history/{task_id}/ 目录读取
@@ -452,7 +454,15 @@ def create_history_blueprint():
 
             task_id = record.get('images', {}).get('task_id')
             images = record.get('images', {}).get('generated', [])
-            content_text = _build_full_content_text(record.get('content'))
+
+            override_content = None
+            if request.method == 'POST':
+                payload = request.get_json(silent=True) or {}
+                override_content = payload.get('content')
+
+            record_content_text = _build_full_content_text(record.get('content'))
+            override_content_text = _build_full_content_text(override_content)
+            content_text = override_content_text or record_content_text
 
             if not task_id:
                 return jsonify({

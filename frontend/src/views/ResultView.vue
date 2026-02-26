@@ -163,7 +163,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGeneratorStore } from '../stores/generator'
-import { regenerateImage, updateHistory } from '../api'
+import { downloadHistoryZip, regenerateImage, updateHistory } from '../api'
 import ContentDisplay from '../components/result/ContentDisplay.vue'
 
 const router = useRouter()
@@ -194,24 +194,71 @@ const downloadOne = (image: any) => {
   }
 }
 
-const downloadAll = () => {
-  if (store.recordId) {
-    const link = document.createElement('a')
-    link.href = `/api/history/${store.recordId}/download`
-    link.click()
-  } else {
-    store.images.forEach((image, index) => {
-      if (image.url) {
-        setTimeout(() => {
-          const link = document.createElement('a')
-          const baseUrl = image.url.split('?')[0]
-          link.href = baseUrl + '?thumbnail=false'
-          link.download = `rednote_page_${image.index + 1}.png`
-          link.click()
-        }, index * 300)
+function hasPersistableContent() {
+  const hasTitles = Array.isArray(store.content.titles) && store.content.titles.some(t => String(t || '').trim())
+  const hasCopywriting = Boolean(String(store.content.copywriting || '').trim())
+  const hasTags = Array.isArray(store.content.tags) && store.content.tags.some(t => String(t || '').trim())
+  return hasTitles || hasCopywriting || hasTags
+}
+
+async function syncContentToHistory() {
+  if (!store.recordId || !hasPersistableContent()) return
+
+  try {
+    await updateHistory(store.recordId, {
+      content: {
+        titles: [...(store.content.titles || [])],
+        copywriting: String(store.content.copywriting || ''),
+        tags: [...(store.content.tags || [])]
       }
     })
+  } catch (error) {
+    console.error('下载前同步文案到历史记录失败:', error)
   }
+}
+
+const downloadAll = async () => {
+  if (store.recordId) {
+    await syncContentToHistory()
+
+    const fallbackLink = document.createElement('a')
+    fallbackLink.href = `/api/history/${store.recordId}/download?_=${Date.now()}`
+
+    try {
+      const contentPayload = hasPersistableContent()
+        ? {
+            titles: [...(store.content.titles || [])],
+            copywriting: String(store.content.copywriting || ''),
+            tags: [...(store.content.tags || [])]
+          }
+        : undefined
+
+      const { blob, filename } = await downloadHistoryZip(store.recordId, contentPayload)
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      link.click()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('打包下载失败，回退到直链下载:', error)
+      fallbackLink.click()
+    }
+
+    return
+  }
+
+  store.images.forEach((image, index) => {
+    if (image.url) {
+      setTimeout(() => {
+        const link = document.createElement('a')
+        const baseUrl = image.url.split('?')[0]
+        link.href = baseUrl + '?thumbnail=false'
+        link.download = `rednote_page_${image.index + 1}.png`
+        link.click()
+      }, index * 300)
+    }
+  })
 }
 
 const handleRegenerate = async (image: any) => {

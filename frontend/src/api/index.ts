@@ -60,6 +60,22 @@ function handleAxiosError(error: any, defaultMessage: string, defaultReturn: any
   return { success: false, ...defaultReturn, error: '未知错误，请稍后重试' }
 }
 
+function extractDownloadFilename(contentDisposition: string): string | undefined {
+  if (!contentDisposition) return undefined
+
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)
+  if (utf8Match && utf8Match[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]).trim()
+    } catch {
+      return utf8Match[1].trim()
+    }
+  }
+
+  const plainMatch = contentDisposition.match(/filename="?([^";]+)"?/i)
+  return plainMatch && plainMatch[1] ? plainMatch[1].trim() : undefined
+}
+
 /**
  * SSE 事件处理器类型
  */
@@ -737,6 +753,37 @@ export interface Config {
     api_key_masked?: string
     base_url?: string
     _has_api_key?: boolean
+  }
+}
+
+export async function downloadHistoryZip(
+  recordId: string,
+  content?: { titles: string[]; copywriting: string; tags: string[] }
+): Promise<{ blob: Blob; filename: string }> {
+  const hasContent = Boolean(
+    content && (
+      (Array.isArray(content.titles) && content.titles.some(t => String(t || '').trim())) ||
+      String(content.copywriting || '').trim() ||
+      (Array.isArray(content.tags) && content.tags.some(t => String(t || '').trim()))
+    )
+  )
+
+  const requestConfig = {
+    responseType: 'blob' as const,
+    timeout: 60000,
+    params: { _: Date.now() }
+  }
+
+  const response = hasContent
+    ? await axios.post(`${API_BASE_URL}/history/${recordId}/download`, { content }, requestConfig)
+    : await axios.get(`${API_BASE_URL}/history/${recordId}/download`, requestConfig)
+
+  const contentDisposition = String(response.headers['content-disposition'] || '')
+  const filename = extractDownloadFilename(contentDisposition) || 'images.zip'
+
+  return {
+    blob: response.data,
+    filename
   }
 }
 

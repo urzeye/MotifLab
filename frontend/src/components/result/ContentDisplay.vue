@@ -150,7 +150,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useGeneratorStore } from '../../stores/generator'
-import { generateContent } from '../../api'
+import { generateContent, updateHistory } from '../../api'
 
 const store = useGeneratorStore()
 
@@ -212,7 +212,25 @@ async function handleGenerate() {
     const result = await generateContent(store.topic, store.outline.raw, store.recordId || undefined)
 
     if (result.success && result.titles && result.copywriting && result.tags) {
-      store.setContent(result.titles, result.copywriting, result.tags)
+      const titles = result.titles
+      const copywriting = result.copywriting
+      const tags = result.tags
+
+      store.setContent(titles, copywriting, tags)
+
+      if (store.recordId) {
+        try {
+          await updateHistory(store.recordId, {
+            content: {
+              titles,
+              copywriting,
+              tags
+            }
+          })
+        } catch (syncError) {
+          console.error('生成文案后回写历史记录失败:', syncError)
+        }
+      }
     } else {
       store.setContentError(result.error || '生成失败')
     }
