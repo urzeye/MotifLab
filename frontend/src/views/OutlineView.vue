@@ -850,13 +850,15 @@ watch(
 .textarea-paper {
   width: 100%;
   min-height: 280px;
+  max-height: 420px;
   border: 1px solid var(--border-color);
   background: transparent;
   padding: 12px;
   font-size: 16px;
   line-height: 1.72;
   color: var(--text-main);
-  resize: vertical;
+  resize: none;
+  overflow-y: auto;
   font-family: inherit;
   border-radius: 10px;
 }

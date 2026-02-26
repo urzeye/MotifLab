@@ -126,6 +126,12 @@ function saveState(state: GeneratorState) {
 
 const IMAGE_SUGGESTION_MARKER_RE =
   /^\s*(?:[-*+]\s*)?(?:【\s*)?(?:配图建议|图片建议|画面建议|视觉建议)(?:\s*】)?\s*(?:[:：]\s*)?(.*)$/im
+const PAGE_TYPE_MARKER_RE = /^\s*\[(?:封面|内容|总结)\]\s*\n?/i
+
+function stripLeadingPageTypeMarker(content: string): string {
+  const text = String(content || '').replace(/\r\n/g, '\n')
+  return text.replace(PAGE_TYPE_MARKER_RE, '').trim()
+}
 
 function extractEmbeddedImageSuggestion(content: string): { content: string; suggestion?: string } {
   const text = String(content || '').replace(/\r\n/g, '\n').trim()
@@ -185,7 +191,8 @@ function normalizeOutlinePages(pages: Page[]): Page[] {
   if (!Array.isArray(pages)) return []
 
   return pages.map((page, idx) => {
-    const extracted = extractEmbeddedImageSuggestion(String(page?.content || ''))
+    const contentWithoutTypeMarker = stripLeadingPageTypeMarker(String(page?.content || ''))
+    const extracted = extractEmbeddedImageSuggestion(contentWithoutTypeMarker)
     const explicitSuggestion = String((page as any)?.image_suggestion || (page as any)?.imageSuggestion || '').trim()
     const mergedSuggestion = mergeImageSuggestion(explicitSuggestion, extracted.suggestion)
 
@@ -306,7 +313,7 @@ export const useGeneratorStore = defineStore('generator', {
     updatePage(index: number, content: string) {
       const page = this.outline.pages.find(p => p.index === index)
       if (page) {
-        page.content = content
+        page.content = stripLeadingPageTypeMarker(content)
         // 同步更新 raw 文本
         this.syncRawFromPages()
       }
@@ -345,7 +352,7 @@ export const useGeneratorStore = defineStore('generator', {
       const newPage: Page = {
         index: this.outline.pages.length,
         type,
-        content
+        content: stripLeadingPageTypeMarker(content)
       }
       this.outline.pages.push(newPage)
       // 同步更新 raw 文本
@@ -362,7 +369,7 @@ export const useGeneratorStore = defineStore('generator', {
       const newPage: Page = {
         index: afterIndex + 1,
         type,
-        content
+        content: stripLeadingPageTypeMarker(content)
       }
       this.outline.pages.splice(afterIndex + 1, 0, newPage)
       // 重新索引所有页面
