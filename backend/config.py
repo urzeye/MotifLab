@@ -118,12 +118,33 @@ class Config:
     @classmethod
     def get_active_image_provider(cls) -> str:
         config = cls.load_image_providers_config()
-        return config.get('active_provider', 'google_genai')
+        return cls._resolve_active_provider(config, 'google_genai')
 
     @classmethod
     def get_active_text_provider(cls) -> str:
         config = cls.load_text_providers_config()
-        return config.get('active_provider', 'google_gemini')
+        return cls._resolve_active_provider(config, 'google_gemini')
+
+    @classmethod
+    def _resolve_active_provider(cls, config: Dict[str, Any], default_provider: str) -> str:
+        """解析当前激活服务商；无效时回退到第一个可用服务商。"""
+        providers = config.get('providers', {}) or {}
+        active_provider = (config.get('active_provider') or '').strip()
+
+        if active_provider and active_provider in providers:
+            return active_provider
+
+        if providers:
+            fallback = next(iter(providers.keys()))
+            if active_provider:
+                logger.warning(
+                    f"active_provider='{active_provider}' 不存在，自动回退到可用服务商: {fallback}"
+                )
+            else:
+                logger.warning(f"active_provider 为空，自动回退到可用服务商: {fallback}")
+            return fallback
+
+        return default_provider
 
     @classmethod
     def _get_provider_config(cls, config_type: str, provider_name: Optional[str] = None) -> Dict[str, Any]:
