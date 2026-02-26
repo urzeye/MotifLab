@@ -8,19 +8,25 @@
 """
 
 import logging
+from copy import deepcopy
 from pathlib import Path
-import yaml
 from flask import Blueprint, request, jsonify
 from backend.middleware import require_auth
 from .utils import prepare_providers_for_response
 
 logger = logging.getLogger(__name__)
 
-# 配置文件路径
+# 配置标识（保留 Path 形式，兼容现有调用签名）
 CONFIG_DIR = Path(__file__).parent.parent.parent
-IMAGE_CONFIG_PATH = CONFIG_DIR / 'image_providers.yaml'
-TEXT_CONFIG_PATH = CONFIG_DIR / 'text_providers.yaml'
-FIRECRAWL_CONFIG_PATH = CONFIG_DIR / 'firecrawl_config.yaml'
+IMAGE_CONFIG_PATH = CONFIG_DIR / "image_providers.yaml"
+TEXT_CONFIG_PATH = CONFIG_DIR / "text_providers.yaml"
+FIRECRAWL_CONFIG_PATH = CONFIG_DIR / "firecrawl_config.yaml"
+
+_CONFIG_NAME_BY_PATH = {
+    IMAGE_CONFIG_PATH: "image_providers",
+    TEXT_CONFIG_PATH: "text_providers",
+    FIRECRAWL_CONFIG_PATH: "firecrawl_config",
+}
 
 
 def create_config_blueprint():
@@ -207,17 +213,41 @@ def create_config_blueprint():
 # ==================== 辅助函数 ====================
 
 def _read_config(path: Path, default: dict) -> dict:
-    """读取配置文件"""
-    if path.exists():
-        with open(path, 'r', encoding='utf-8') as f:
-            return yaml.safe_load(f) or default
-    return default
+    """读取配置（由 Config 决定是 YAML 还是 Supabase）"""
+    from backend.config import Config
+
+    config_name = _CONFIG_NAME_BY_PATH.get(path)
+    if config_name == "image_providers":
+        data = Config.load_image_providers_config()
+    elif config_name == "text_providers":
+        data = Config.load_text_providers_config()
+    elif config_name == "firecrawl_config":
+        data = Config.load_firecrawl_config()
+    else:
+        logger.warning(f"未知配置路径，回退默认值: {path}")
+        return deepcopy(default)
+
+    if not isinstance(data, dict):
+        return deepcopy(default)
+    return deepcopy(data)
 
 
 def _write_config(path: Path, config: dict):
-    """写入配置文件"""
-    with open(path, 'w', encoding='utf-8') as f:
-        yaml.dump(config, f, allow_unicode=True, default_flow_style=False)
+    """写入配置（由 Config 决定是 YAML 还是 Supabase）"""
+    from backend.config import Config
+
+    config_name = _CONFIG_NAME_BY_PATH.get(path)
+    if config_name == "image_providers":
+        Config.save_image_providers_config(config)
+        return
+    if config_name == "text_providers":
+        Config.save_text_providers_config(config)
+        return
+    if config_name == "firecrawl_config":
+        Config.save_firecrawl_config(config)
+        return
+
+    raise ValueError(f"不支持写入的配置路径: {path}")
 
 
 def _update_provider_config(config_path: Path, new_data: dict):
@@ -328,21 +358,19 @@ def _load_provider_config(provider_type: str, provider_name: str, config: dict) 
     else:
         config_path = IMAGE_CONFIG_PATH
 
-    if config_path.exists():
-        with open(config_path, 'r', encoding='utf-8') as f:
-            yaml_config = yaml.safe_load(f) or {}
-            providers = yaml_config.get('providers', {})
+    yaml_config = _read_config(config_path, {"providers": {}})
+    providers = yaml_config.get("providers", {})
 
-            if provider_name in providers:
-                saved = providers[provider_name]
-                config['api_key'] = saved.get('api_key')
+    if provider_name in providers:
+        saved = providers[provider_name]
+        config["api_key"] = saved.get("api_key")
 
-                if not config['base_url']:
-                    config['base_url'] = saved.get('base_url')
-                if not config['model']:
-                    config['model'] = saved.get('model')
-                if not config.get('endpoint_type'):
-                    config['endpoint_type'] = saved.get('endpoint_type')
+        if not config["base_url"]:
+            config["base_url"] = saved.get("base_url")
+        if not config["model"]:
+            config["model"] = saved.get("model")
+        if not config.get("endpoint_type"):
+            config["endpoint_type"] = saved.get("endpoint_type")
 
     return config
 

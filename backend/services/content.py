@@ -52,7 +52,7 @@ class ContentService:
                 "未找到任何文本生成服务商配置。\n"
                 "解决方案：\n"
                 "1. 在系统设置页面添加文本生成服务商\n"
-                "2. 或手动编辑 text_providers.yaml 文件"
+                "2. 或检查当前配置存储中的文本服务商配置"
             )
 
         ordered_provider_names = []
@@ -74,7 +74,7 @@ class ContentService:
         raise ValueError(
             "未找到可用的文本生成服务商（API Key 为空或未解析）。\n"
             f"当前服务商: {available}\n"
-            "解决方案：在系统设置页面填写有效 API Key，或检查 .env 变量是否正确"
+            "解决方案：在系统设置页面填写有效 API Key，或检查密钥配置是否正确"
         )
 
     def _load_prompt_template(self) -> str:
@@ -213,7 +213,7 @@ class ContentService:
                 detailed_error = (
                     f"内容生成失败。\n"
                     f"错误详情: {error_msg}\n"
-                    "建议：检查配置文件 text_providers.yaml"
+                    "建议：检查文本服务商配置（系统设置）"
                 )
 
             return {
