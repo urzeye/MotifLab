@@ -18,6 +18,7 @@ import ConceptHistoryView from '../views/ConceptHistoryView.vue'
 import HistoryView from '../views/HistoryView.vue'
 import SettingsView from '../views/SettingsView.vue'
 import KnowledgeView from '../views/KnowledgeView.vue'
+import TemplateMarketView from '../views/TemplateMarketView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -83,6 +84,11 @@ const router = createRouter({
       path: '/knowledge',
       name: 'knowledge',
       component: KnowledgeView
+    },
+    {
+      path: '/templates',
+      name: 'template-market',
+      component: TemplateMarketView
     },
     {
       path: '/settings',
