@@ -93,7 +93,7 @@
         ref="composerRef"
         v-model="topic"
         :loading="loading"
-        :firecrawl-enabled="firecrawlEnabled"
+        :search-provider-enabled="searchProviderEnabled"
         :page-count="pageCount"
         :enable-search="enableSearch"
         @update:pageCount="handlePageCountChange"
@@ -162,7 +162,7 @@ import { useGeneratorStore } from "../stores/generator";
 import {
   generateOutlineStream,
   createHistory,
-  getFirecrawlStatus,
+  getSearchStatus,
   getTemplateDetail,
   type OutlineStreamFinishEvent,
   type ScrapeResult,
@@ -189,8 +189,8 @@ const composerRef = ref<ComposerInputRef | null>(null);
 
 // 上传的图片文件
 const uploadedImageFiles = ref<File[]>([]);
-// Firecrawl 状态
-const firecrawlEnabled = ref(false);
+// 搜索服务可用状态
+const searchProviderEnabled = ref(false);
 const urlContent = ref<ScrapeResult | null>(null);
 const appliedTemplate = ref<TemplateItem | null>(null);
 const pageCount = ref(5);
@@ -198,9 +198,9 @@ const enableSearch = ref(false);
 
 let templateRequestSeq = 0;
 
-async function checkFirecrawlStatus() {
-  const result = await getFirecrawlStatus();
-  firecrawlEnabled.value =
+async function checkSearchStatus() {
+  const result = await getSearchStatus();
+  searchProviderEnabled.value =
     result.success && !!result.enabled && !!result.configured;
 }
 
@@ -359,7 +359,7 @@ async function handleGenerate() {
 }
 
 onMounted(() => {
-  checkFirecrawlStatus();
+  checkSearchStatus();
 });
 
 watch(

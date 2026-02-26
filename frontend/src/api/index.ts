@@ -292,8 +292,10 @@ export interface HealthResponse {
   rate_limit?: string
 }
 
-export interface FirecrawlStatusResponse {
+export interface SearchStatusResponse {
   success: boolean
+  active_provider?: string
+  provider?: string
   enabled?: boolean
   configured?: boolean
   error?: string
@@ -387,21 +389,27 @@ export async function verifyAccessToken(): Promise<boolean> {
   }
 }
 
-export async function getFirecrawlStatus(): Promise<FirecrawlStatusResponse> {
+export async function getSearchStatus(provider?: string): Promise<SearchStatusResponse> {
   try {
-    const response = await axios.get(`${API_BASE_URL}/firecrawl/status`, { timeout: 8000 })
+    const response = await axios.get(`${API_BASE_URL}/search/status`, {
+      timeout: 8000,
+      params: provider ? { provider } : undefined
+    })
     return response.data
   } catch (error) {
-    return handleAxiosError(error, '获取 Firecrawl 状态失败', {
+    return handleAxiosError(error, '获取搜索服务状态失败', {
       enabled: false,
       configured: false
     })
   }
 }
 
-export async function scrapeUrl(url: string): Promise<ScrapeResult> {
+export async function scrapeUrl(url: string, provider?: string): Promise<ScrapeResult> {
   try {
-    const response = await axios.post(`${API_BASE_URL}/firecrawl/scrape`, { url }, { timeout: 90000 })
+    const response = await axios.post(`${API_BASE_URL}/search/scrape`, {
+      url,
+      provider: provider || undefined
+    }, { timeout: 90000 })
     return response.data
   } catch (error) {
     return handleAxiosError(error, '抓取网页失败')
@@ -748,11 +756,16 @@ export async function scanAllTasks(): Promise<{
 export interface Config {
   text_generation: { active_provider: string; providers: Record<string, any> }
   image_generation: { active_provider: string; providers: Record<string, any> }
-  firecrawl?: {
-    enabled: boolean
-    api_key_masked?: string
-    base_url?: string
-    _has_api_key?: boolean
+  search: {
+    active_provider: string
+    providers: Record<string, {
+      type: string
+      enabled?: boolean
+      base_url?: string
+      model?: string
+      api_key_masked?: string
+      _has_api_key?: boolean
+    }>
   }
 }
 

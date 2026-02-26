@@ -11,6 +11,8 @@ export interface Provider {
   high_concurrency?: boolean
   short_prompt?: boolean
   use_size_tag?: boolean
+  enabled?: boolean
+  _has_api_key?: boolean
 }
 
 export interface ProviderConfig {
@@ -30,23 +32,23 @@ export interface ProviderForm {
   short_prompt?: boolean
   use_size_tag?: boolean
   _has_api_key?: boolean
+  enabled?: boolean
 }
 
-export interface FirecrawlConfig {
-  enabled: boolean
-  api_key: string
-  api_key_masked: string
-  base_url: string
-  _has_api_key: boolean
-}
-
-// 文本生成服务商预设配置
-export const textProviderPresets: Record<string, {
+interface ProviderPreset {
   label: string
   base_url: string
   model: string
   endpoint?: string
-}> = {
+  enabled?: boolean
+}
+
+type ProviderCategory = 'text' | 'image' | 'search'
+
+const SEARCH_NO_KEY_REQUIRED_TYPES = new Set(['firecrawl', 'bing'])
+
+// 文本生成服务商预设配置
+export const textProviderPresets: Record<string, ProviderPreset> = {
   google_gemini: {
     label: 'Google Gemini',
     base_url: 'https://generativelanguage.googleapis.com',
@@ -102,12 +104,7 @@ export const textTypeOptions = Object.entries(textProviderPresets).map(([value, 
 }))
 
 // 图片生成服务商预设配置
-export const imageProviderPresets: Record<string, {
-  label: string
-  base_url: string
-  model: string
-  endpoint?: string
-}> = {
+export const imageProviderPresets: Record<string, ProviderPreset> = {
   google_genai: {
     label: 'Google GenAI (Imagen)',
     base_url: 'https://generativelanguage.googleapis.com',
@@ -153,10 +150,52 @@ export const imageTypeOptions = Object.entries(imageProviderPresets).map(([value
   label: preset.label
 }))
 
-function createEmptyForm(isImage: boolean): ProviderForm {
+// 搜索服务商预设配置
+export const searchProviderPresets: Record<string, ProviderPreset> = {
+  bing: {
+    label: 'Bing（默认，无需 Key）',
+    base_url: 'https://www.bing.com',
+    model: '',
+    enabled: true
+  },
+  firecrawl: {
+    label: 'Firecrawl',
+    base_url: 'https://api.firecrawl.dev',
+    model: '',
+    enabled: false
+  },
+  exa: {
+    label: 'Exa',
+    base_url: 'https://api.exa.ai',
+    model: '',
+    enabled: false
+  },
+  tavily: {
+    label: 'Tavily',
+    base_url: 'https://api.tavily.com',
+    model: '',
+    enabled: false
+  },
+  perplexity: {
+    label: 'Perplexity',
+    base_url: 'https://api.perplexity.ai',
+    model: 'sonar',
+    enabled: false
+  }
+}
+
+export const searchTypeOptions = Object.entries(searchProviderPresets).map(([value, preset]) => ({
+  value,
+  label: preset.label
+}))
+
+function createEmptyForm(category: ProviderCategory): ProviderForm {
+  const isImage = category === 'image'
+  const isSearch = category === 'search'
+
   return {
     name: '',
-    type: isImage ? 'image_api' : 'openai_compatible',
+    type: isImage ? 'image_api' : isSearch ? 'bing' : 'openai_compatible',
     api_key: '',
     api_key_masked: '',
     base_url: '',
@@ -165,7 +204,8 @@ function createEmptyForm(isImage: boolean): ProviderForm {
     high_concurrency: false,
     short_prompt: false,
     use_size_tag: isImage ? true : undefined,
-    _has_api_key: false
+    _has_api_key: false,
+    enabled: isSearch ? false : undefined
   }
 }
 
@@ -175,17 +215,23 @@ function createProviderHandler(
   showModal: Ref<boolean>,
   editing: Ref<string | null>,
   testing: Ref<boolean>,
-  isImage: boolean,
+  category: ProviderCategory,
   autoSave: () => Promise<void>
 ) {
+  const isImage = category === 'image'
+  const isSearch = category === 'search'
+
   const activate = async (name: string) => {
     config.value.active_provider = name
+    if (isSearch && config.value.providers[name]) {
+      config.value.providers[name].enabled = true
+    }
     await autoSave()
   }
 
   const openAdd = () => {
     editing.value = null
-    form.value = createEmptyForm(isImage)
+    form.value = createEmptyForm(category)
     showModal.value = true
   }
 
@@ -193,7 +239,7 @@ function createProviderHandler(
     editing.value = name
     form.value = {
       name,
-      type: provider.type || (isImage ? 'image_api' : 'openai_compatible'),
+      type: provider.type || (isImage ? 'image_api' : isSearch ? 'bing' : 'openai_compatible'),
       api_key: '',
       api_key_masked: provider.api_key_masked || '',
       base_url: provider.base_url || '',
@@ -202,7 +248,8 @@ function createProviderHandler(
       high_concurrency: provider.high_concurrency || false,
       short_prompt: provider.short_prompt || false,
       use_size_tag: isImage ? (provider.use_size_tag ?? true) : undefined,
-      _has_api_key: !!provider.api_key_masked
+      _has_api_key: !!provider._has_api_key || !!provider.api_key_masked,
+      enabled: isSearch ? !!provider.enabled : undefined
     }
     showModal.value = true
   }
@@ -216,14 +263,32 @@ function createProviderHandler(
     const name = editing.value || form.value.name
     if (!name) return alert('请填写服务商名称')
     if (!form.value.type) return alert('请选择服务商类型')
-    if (!editing.value && !form.value.api_key) return alert('请填写 API Key')
+
+    const apiKey = form.value.api_key.trim()
+    const needApiKey = !isSearch || !SEARCH_NO_KEY_REQUIRED_TYPES.has(form.value.type)
+    if (!editing.value && !apiKey && needApiKey) {
+      return alert('请填写 API Key')
+    }
 
     const existing = config.value.providers[name] || {}
-    const data: any = { type: form.value.type, model: form.value.model }
+    const data: any = { type: form.value.type }
 
-    if (form.value.api_key) data.api_key = form.value.api_key
+    const model = form.value.model.trim()
+    if (!isSearch || model || form.value.type === 'perplexity') {
+      data.model = model
+    }
+
+    if (apiKey) data.api_key = apiKey
     else if (existing.api_key) data.api_key = existing.api_key
-    if (form.value.base_url) data.base_url = form.value.base_url
+
+    const baseUrl = form.value.base_url.trim()
+    if (isSearch || baseUrl) {
+      data.base_url = baseUrl
+    }
+
+    if (isSearch) {
+      data.enabled = !!form.value.enabled
+    }
 
     if (isImage) {
       data.high_concurrency = form.value.high_concurrency
@@ -232,8 +297,10 @@ function createProviderHandler(
         data.endpoint_type = form.value.endpoint_type || '/v1/images/generations'
         data.use_size_tag = form.value.use_size_tag ?? true
       }
-    } else {
-      if (form.value.type === 'openai_compatible') data.endpoint_type = form.value.endpoint_type
+    } else if (!isSearch) {
+      if (form.value.type === 'openai_compatible') {
+        data.endpoint_type = form.value.endpoint_type
+      }
     }
 
     config.value.providers[name] = data
@@ -251,14 +318,20 @@ function createProviderHandler(
   const test = async () => {
     testing.value = true
     try {
-      const result = await testConnection({
+      const payload: any = {
         type: form.value.type,
         provider_name: editing.value || undefined,
-        api_key: form.value.api_key || undefined,
-        base_url: form.value.base_url,
-        model: form.value.model,
-        endpoint_type: form.value.endpoint_type || '/v1/images/generations'
-      })
+        api_key: form.value.api_key.trim() || undefined,
+        base_url: form.value.base_url.trim() || undefined,
+        model: form.value.model.trim() || undefined
+      }
+      if (isImage) {
+        payload.endpoint_type = form.value.endpoint_type || '/v1/images/generations'
+      } else if (!isSearch) {
+        payload.endpoint_type = form.value.endpoint_type || '/v1/chat/completions'
+      }
+
+      const result = await testConnection(payload)
       if (result.success) alert('✅ ' + result.message)
     } catch (e: any) {
       alert('❌ 连接失败：' + (e.response?.data?.error || e.message))
@@ -269,13 +342,19 @@ function createProviderHandler(
 
   const testInList = async (name: string, provider: Provider) => {
     try {
-      const result = await testConnection({
+      const payload: any = {
         type: provider.type,
         provider_name: name,
         base_url: provider.base_url,
-        model: provider.model,
-        endpoint_type: provider.endpoint_type || '/v1/images/generations'
-      })
+        model: provider.model
+      }
+      if (isImage) {
+        payload.endpoint_type = provider.endpoint_type || '/v1/images/generations'
+      } else if (!isSearch) {
+        payload.endpoint_type = provider.endpoint_type || '/v1/chat/completions'
+      }
+
+      const result = await testConnection(payload)
       if (result.success) alert('✅ ' + result.message)
     } catch (e: any) {
       alert('❌ 连接失败：' + (e.response?.data?.error || e.message))
@@ -285,48 +364,47 @@ function createProviderHandler(
   return { activate, openAdd, openEdit, close, save, remove, test, testInList }
 }
 
+function normalizeProviderConfig(data: any, fallbackActive = ''): ProviderConfig {
+  if (!data || typeof data !== 'object') {
+    return { active_provider: fallbackActive, providers: {} }
+  }
+  return {
+    active_provider: data.active_provider || fallbackActive,
+    providers: data.providers || {}
+  }
+}
+
 export function useProviderForm() {
   const loading = ref(true)
   const saving = ref(false)
   const testingText = ref(false)
   const testingImage = ref(false)
-  const testingFirecrawl = ref(false)
+  const testingSearch = ref(false)
 
   const textConfig = ref<ProviderConfig>({ active_provider: '', providers: {} })
   const imageConfig = ref<ProviderConfig>({ active_provider: '', providers: {} })
-  const firecrawlConfig = ref<FirecrawlConfig>({
-    enabled: false,
-    api_key: '',
-    api_key_masked: '',
-    base_url: '',
-    _has_api_key: false
-  })
+  const searchConfig = ref<ProviderConfig>({ active_provider: 'bing', providers: {} })
 
   const showTextModal = ref(false)
   const editingTextProvider = ref<string | null>(null)
-  const textForm = ref<ProviderForm>(createEmptyForm(false))
+  const textForm = ref<ProviderForm>(createEmptyForm('text'))
 
   const showImageModal = ref(false)
   const editingImageProvider = ref<string | null>(null)
-  const imageForm = ref<ProviderForm>(createEmptyForm(true))
+  const imageForm = ref<ProviderForm>(createEmptyForm('image'))
+
+  const showSearchModal = ref(false)
+  const editingSearchProvider = ref<string | null>(null)
+  const searchForm = ref<ProviderForm>(createEmptyForm('search'))
 
   async function loadConfig() {
     loading.value = true
     try {
       const result = await getConfig()
       if (result.success && result.config) {
-        textConfig.value = {
-          active_provider: result.config.text_generation.active_provider,
-          providers: result.config.text_generation.providers
-        }
-        imageConfig.value = result.config.image_generation
-        firecrawlConfig.value = {
-          enabled: result.config.firecrawl?.enabled || false,
-          api_key: '',
-          api_key_masked: result.config.firecrawl?.api_key_masked || '',
-          base_url: result.config.firecrawl?.base_url || '',
-          _has_api_key: result.config.firecrawl?._has_api_key || false
-        }
+        textConfig.value = normalizeProviderConfig(result.config.text_generation)
+        imageConfig.value = normalizeProviderConfig(result.config.image_generation)
+        searchConfig.value = normalizeProviderConfig(result.config.search, 'bing')
       } else {
         alert('加载配置失败: ' + (result.error || '未知错误'))
       }
@@ -340,8 +418,12 @@ export function useProviderForm() {
   async function autoSaveConfig() {
     try {
       const config: Partial<Config> = {
-        text_generation: { active_provider: textConfig.value.active_provider, providers: textConfig.value.providers },
-        image_generation: imageConfig.value
+        text_generation: {
+          active_provider: textConfig.value.active_provider,
+          providers: textConfig.value.providers
+        },
+        image_generation: imageConfig.value,
+        search: searchConfig.value
       }
       const result = await updateConfig(config)
       if (result.success) await loadConfig()
@@ -350,64 +432,52 @@ export function useProviderForm() {
     }
   }
 
-  async function saveFirecrawlConfig() {
-    saving.value = true
-    try {
-      const payload: NonNullable<Config['firecrawl']> & { api_key?: string } = {
-        enabled: !!firecrawlConfig.value.enabled,
-        base_url: firecrawlConfig.value.base_url.trim()
-      }
-      if (firecrawlConfig.value.api_key.trim()) {
-        payload.api_key = firecrawlConfig.value.api_key.trim()
-      }
-      const result = await updateConfig({ firecrawl: payload })
-      if (!result.success) {
-        alert('保存 Firecrawl 配置失败: ' + (result.error || '未知错误'))
-        return
-      }
-      await loadConfig()
-    } catch (e) {
-      alert('保存 Firecrawl 配置失败: ' + String(e))
-    } finally {
-      saving.value = false
-    }
-  }
-
-  async function testFirecrawlConnection() {
-    testingFirecrawl.value = true
-    try {
-      const result = await testConnection({
-        type: 'firecrawl',
-        api_key: firecrawlConfig.value.api_key.trim() || undefined,
-        base_url: firecrawlConfig.value.base_url.trim() || undefined
-      })
-      if (result.success) {
-        alert('✅ ' + result.message)
-      } else {
-        alert('❌ 连接失败：' + (result.error || '未知错误'))
-      }
-    } catch (e: any) {
-      alert('❌ 连接失败：' + (e.response?.data?.error || e.message))
-    } finally {
-      testingFirecrawl.value = false
-    }
-  }
-
-  function updateFirecrawlConfig(data: Partial<FirecrawlConfig>) {
-    firecrawlConfig.value = {
-      ...firecrawlConfig.value,
-      ...data
-    }
-  }
-
-  const textHandler = createProviderHandler(textConfig, textForm, showTextModal, editingTextProvider, testingText, false, autoSaveConfig)
-  const imageHandler = createProviderHandler(imageConfig, imageForm, showImageModal, editingImageProvider, testingImage, true, autoSaveConfig)
+  const textHandler = createProviderHandler(
+    textConfig,
+    textForm,
+    showTextModal,
+    editingTextProvider,
+    testingText,
+    'text',
+    autoSaveConfig
+  )
+  const imageHandler = createProviderHandler(
+    imageConfig,
+    imageForm,
+    showImageModal,
+    editingImageProvider,
+    testingImage,
+    'image',
+    autoSaveConfig
+  )
+  const searchHandler = createProviderHandler(
+    searchConfig,
+    searchForm,
+    showSearchModal,
+    editingSearchProvider,
+    testingSearch,
+    'search',
+    autoSaveConfig
+  )
 
   return {
-    loading, saving, testingText, testingImage, testingFirecrawl,
-    textConfig, imageConfig, firecrawlConfig,
-    showTextModal, editingTextProvider, textForm,
-    showImageModal, editingImageProvider, imageForm,
+    loading,
+    saving,
+    testingText,
+    testingImage,
+    testingSearch,
+    textConfig,
+    imageConfig,
+    searchConfig,
+    showTextModal,
+    editingTextProvider,
+    textForm,
+    showImageModal,
+    editingImageProvider,
+    imageForm,
+    showSearchModal,
+    editingSearchProvider,
+    searchForm,
     loadConfig,
     // Text provider methods
     activateTextProvider: textHandler.activate,
@@ -418,7 +488,9 @@ export function useProviderForm() {
     deleteTextProvider: textHandler.remove,
     testTextConnection: textHandler.test,
     testTextProviderInList: textHandler.testInList,
-    updateTextForm: (data: ProviderForm) => { textForm.value = data },
+    updateTextForm: (data: ProviderForm) => {
+      textForm.value = data
+    },
     // Image provider methods
     activateImageProvider: imageHandler.activate,
     openAddImageModal: imageHandler.openAdd,
@@ -428,13 +500,25 @@ export function useProviderForm() {
     deleteImageProvider: imageHandler.remove,
     testImageConnection: imageHandler.test,
     testImageProviderInList: imageHandler.testInList,
-    updateImageForm: (data: ProviderForm) => { imageForm.value = data },
-    saveFirecrawlConfig,
-    testFirecrawlConnection,
-    updateFirecrawlConfig
+    updateImageForm: (data: ProviderForm) => {
+      imageForm.value = data
+    },
+    // Search provider methods
+    activateSearchProvider: searchHandler.activate,
+    openAddSearchModal: searchHandler.openAdd,
+    openEditSearchModal: searchHandler.openEdit,
+    closeSearchModal: searchHandler.close,
+    saveSearchProvider: searchHandler.save,
+    deleteSearchProvider: searchHandler.remove,
+    testSearchConnection: searchHandler.test,
+    testSearchProviderInList: searchHandler.testInList,
+    updateSearchForm: (data: ProviderForm) => {
+      searchForm.value = data
+    }
   }
 }
 
 // Type aliases for backward compatibility
 export type TextProviderForm = ProviderForm
 export type ImageProviderForm = ProviderForm
+export type SearchProviderForm = ProviderForm
