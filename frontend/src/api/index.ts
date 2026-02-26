@@ -250,6 +250,16 @@ export interface ScrapeResult {
   error?: string
 }
 
+export interface TemplateReferencePayload {
+  id: string
+  title: string
+  category?: string
+  description?: string
+  prompt?: string
+  stylePrompt?: string
+  tags?: string[]
+}
+
 export interface TemplateItem {
   id: string
   title: string
@@ -372,13 +382,17 @@ export async function getTemplateDetail(templateId: string): Promise<TemplateDet
 export async function generateOutline(
   topic: string,
   images?: File[],
-  sourceContent?: string
+  sourceContent?: string,
+  templateRef?: TemplateReferencePayload
 ): Promise<OutlineResponse> {
   if (images && images.length > 0) {
     const formData = new FormData()
     formData.append('topic', topic)
     if (sourceContent) {
       formData.append('source_content', sourceContent)
+    }
+    if (templateRef) {
+      formData.append('template_ref', JSON.stringify(templateRef))
     }
     images.forEach(file => formData.append('images', file))
     const response = await axios.post<OutlineResponse>(`${API_BASE_URL}/outline`, formData, {
@@ -388,7 +402,8 @@ export async function generateOutline(
   }
   const response = await axios.post<OutlineResponse>(`${API_BASE_URL}/outline`, {
     topic,
-    source_content: sourceContent || undefined
+    source_content: sourceContent || undefined,
+    template_ref: templateRef || undefined
   })
   return response.data
 }

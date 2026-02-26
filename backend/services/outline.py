@@ -144,18 +144,43 @@ class OutlineService:
             f"{content}"
         )
 
+    def _build_template_reference(self, template_ref: Optional[Dict[str, Any]]) -> str:
+        """构造模板参考片段：只参考布局和风格，不覆盖用户主题。"""
+        if not template_ref or not isinstance(template_ref, dict):
+            return ""
+
+        title = str(template_ref.get("title", "")).strip()
+        description = str(template_ref.get("description", "")).strip()
+        style_prompt = str(
+            template_ref.get("stylePrompt") or template_ref.get("style_prompt") or ""
+        ).strip()
+
+        if not any([title, description, style_prompt]):
+            return ""
+
+        return (
+            "\n\n【模板参考（仅布局与风格）】\n"
+            "用户已选择模板，请仅参考该模板的版式结构、视觉风格和表达节奏，"
+            "不要替换或改写用户输入的主题。\n"
+            f"- 模板名称: {title or '未提供'}\n"
+            f"- 描述: {description or '未提供'}\n"
+            f"- 风格提示: {style_prompt or '未提供'}\n"
+        )
+
     def generate_outline(
         self,
         topic: str,
         images: Optional[List[bytes]] = None,
         source_content: Optional[str] = None,
+        template_ref: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         try:
             logger.info(
                 "开始生成大纲: "
                 f"topic={topic[:50]}..., "
                 f"images={len(images) if images else 0}, "
-                f"has_source={bool(source_content)}"
+                f"has_source={bool(source_content)}, "
+                f"has_template_ref={bool(template_ref)}"
             )
             needs_image_support = bool(images and len(images) > 0)
             client, selected_provider_name, provider_config = self._get_client(
@@ -163,6 +188,7 @@ class OutlineService:
             )
             prompt = self.prompt_template.format(topic=topic)
             prompt += self._build_source_reference(source_content)
+            prompt += self._build_template_reference(template_ref)
 
             if images and len(images) > 0:
                 prompt += f"\n\n注意：用户提供了 {len(images)} 张参考图片，请在生成大纲时考虑这些图片的内容和风格。这些图片可能是产品图、个人照片或场景图，请根据图片内容来优化大纲，使生成的内容与图片相关联。"
