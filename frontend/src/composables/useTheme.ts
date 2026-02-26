@@ -1,58 +1,79 @@
-import { ref, watch, onMounted, onUnmounted } from "vue";
+import { ref } from "vue";
 
 export type ThemeType = "system" | "light" | "dark";
 
-export function useTheme() {
-  const theme = ref<ThemeType>("system");
-  const isDark = ref(true);
+const STORAGE_KEY = "renderai-theme";
+const theme = ref<ThemeType>("system");
+const isDark = ref(true);
 
-  let mediaQuery: MediaQueryList | null = null;
+let mediaQuery: MediaQueryList | null = null;
+let initialized = false;
+let listenerRegistered = false;
 
-  const applyTheme = (t: ThemeType) => {
-    let activeTheme: "light" | "dark" = "dark";
+const isValidTheme = (value: string | null): value is ThemeType =>
+  value === "system" || value === "light" || value === "dark";
 
-    if (t === "system") {
-      activeTheme = mediaQuery?.matches ? "dark" : "light";
-    } else {
-      activeTheme = t;
-    }
+const resolveActiveTheme = (targetTheme: ThemeType): "light" | "dark" => {
+  if (targetTheme === "system") {
+    return mediaQuery?.matches ? "dark" : "light";
+  }
+  return targetTheme;
+};
 
-    isDark.value = activeTheme === "dark";
+const applyTheme = (targetTheme: ThemeType) => {
+  const activeTheme = resolveActiveTheme(targetTheme);
+  isDark.value = activeTheme === "dark";
 
-    if (activeTheme === "light") {
-      document.documentElement.setAttribute("data-theme", "light");
-    } else {
-      document.documentElement.removeAttribute("data-theme");
-    }
-  };
+  if (activeTheme === "light") {
+    document.documentElement.setAttribute("data-theme", "light");
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+  document.documentElement.style.colorScheme = activeTheme;
+};
 
-  const handleSystemThemeChange = (e: MediaQueryListEvent) => {
-    if (theme.value === "system") {
-      applyTheme("system");
-    }
-  };
+const ensureMediaQuery = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
 
-  onMounted(() => {
-    // 监听系统主题变化
+  if (!mediaQuery) {
     mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    mediaQuery.addEventListener("change", handleSystemThemeChange);
+  }
 
-    // 从 localStorage 读取设定
-    const savedTheme = localStorage.getItem("renderai-theme") as ThemeType;
-    if (savedTheme && ["system", "light", "dark"].includes(savedTheme)) {
-      theme.value = savedTheme;
-    }
+  if (!listenerRegistered && mediaQuery) {
+    mediaQuery.addEventListener("change", () => {
+      if (theme.value === "system") {
+        applyTheme("system");
+      }
+    });
+    listenerRegistered = true;
+  }
+};
 
-    applyTheme(theme.value);
-  });
+const initializeTheme = () => {
+  if (initialized || typeof window === "undefined") {
+    return;
+  }
 
-  onUnmounted(() => {
-    mediaQuery?.removeEventListener("change", handleSystemThemeChange);
-  });
+  ensureMediaQuery();
+
+  const savedTheme = localStorage.getItem(STORAGE_KEY);
+  if (isValidTheme(savedTheme)) {
+    theme.value = savedTheme;
+  }
+
+  applyTheme(theme.value);
+  initialized = true;
+};
+
+export function useTheme() {
+  initializeTheme();
 
   const setTheme = (newTheme: ThemeType) => {
+    ensureMediaQuery();
     theme.value = newTheme;
-    localStorage.setItem("renderai-theme", newTheme);
+    localStorage.setItem(STORAGE_KEY, newTheme);
     applyTheme(newTheme);
   };
 

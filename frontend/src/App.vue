@@ -4,7 +4,7 @@
     :class="{ 'sidebar-collapsed': sidebarCollapsed }"
   >
     <n-config-provider
-      :theme="darkTheme"
+      :theme="isDark ? darkTheme : null"
       :theme-overrides="themeOverrides"
       style="display: contents"
     >
@@ -329,6 +329,8 @@ const themeOverrides: GlobalThemeOverrides = {
   },
 };
 
+const { isDark } = useTheme();
+
 // 侧边栏折叠状态
 const sidebarCollapsed = ref(false);
 
@@ -343,7 +345,6 @@ const toggleSidebar = () => {
 onMounted(() => {
   setupAutoSave();
   // 初始化主题
-  useTheme();
   // 恢复侧边栏状态
   const saved = localStorage.getItem("sidebarCollapsed");
   if (saved === "true") {
