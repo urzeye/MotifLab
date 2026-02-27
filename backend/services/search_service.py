@@ -13,6 +13,8 @@ import requests
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 
+from backend.domain.ports import SearchProviderPort
+
 logger = logging.getLogger(__name__)
 
 urllib3.disable_warnings(InsecureRequestWarning)
@@ -129,7 +131,7 @@ def _build_success(url: str, title: str, content: str) -> Dict[str, Any]:
     }
 
 
-class BaseSearchProvider:
+class BaseSearchProvider(SearchProviderPort):
     """搜索抓取服务商基类。"""
 
     provider_type = "base"

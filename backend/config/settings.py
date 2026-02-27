@@ -10,6 +10,8 @@ import requests
 import yaml
 from dotenv import load_dotenv
 
+from backend.domain.ports import ConfigStorePort
+
 logger = logging.getLogger(__name__)
 
 CONFIG_STORAGE_MODE_ENV = "CONFIG_STORAGE_MODE"
@@ -94,7 +96,7 @@ def _load_dotenv_file():
         logger.debug(f"项目根目录未找到 .env: {env_path}，已尝试从工作目录加载")
 
 
-class BaseConfigStore:
+class BaseConfigStore(ConfigStorePort):
     """配置存储抽象基类。"""
 
     def load(self, config_name: str, default: Dict[str, Any]) -> Dict[str, Any]:

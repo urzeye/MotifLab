@@ -239,3 +239,27 @@ Verification:
 1. `python -m py_compile ...` passed for all newly modified skill and concept-history files.
 2. `GET /api/concept/history` returned `200` and includes `X-Request-ID`.
 3. `GET /api/health` / `GET /api/config` / `GET /api/search/status` still returned `200`.
+
+## Execution Progress (2026-02-27, Iteration 4)
+
+Completed in this iteration:
+
+1. Added domain port layer (`backend/domain/ports`) to formalize adapter contracts:
+   - `ConfigStorePort`
+   - `HistoryRepositoryPort`
+   - `ConceptHistoryRepositoryPort`
+   - `SearchProviderPort`
+   - `ImageProviderPort`
+   - `PublishGatewayPort`
+2. Aligned current implementations to domain ports:
+   - `BaseConfigStore` now conforms to `ConfigStorePort`
+   - `BaseSearchProvider` now conforms to `SearchProviderPort`
+   - history/concept-history adapter protocols are bound to repository ports
+3. Kept route behavior stable while improving extensibility:
+   - search route uses container registry first, fallback preserved
+   - all checked endpoints remain backward compatible
+
+Verification:
+
+1. `python -m py_compile ...` passed for domain ports and aligned implementations.
+2. `GET /api/health`, `GET /api/search/status`, `GET /api/concept/history` all returned `200` with `X-Request-ID`.

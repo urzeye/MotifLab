@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional, Protocol
 
+from backend.domain.ports import ConceptHistoryRepositoryPort
+
 STORAGE_MODE_LOCAL = "local"
 STORAGE_MODE_SUPABASE = "supabase"
 
 
-class ConceptHistoryStorageAdapterProtocol(Protocol):
+class ConceptHistoryStorageAdapterProtocol(ConceptHistoryRepositoryPort, Protocol):
     """概念历史存储适配器协议。"""
 
     def create_record(
