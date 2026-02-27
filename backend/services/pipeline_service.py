@@ -7,7 +7,7 @@
 import logging
 from typing import Any, Dict, Generator, Optional
 
-from backend.application.services import get_provider_config_service
+from backend.application.services.provider_config_service import get_provider_config_service
 from backend.pipelines import RedBookPipeline, ConceptPipeline
 from backend.core.base_pipeline import BasePipeline, PipelineEvent
 
