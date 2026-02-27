@@ -430,3 +430,25 @@ Verification:
 5. `POST /api/regenerate` (missing params) returned `400` with `meta.trace_id`.
 6. `GET /api/task/nonexistent` returned `404` with `meta.trace_id`.
 7. `GET /api/health` returned `200` with `meta.trace_id`.
+
+## Execution Progress (2026-02-27, Iteration 13)
+
+Completed in this iteration:
+
+1. Unified response helper usage in publish routes:
+   - `backend/routes/publish_routes.py` switched from `jsonify` to `json_response(...)`
+   - all JSON responses now consistently include `meta.trace_id`
+2. Reduced duplicated async loop boilerplate in route layer:
+   - added `_run_async(coro)` helper in publish route module
+   - centralized event-loop lifecycle management for MCP/login/publish/list/search flows
+3. Applied safer JSON parsing for publish POST APIs:
+   - `request.get_json(silent=True)` + dict fallback in publish endpoints
+   - preserved existing validation and status-code behavior
+
+Verification:
+
+1. `python -m py_compile` passed for `publish_routes.py`.
+2. `GET /api/publish/status` returned `200` with `meta.trace_id`.
+3. `GET /api/publish/search` (missing keyword) returned `400` with `meta.trace_id`.
+4. `POST /api/publish/xiaohongshu` (missing required fields) returned `400` with `meta.trace_id`.
+5. `POST /api/publish/video` (missing required fields) returned `400` with `meta.trace_id`.
