@@ -58,7 +58,7 @@
             v-model="accessTokenInput"
             class="token-input"
             :type="showToken ? 'text' : 'password'"
-            placeholder="输入 REDINK_AUTH_TOKEN"
+            placeholder="输入 MOTIFLAB_AUTH_TOKEN"
             autocomplete="off"
             spellcheck="false"
           />

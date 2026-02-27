@@ -2,7 +2,7 @@ import { ref } from "vue";
 
 export type ThemeType = "system" | "light" | "dark";
 
-const STORAGE_KEY = "renderai-theme";
+const STORAGE_KEY = "motiflab-theme";
 const theme = ref<ThemeType>("system");
 const isDark = ref(true);
 

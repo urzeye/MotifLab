@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# RenderInk 工具安装脚本
+# MotifLab 工具安装脚本
 # 自动下载并安装 xiaohongshu-mcp 到 tools/ 目录
 
 set -e
@@ -16,7 +16,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${BLUE}📦 RenderInk 工具安装脚本${NC}"
+echo -e "${BLUE}📦 MotifLab 工具安装脚本${NC}"
 echo ""
 
 # 创建工具目录

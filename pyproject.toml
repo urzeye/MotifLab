@@ -1,7 +1,7 @@
 [project]
-name = "renderai-generator"
+name = "motiflab"
 version = "0.1.0"
-description = "渲染AI 图文生成器"
+description = "MotifLab"
 requires-python = ">=3.9"
 dependencies = [
     "flask>=3.0.0",

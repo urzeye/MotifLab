@@ -55,9 +55,9 @@ def _configure_cors(app: Flask, settings: AppSettings, logger: logging.Logger) -
 def _configure_auth_guard(app: Flask, logger: logging.Logger) -> None:
     """注册 API 鉴权前置拦截。"""
     if is_auth_enabled():
-        logger.warning("🔒 已启用 API 访问令牌认证（REDINK_AUTH_TOKEN）")
+        logger.warning("🔒 已启用 API 访问令牌认证（MOTIFLAB_AUTH_TOKEN）")
     else:
-        logger.info("🔓 未启用 API 访问令牌认证（REDINK_AUTH_TOKEN 未设置）")
+        logger.info("🔓 未启用 API 访问令牌认证（MOTIFLAB_AUTH_TOKEN 未设置）")
 
     @app.before_request
     def _api_auth_guard():
@@ -186,7 +186,7 @@ def create_app(settings: AppSettings | None = None) -> Flask:
     """创建并装配 Flask 应用。"""
     runtime_settings = settings or AppSettings.from_env()
     logger = configure_logging(runtime_settings)
-    logger.info("🚀 正在启动 渲染AI 图文生成器...")
+    logger.info("🚀 正在启动 MotifLab...")
 
     app = _create_flask_app(runtime_settings, logger)
     app.extensions["backend_container"] = build_container()

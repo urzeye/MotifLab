@@ -1,7 +1,7 @@
 services:
-  redink:
+  motiflab:
     image: histonemax/redink:latest
-    container_name: redink
+    container_name: motiflab
     ports:
       - "12398:12398"
     volumes:
