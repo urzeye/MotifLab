@@ -556,3 +556,32 @@ Verification:
 2. `POST /api/content` (missing topic/outline) returned `400` with `meta.trace_id`.
 3. `POST /api/outline` (missing topic) returned `400` with `meta.trace_id`.
 4. `POST /api/outline/edit/stream` (invalid mode payload) returned `400` with `meta.trace_id`.
+
+## Execution Progress (2026-02-27, Iteration 18)
+
+Completed in this iteration:
+
+1. Added template/knowledge application services:
+   - new `backend/application/services/template_application_service.py`
+   - new `backend/application/services/knowledge_application_service.py`
+2. Migrated template/knowledge routes to application layer:
+   - `backend/routes/template_routes.py` now uses `get_template_application_service()`
+   - `backend/routes/knowledge_routes.py` now uses `get_knowledge_application_service()`
+3. Moved knowledge formatting and write orchestration from route layer:
+   - framework/chart/style formatting logic moved into knowledge application service
+   - framework create/reload orchestration moved into application service
+4. Updated application service export surface:
+   - `backend/application/services/__init__.py` now exports template/knowledge service factories
+
+Verification:
+
+1. `python -m py_compile` passed for:
+   - `backend/application/services/template_application_service.py`
+   - `backend/application/services/knowledge_application_service.py`
+   - `backend/application/services/__init__.py`
+   - `backend/routes/template_routes.py`
+   - `backend/routes/knowledge_routes.py`
+2. `GET /api/templates` returned `200` with `meta.trace_id`.
+3. `GET /api/templates/categories` returned `200` with `meta.trace_id`.
+4. `GET /api/knowledge/frameworks` returned `200` with `meta.trace_id`.
+5. `POST /api/knowledge/frameworks` (empty payload) returned `400` with `meta.trace_id`.

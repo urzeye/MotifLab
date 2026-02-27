@@ -16,6 +16,10 @@ from .image_generation_application_service import (
     ImageGenerationApplicationService,
     get_image_generation_application_service,
 )
+from .knowledge_application_service import (
+    KnowledgeApplicationService,
+    get_knowledge_application_service,
+)
 from .outline_application_service import (
     OutlineApplicationService,
     get_outline_application_service,
@@ -25,6 +29,10 @@ from .publish_application_service import (
     get_publish_application_service,
 )
 from .provider_config_service import ProviderConfigService, get_provider_config_service
+from .template_application_service import (
+    TemplateApplicationService,
+    get_template_application_service,
+)
 
 __all__ = [
     "ProviderConfigService",
@@ -37,8 +45,12 @@ __all__ = [
     "get_history_application_service",
     "ImageGenerationApplicationService",
     "get_image_generation_application_service",
+    "KnowledgeApplicationService",
+    "get_knowledge_application_service",
     "OutlineApplicationService",
     "get_outline_application_service",
     "PublishApplicationService",
     "get_publish_application_service",
+    "TemplateApplicationService",
+    "get_template_application_service",
 ]
