@@ -385,3 +385,24 @@ Verification:
 3. `POST /api/outline` (missing topic) returned `400` with `meta.trace_id`.
 4. `POST /api/outline/stream` (missing topic) returned `400` with `meta.trace_id`.
 5. `POST /api/outline/edit/stream` (invalid mode) returned `400` with `meta.trace_id`.
+
+## Execution Progress (2026-02-27, Iteration 11)
+
+Completed in this iteration:
+
+1. Unified response helper usage in knowledge/template routes:
+   - `backend/routes/knowledge_routes.py` switched to `json_response(...)`
+   - `backend/routes/template_routes.py` switched to `json_response(...)`
+2. Preserved endpoint contracts while adding trace metadata:
+   - existing business fields and status codes remain unchanged
+   - all JSON responses now consistently include `meta.trace_id`
+3. Applied small request parsing hardening:
+   - `knowledge_routes.py` now uses `request.get_json(silent=True)` for create endpoint to avoid parse exceptions bubbling into unclear errors
+
+Verification:
+
+1. `python -m py_compile` passed for `knowledge_routes.py`, `template_routes.py`.
+2. `GET /api/knowledge/frameworks` returned `200` with `meta.trace_id`.
+3. `POST /api/knowledge/frameworks` (empty payload) returned `400` with `meta.trace_id`.
+4. `GET /api/templates` returned `200` with `meta.trace_id`.
+5. `GET /api/templates/categories` returned `200` with `meta.trace_id`.

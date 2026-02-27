@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, request
 
+from backend.interfaces.http import json_response
 from backend.services.template import get_template_service
 
 
@@ -23,41 +24,40 @@ def create_template_blueprint() -> Blueprint:
             try:
                 limit = int(limit_raw)
             except ValueError:
-                return jsonify({"success": False, "error": "limit 必须是整数"}), 400
+                return json_response({"success": False, "error": "limit 必须是整数"}, 400)
 
         templates, total = service.list_templates(q=q, category=category, limit=limit)
 
-        return jsonify({
+        return json_response({
             "success": True,
             "templates": templates,
             "total": total,
             "q": q,
             "category": category
-        }), 200
+        }, 200)
 
     @template_bp.route("/templates/categories", methods=["GET"])
     def list_categories():
         service = get_template_service()
         categories = service.list_categories()
-        return jsonify({
+        return json_response({
             "success": True,
             "categories": categories
-        }), 200
+        }, 200)
 
     @template_bp.route("/templates/<template_id>", methods=["GET"])
     def get_template(template_id: str):
         service = get_template_service()
         template = service.get_template(template_id)
         if template is None:
-            return jsonify({
+            return json_response({
                 "success": False,
                 "error": f"模板不存在: {template_id}"
-            }), 404
+            }, 404)
 
-        return jsonify({
+        return json_response({
             "success": True,
             "template": template
-        }), 200
+        }, 200)
 
     return template_bp
-
