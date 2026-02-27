@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, Optional
 
-from backend.services.history import HistoryService, get_history_service
+from backend.infrastructure.services.history import HistoryService, get_history_service
 
 _history_application_service: "HistoryApplicationService | None" = None
 

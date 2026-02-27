@@ -612,3 +612,98 @@ Verification:
 2. `GET /api/pipeline/types` returned `200` with `meta.trace_id`.
 3. `POST /api/pipeline/run` returned `200` with `meta.trace_id` (default request contract).
 4. `POST /api/pipeline/cancel` (missing run_id) returned `400` with `meta.trace_id`.
+
+## Execution Progress (2026-02-27, Iteration 20)
+
+Completed in this iteration:
+
+1. Completed frontend contract alignment for image prompt extension:
+   - `frontend/src/api/index.ts` now supports `user_prompt/system_prompt` pass-through for:
+     - `generateImagesPost(...)`
+     - `regenerateImage(...)`
+     - `retryFailedImages(...)`
+   - kept backward compatibility with existing callers (all new prompt params are optional).
+2. Fixed frontend publish API mismatch:
+   - `publishToXiaohongshu(...)` switched from SSE parsing to standard JSON POST.
+   - callbacks are preserved (`onProgress/onComplete/onError`) so UI integration remains stable.
+3. Removed legacy backend service directory by migration:
+   - moved all modules from `backend/services/*` to `backend/infrastructure/services/*`
+   - updated all imports in application/routes/bootstrap/pipeline layers to new module path.
+4. Adjusted moved service runtime paths:
+   - fixed `__file__` parent-level path calculations for prompt files/history/data roots after relocation.
+5. Deleted old directory:
+   - `backend/services` removed after import replacement and validation.
+
+Verification:
+
+1. `python -m compileall backend`: passed.
+2. `python -c "from backend.app import create_app; ..."`: passed (`APP_OK True`).
+3. `cd frontend && npm run build`: passed.
+4. Global search check:
+   - no `backend.services.*` import remains in active code.
+
+## Execution Progress (2026-02-27, Iteration 21)
+
+Completed in this iteration:
+
+1. Completed persistence unification baseline with SQLAlchemy + Alembic:
+   - added SQLAlchemy session/model/repository modules under `backend/infrastructure/persistence/*`
+   - added Alembic baseline files:
+     - `alembic.ini`
+     - `backend/migrations/alembic/env.py`
+     - `backend/migrations/alembic/script.py.mako`
+     - `backend/migrations/alembic/versions/0001_initial_baseline.py`
+2. Completed repository port coverage for business domains:
+   - added/extended domain ports:
+     - `HistoryRepositoryPort`
+     - `ConceptRepositoryPort`
+     - `PublishRepositoryPort`
+     - `ImageJobRepositoryPort`
+   - added SQLAlchemy repository implementations for all above domains.
+3. Connected storage adapters to database mode:
+   - history/concept-history adapters now support `database/sqlalchemy/db` mode
+   - kept local-first behavior as default for backward compatibility.
+4. Added publish-domain persistence and gateway abstraction:
+   - introduced `McpPublishGateway` behind `PublishGatewayPort`
+   - publish application service now writes and updates publish audit records
+   - added `GET /api/publish/records` for audit querying.
+5. Added generic async image job domain APIs:
+   - `POST /api/image-jobs`
+   - `GET /api/image-jobs`
+   - `GET /api/image-jobs/<job_id>`
+   - `POST /api/image-jobs/<job_id>/cancel`
+
+Verification:
+
+1. `python -m compileall backend tests`: passed.
+2. `pytest -q`: passed (`3 passed`).
+
+## Execution Progress (2026-02-27, Iteration 22)
+
+Completed in this iteration:
+
+1. Completed frontend custom prompt integration for image generation:
+   - added prompt input UI in `frontend/src/views/HomeView.vue`
+   - added store state persistence and action method in `frontend/src/stores/generator.ts`
+   - passed prompt context through generate/retry/regenerate flows in:
+     - `frontend/src/views/GenerateView.vue`
+     - `frontend/src/views/ResultView.vue`
+     - `frontend/src/api/index.ts`
+2. Completed backend prompt pass-through consistency:
+   - `retry-failed` flow now supports and persists `user_prompt/system_prompt` context.
+3. Fixed async image job service consistency issue:
+   - removed duplicate `finished_at` assignment
+   - unified to timezone-aware UTC timestamps in image job completion/failure paths.
+4. Added automated testing baseline (no longer zero-test state):
+   - added `tests/test_persistence_baseline.py`
+   - covers history/concept/publish repositories and image-job application service.
+
+Verification:
+
+1. `python -m compileall backend tests`: passed.
+2. `pytest -q`: passed (`3 passed`).
+3. `cd frontend && npm run build`: passed.
+
+Remaining intentionally out-of-scope in this phase:
+
+1. Xiaohongshu real publish end-to-end verification remains intentionally skipped.

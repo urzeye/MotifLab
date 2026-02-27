@@ -22,7 +22,7 @@ from backend.skills.concept.analyze import AnalyzeInput
 from backend.skills.concept.map_framework import MapInput
 from backend.skills.concept.design import DesignInput
 from backend.skills.concept.generate import GenerateInput
-from backend.services.concept_history import get_concept_history_service, ConceptRecordStatus
+from backend.infrastructure.services.concept_history import get_concept_history_service, ConceptRecordStatus
 
 logger = logging.getLogger(__name__)
 

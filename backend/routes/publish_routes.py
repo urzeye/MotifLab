@@ -223,6 +223,34 @@ def create_publish_blueprint():
                 "error": str(e)
             }, 500)
 
+    @publish_bp.route('/publish/records', methods=['GET'])
+    def list_publish_records():
+        """
+        获取本地发布审计记录
+
+        查询参数：
+        - page: 页码（默认 1）
+        - page_size: 每页数量（默认 20）
+        - status: 状态过滤（可选）
+        """
+        try:
+            page = request.args.get('page', 1, type=int)
+            page_size = request.args.get('page_size', 20, type=int)
+            status = (request.args.get('status') or '').strip() or None
+
+            result = publish_application_service.list_publish_records(
+                page=page,
+                page_size=page_size,
+                status=status,
+            )
+            return json_response({"success": True, **result}, 200)
+        except Exception as e:
+            logger.error(f"获取发布记录失败: {e}")
+            return json_response({
+                "success": False,
+                "error": str(e)
+            }, 500)
+
     @publish_bp.route('/publish/search', methods=['GET'])
     def search_posts():
         """

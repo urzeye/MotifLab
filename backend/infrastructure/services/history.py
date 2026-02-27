@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 # 存储模式常量
 STORAGE_MODE_LOCAL = "local"
 STORAGE_MODE_SUPABASE = "supabase"
+STORAGE_MODE_DATABASE = "database"
 
 
 class RecordStatus:
@@ -89,12 +90,12 @@ class HistoryService:
         - supabase: Supabase 云存储
         """
         # 存储模式（默认为本地）
-        self.storage_mode = os.getenv("HISTORY_STORAGE_MODE", STORAGE_MODE_LOCAL)
+        self.storage_mode = os.getenv("HISTORY_STORAGE_MODE", STORAGE_MODE_LOCAL).strip().lower()
         logger.info(f"历史记录服务初始化，存储模式: {self.storage_mode}")
 
         # 本地存储相关配置
         self.history_dir = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
             "history"
         )
 
@@ -112,6 +113,11 @@ class HistoryService:
     def is_supabase_mode(self) -> bool:
         """是否使用 Supabase 存储模式"""
         return self.storage_mode == STORAGE_MODE_SUPABASE
+
+    @property
+    def is_database_mode(self) -> bool:
+        """是否使用数据库存储模式。"""
+        return self.storage_mode in {STORAGE_MODE_DATABASE, "sqlalchemy", "db"}
 
     def _init_index(self) -> None:
         """
@@ -742,6 +748,12 @@ class HistoryService:
                 - status: 更新后的状态
                 - error: 错误信息（失败时）
         """
+        if self.storage_mode != STORAGE_MODE_LOCAL:
+            return {
+                "success": False,
+                "error": "仅本地存储模式支持扫描任务目录同步图片"
+            }
+
         task_dir = os.path.join(self.history_dir, task_id)
 
         if not os.path.exists(task_dir) or not os.path.isdir(task_dir):
@@ -846,6 +858,12 @@ class HistoryService:
                 - results: 详细结果列表
                 - error: 错误信息（失败时）
         """
+        if self.storage_mode != STORAGE_MODE_LOCAL:
+            return {
+                "success": False,
+                "error": "仅本地存储模式支持批量扫描任务目录"
+            }
+
         if not os.path.exists(self.history_dir):
             return {
                 "success": False,

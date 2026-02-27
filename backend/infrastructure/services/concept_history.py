@@ -44,15 +44,14 @@ class ConceptHistoryService:
         self.storage_mode = os.getenv("CONCEPT_HISTORY_STORAGE_MODE", STORAGE_MODE_LOCAL)
 
         # 项目根目录
-        project_root = Path(__file__).parent.parent.parent
+        project_root = Path(__file__).parent.parent.parent.parent
 
-        # 概念历史记录存储目录
+        # 概念历史记录存储目录（数据库模式仅保留路径，不强制落盘）
         self.history_dir = project_root / "history" / "concepts"
-        self.history_dir.mkdir(parents=True, exist_ok=True)
-
-        # 索引文件
         self.index_file = self.history_dir / "index.json"
-        self._init_index()
+        if self.storage_mode == STORAGE_MODE_LOCAL:
+            self.history_dir.mkdir(parents=True, exist_ok=True)
+            self._init_index()
         self.storage_adapter: ConceptHistoryStorageAdapterProtocol = create_concept_history_storage_adapter(
             self.storage_mode,
             self,
@@ -345,7 +344,7 @@ class ConceptHistoryService:
         # 删除关联的图片目录
         if record.get("task_id"):
             task_id = record["task_id"]
-            project_root = Path(__file__).parent.parent.parent
+            project_root = Path(__file__).parent.parent.parent.parent
             task_dir = project_root / "output" / "concepts" / task_id
             if task_dir.exists() and task_dir.is_dir():
                 try:
@@ -490,7 +489,7 @@ class ConceptHistoryService:
             return False
 
         # 查找图片目录
-        project_root = Path(__file__).parent.parent.parent
+        project_root = Path(__file__).parent.parent.parent.parent
         task_dir = project_root / "output" / "concepts" / task_id
 
         if not task_dir.exists():

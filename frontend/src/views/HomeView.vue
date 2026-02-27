@@ -102,6 +102,31 @@
         @imagesChange="handleImagesChange"
         @urlContentChange="handleUrlContentChange"
       />
+
+      <div class="prompt-config-card">
+        <div class="prompt-config-title">高级图片 Prompt（可选）</div>
+        <div class="prompt-config-desc">
+          可为当前创作设置额外提示词，后续图片生成、重试、重绘都会复用。
+        </div>
+        <div class="prompt-config-grid">
+          <div class="prompt-field">
+            <label>用户提示词（user_prompt）</label>
+            <textarea
+              v-model="userPrompt"
+              rows="3"
+              placeholder="例如：极简扁平风、柔和奶油色调、留白构图"
+            />
+          </div>
+          <div class="prompt-field">
+            <label>系统提示词（system_prompt）</label>
+            <textarea
+              v-model="systemPrompt"
+              rows="3"
+              placeholder="例如：统一 3:4 竖版、保持系列风格一致、避免复杂背景"
+            />
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 版权信息 -->
@@ -195,6 +220,8 @@ const urlContent = ref<ScrapeResult | null>(null);
 const appliedTemplate = ref<TemplateItem | null>(null);
 const pageCount = ref(5);
 const enableSearch = ref(false);
+const userPrompt = ref("");
+const systemPrompt = ref("");
 
 let templateRequestSeq = 0;
 
@@ -271,6 +298,11 @@ async function handleGenerate() {
   error.value = "";
 
   try {
+    store.setImagePrompt({
+      userPrompt: userPrompt.value,
+      systemPrompt: systemPrompt.value,
+    });
+
     const imageFiles = uploadedImageFiles.value;
     const sourceContent = urlContent.value?.success
       ? urlContent.value.data?.content
@@ -360,7 +392,20 @@ async function handleGenerate() {
 
 onMounted(() => {
   checkSearchStatus();
+  userPrompt.value = store.imagePrompt.userPrompt || "";
+  systemPrompt.value = store.imagePrompt.systemPrompt || "";
 });
+
+watch(
+  [userPrompt, systemPrompt],
+  ([nextUserPrompt, nextSystemPrompt]) => {
+    store.setImagePrompt({
+      userPrompt: nextUserPrompt,
+      systemPrompt: nextSystemPrompt,
+    });
+  },
+  { immediate: true },
+);
 
 watch(
   () => route.query.template_id,
@@ -401,6 +446,62 @@ watch(
 
 .hero-content {
   margin-bottom: 40px;
+}
+
+.prompt-config-card {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+  text-align: left;
+}
+
+.prompt-config-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.prompt-config-desc {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.prompt-config-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.prompt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prompt-field label {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.prompt-field textarea {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-main);
+  padding: 10px 12px;
+  resize: vertical;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.prompt-field textarea:focus {
+  outline: none;
+  border-color: var(--primary);
 }
 
 .template-applied-banner {
@@ -574,6 +675,10 @@ watch(
   .template-applied-banner {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .prompt-config-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

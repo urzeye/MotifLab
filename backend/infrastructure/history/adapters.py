@@ -6,9 +6,11 @@ import os
 from typing import Any, Dict, List, Optional, Protocol
 
 from backend.domain.ports import HistoryRepositoryPort
+from backend.infrastructure.persistence import get_history_repository
 
 STORAGE_MODE_LOCAL = "local"
 STORAGE_MODE_SUPABASE = "supabase"
+STORAGE_MODE_DATABASE = "database"
 
 
 class HistoryStorageAdapterProtocol(HistoryRepositoryPort, Protocol):
@@ -147,9 +149,56 @@ class SupabaseHistoryStorageAdapter:
         return self.service._get_statistics_supabase()
 
 
+class DatabaseHistoryStorageAdapter:
+    """数据库历史存储适配器。"""
+
+    def __init__(self) -> None:
+        self.repository = get_history_repository()
+
+    def create_record(
+        self,
+        topic: str,
+        outline: Dict[str, Any],
+        task_id: Optional[str] = None,
+        content: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        return self.repository.create_record(topic, outline, task_id, content)
+
+    def get_record(self, record_id: str) -> Optional[Dict[str, Any]]:
+        return self.repository.get_record(record_id)
+
+    def record_exists(self, record_id: str) -> bool:
+        return self.repository.record_exists(record_id)
+
+    def update_record(
+        self,
+        record_id: str,
+        outline: Optional[Dict[str, Any]] = None,
+        images: Optional[Dict[str, Any]] = None,
+        status: Optional[str] = None,
+        thumbnail: Optional[str] = None,
+        content: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        return self.repository.update_record(record_id, outline, images, status, thumbnail, content)
+
+    def delete_record(self, record_id: str) -> bool:
+        return self.repository.delete_record(record_id)
+
+    def list_records(self, page: int = 1, page_size: int = 20, status: Optional[str] = None) -> Dict[str, Any]:
+        return self.repository.list_records(page, page_size, status)
+
+    def search_records(self, keyword: str) -> List[Dict[str, Any]]:
+        return self.repository.search_records(keyword)
+
+    def get_statistics(self) -> Dict[str, Any]:
+        return self.repository.get_statistics()
+
+
 def create_history_storage_adapter(storage_mode: str, service: Any) -> HistoryStorageAdapterProtocol:
     """根据存储模式创建历史记录存储适配器。"""
     normalized_mode = (storage_mode or STORAGE_MODE_LOCAL).strip().lower()
     if normalized_mode == STORAGE_MODE_SUPABASE:
         return SupabaseHistoryStorageAdapter(service)
+    if normalized_mode in {STORAGE_MODE_DATABASE, "sqlalchemy", "db"}:
+        return DatabaseHistoryStorageAdapter()
     return LocalHistoryStorageAdapter(service)

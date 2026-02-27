@@ -363,6 +363,8 @@ def create_image_blueprint():
         请求体：
         - task_id: 任务 ID（必填）
         - pages: 要重试的页面列表（必填）
+        - user_prompt/custom_prompt: 用户自定义提示词（可选，兼容双字段）
+        - system_prompt: 用户自定义系统提示词（可选）
 
         返回：
         SSE 事件流
@@ -373,10 +375,14 @@ def create_image_blueprint():
                 data = {}
             task_id = data.get('task_id')
             pages = data.get('pages')
+            user_prompt = str(data.get('user_prompt', data.get('custom_prompt', '')) or '').strip()
+            system_prompt = str(data.get('system_prompt', '') or '').strip()
 
             log_request('/retry-failed', {
                 'task_id': task_id,
-                'pages_count': len(pages) if pages else 0
+                'pages_count': len(pages) if pages else 0,
+                'has_user_prompt': bool(user_prompt),
+                'has_system_prompt': bool(system_prompt)
             })
 
             if not task_id or not isinstance(pages, list) or not pages:
@@ -395,7 +401,12 @@ def create_image_blueprint():
 
             def generate():
                 """SSE 事件生成器"""
-                for event in image_generation_app_service.retry_failed_images(task_id, pages):
+                for event in image_generation_app_service.retry_failed_images(
+                    task_id,
+                    pages,
+                    user_prompt=user_prompt,
+                    system_prompt=system_prompt,
+                ):
                     event_type = event["event"]
                     event_data = event["data"]
 

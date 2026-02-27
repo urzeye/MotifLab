@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Generator, List, Optional
 
-from backend.services.image import ImageService, get_image_service
+from backend.infrastructure.services.image import ImageService, get_image_service
 
 _image_generation_application_service: "ImageGenerationApplicationService | None" = None
 
@@ -57,9 +57,20 @@ class ImageGenerationApplicationService:
             system_prompt=system_prompt,
         )
 
-    def retry_failed_images(self, task_id: str, pages: List[Dict[str, Any]]) -> Generator[Dict[str, Any], None, None]:
+    def retry_failed_images(
+        self,
+        task_id: str,
+        pages: List[Dict[str, Any]],
+        user_prompt: str = "",
+        system_prompt: str = "",
+    ) -> Generator[Dict[str, Any], None, None]:
         """批量重试失败图片。"""
-        return self._image_service.retry_failed_images(task_id=task_id, pages=pages)
+        return self._image_service.retry_failed_images(
+            task_id=task_id,
+            pages=pages,
+            custom_prompt=user_prompt,
+            system_prompt=system_prompt,
+        )
 
     def regenerate_image(
         self,

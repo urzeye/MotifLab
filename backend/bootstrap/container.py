@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict
 
 from backend.config import ConfigService, get_config_service
-from backend.services.search_service import build_default_search_provider_registry
+from backend.infrastructure.services.search_service import build_default_search_provider_registry
 
 
 @dataclass

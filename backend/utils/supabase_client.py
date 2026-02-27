@@ -7,7 +7,7 @@ Supabase 客户端
 import os
 import logging
 from typing import Dict, Any, Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +181,7 @@ def update_publish_status(
     data = {"status": status}
     if post_url:
         data["post_url"] = post_url
-        data["published_at"] = datetime.utcnow().isoformat()
+        data["published_at"] = datetime.now(timezone.utc).isoformat()
     if error:
         data["error"] = error
 

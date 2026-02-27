@@ -66,7 +66,7 @@ class ImageService:
 
         # 历史记录根目录（本地模式使用）
         self.history_root_dir = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
             "history"
         )
         if self.storage_mode == STORAGE_MODE_LOCAL:
@@ -90,7 +90,7 @@ class ImageService:
         """加载 Prompt 模板"""
         filename = "image_prompt_short.txt" if short else "image_prompt.txt"
         prompt_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)),
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
             "prompts",
             filename
         )
@@ -866,7 +866,9 @@ class ImageService:
     def retry_failed_images(
         self,
         task_id: str,
-        pages: List[Dict]
+        pages: List[Dict],
+        custom_prompt: str = "",
+        system_prompt: str = "",
     ) -> Generator[Dict[str, Any], None, None]:
         """
         批量重试失败的图片
@@ -899,15 +901,22 @@ class ImageService:
         # 从任务状态中获取上下文信息
         full_outline = ""
         user_topic = ""
-        custom_prompt = ""
-        system_prompt = ""
+        persisted_custom_prompt = ""
+        persisted_system_prompt = ""
         user_images = None
         if task_id in self._task_states:
             full_outline = self._task_states[task_id].get("full_outline", "")
             user_topic = self._task_states[task_id].get("user_topic", "")
-            custom_prompt = self._task_states[task_id].get("custom_prompt", "")
-            system_prompt = self._task_states[task_id].get("system_prompt", "")
+            persisted_custom_prompt = self._task_states[task_id].get("custom_prompt", "")
+            persisted_system_prompt = self._task_states[task_id].get("system_prompt", "")
             user_images = self._task_states[task_id].get("user_images")
+
+        effective_custom_prompt = str(custom_prompt or persisted_custom_prompt or "").strip()
+        effective_system_prompt = str(system_prompt or persisted_system_prompt or "").strip()
+
+        if task_id in self._task_states:
+            self._task_states[task_id]["custom_prompt"] = effective_custom_prompt
+            self._task_states[task_id]["system_prompt"] = effective_system_prompt
 
         with ThreadPoolExecutor(max_workers=self.MAX_CONCURRENT) as executor:
             future_to_page = {
@@ -920,8 +929,8 @@ class ImageService:
                     full_outline,  # 传入完整大纲
                     user_images,
                     user_topic,
-                    custom_prompt,
-                    system_prompt,
+                    effective_custom_prompt,
+                    effective_system_prompt,
                 ): page
                 for page in pages
             }

@@ -414,6 +414,8 @@ const handleRegenerate = async (image: any) => {
     const context = {
       fullOutline: store.outline.raw || "",
       userTopic: store.topic || "",
+      userPrompt: store.imagePrompt.userPrompt || "",
+      systemPrompt: store.imagePrompt.systemPrompt || "",
     };
 
     const result = await regenerateImage(

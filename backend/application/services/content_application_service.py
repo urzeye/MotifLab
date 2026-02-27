@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Optional
 
-from backend.services.content import ContentService, get_content_service
+from backend.infrastructure.services.content import ContentService, get_content_service
 
 from .history_application_service import (
     HistoryApplicationService,

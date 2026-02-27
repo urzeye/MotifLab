@@ -81,7 +81,7 @@ class ContentService:
     def _load_prompt_template(self) -> str:
         """加载提示词模板"""
         prompt_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)),
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
             "prompts",
             "content_prompt.txt"
         )

@@ -8,6 +8,7 @@ from pathlib import Path
 from flask import Flask, request, send_from_directory
 
 from backend.config import Config, get_config_service
+from backend.infrastructure.persistence import init_database_schema
 from backend.middleware import authenticate_request, is_auth_enabled
 from backend.routes import register_routes
 
@@ -164,6 +165,15 @@ def _validate_config_on_startup(logger: logging.Logger) -> None:
     logger.info("✅ 配置检查完成")
 
 
+def _init_database_on_startup(logger: logging.Logger) -> None:
+    """启动时初始化数据库基线表结构。"""
+    try:
+        init_database_schema()
+        logger.info("✅ 数据库基线初始化完成（SQLAlchemy）")
+    except Exception as exc:
+        logger.warning(f"⚠️ 数据库基线初始化失败，已跳过: {exc}")
+
+
 def create_app(settings: AppSettings | None = None) -> Flask:
     """创建并装配 Flask 应用。"""
     runtime_settings = settings or AppSettings.from_env()
@@ -186,6 +196,7 @@ def create_app(settings: AppSettings | None = None) -> Flask:
     register_tracing(app)
     _configure_auth_guard(app, logger)
     _configure_rate_limiter(app, runtime_settings, logger)
+    _init_database_on_startup(logger)
 
     register_routes(app)
     _register_output_route(app, runtime_settings.output_dir)

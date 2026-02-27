@@ -36,7 +36,7 @@ def get_concept_history_application_service() -> ConceptHistoryApplicationServic
     """获取概念历史记录应用层服务（单例）。"""
     global _concept_history_app_service
     if _concept_history_app_service is None:
-        from backend.services.concept_history import get_concept_history_service
+        from backend.infrastructure.services.concept_history import get_concept_history_service
 
         _concept_history_app_service = ConceptHistoryApplicationService(
             repository=get_concept_history_service(),

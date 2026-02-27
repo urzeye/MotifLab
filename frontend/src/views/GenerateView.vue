@@ -235,6 +235,8 @@ function retrySingleImage(index: number) {
   const context = {
     fullOutline: store.outline.raw || "",
     userTopic: store.topic || "",
+    userPrompt: store.imagePrompt.userPrompt || "",
+    systemPrompt: store.imagePrompt.systemPrompt || "",
   };
 
   // 异步执行重绘，不阻塞
@@ -295,6 +297,10 @@ async function retryAllFailed() {
         console.error("重试失败:", err);
         isRetrying.value = false;
         error.value = "重试失败: " + err.message;
+      },
+      {
+        userPrompt: store.imagePrompt.userPrompt || "",
+        systemPrompt: store.imagePrompt.systemPrompt || "",
       },
     );
   } catch (e) {
@@ -440,6 +446,11 @@ onMounted(async () => {
     store.userImages.length > 0 ? store.userImages : undefined,
     // userTopic - 用户原始输入
     store.topic,
+    // promptContext - 用户自定义 prompt 上下文
+    {
+      userPrompt: store.imagePrompt.userPrompt || "",
+      systemPrompt: store.imagePrompt.systemPrompt || "",
+    },
   );
 });
 </script>

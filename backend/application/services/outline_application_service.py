@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from backend.services.outline import OutlineService, get_outline_service
+from backend.infrastructure.services.outline import OutlineService, get_outline_service
 
 _outline_application_service: "OutlineApplicationService | None" = None
 
