@@ -14,10 +14,11 @@ import json
 import logging
 from flask import Blueprint, request, Response, stream_with_context
 
+from backend.application.services import get_pipeline_application_service
 from backend.interfaces.http import json_response
-from backend.services.pipeline_service import get_pipeline_service
 
 logger = logging.getLogger(__name__)
+pipeline_application_service = get_pipeline_application_service()
 
 
 def create_pipeline_blueprint():
@@ -38,8 +39,7 @@ def create_pipeline_blueprint():
         }
         """
         try:
-            service = get_pipeline_service()
-            pipelines = service.get_available_pipelines()
+            pipelines = pipeline_application_service.get_available_pipelines()
             return json_response({
                 "success": True,
                 "pipelines": pipelines
@@ -75,28 +75,18 @@ def create_pipeline_blueprint():
         }
         """
         try:
-            data = request.get_json()
-            if not data:
+            data = request.get_json(silent=True)
+            if not isinstance(data, dict):
                 return json_response({"success": False, "error": "请求体不能为空"}, 400)
 
             pipeline_type = data.get('pipeline', 'redbook')
             input_data = data.get('input', {})
             config = data.get('config', {})
-
-            # 处理 base64 图片
-            if 'images' in input_data and isinstance(input_data['images'], list):
-                import base64
-                decoded_images = []
-                for img in input_data['images']:
-                    if isinstance(img, str):
-                        # 移除 data:image/xxx;base64, 前缀
-                        if ',' in img:
-                            img = img.split(',')[1]
-                        decoded_images.append(base64.b64decode(img))
-                input_data['images'] = decoded_images
-
-            service = get_pipeline_service()
-            result = service.run_pipeline(pipeline_type, input_data, config)
+            result = pipeline_application_service.run_pipeline(
+                pipeline_type=pipeline_type,
+                input_data=input_data,
+                config=config,
+            )
 
             return json_response(result, 200)
 
@@ -134,29 +124,21 @@ def create_pipeline_blueprint():
             data: {"success": true, "data": {...}}
         """
         try:
-            data = request.get_json()
-            if not data:
+            data = request.get_json(silent=True)
+            if not isinstance(data, dict):
                 return json_response({"success": False, "error": "请求体不能为空"}, 400)
 
             pipeline_type = data.get('pipeline', 'redbook')
             input_data = data.get('input', {})
             config = data.get('config', {})
 
-            # 处理 base64 图片
-            if 'images' in input_data and isinstance(input_data['images'], list):
-                import base64
-                decoded_images = []
-                for img in input_data['images']:
-                    if isinstance(img, str):
-                        if ',' in img:
-                            img = img.split(',')[1]
-                        decoded_images.append(base64.b64decode(img))
-                input_data['images'] = decoded_images
-
             def generate():
-                service = get_pipeline_service()
                 try:
-                    for event in service.run_pipeline_stream(pipeline_type, input_data, config):
+                    for event in pipeline_application_service.run_pipeline_stream(
+                        pipeline_type=pipeline_type,
+                        input_data=input_data,
+                        config=config,
+                    ):
                         event_dict = event.to_dict()
                         event_type = event_dict.get('event', 'message')
                         event_data = json.dumps(event_dict, ensure_ascii=False)
@@ -203,14 +185,15 @@ def create_pipeline_blueprint():
         }
         """
         try:
-            data = request.get_json()
+            data = request.get_json(silent=True)
+            if not isinstance(data, dict):
+                data = {}
             run_id = data.get('run_id')
 
             if not run_id:
                 return json_response({"success": False, "error": "缺少 run_id"}, 400)
 
-            service = get_pipeline_service()
-            cancelled = service.cancel_pipeline(run_id)
+            cancelled = pipeline_application_service.cancel_pipeline(run_id)
 
             return json_response({
                 "success": True,

@@ -585,3 +585,30 @@ Verification:
 3. `GET /api/templates/categories` returned `200` with `meta.trace_id`.
 4. `GET /api/knowledge/frameworks` returned `200` with `meta.trace_id`.
 5. `POST /api/knowledge/frameworks` (empty payload) returned `400` with `meta.trace_id`.
+
+## Execution Progress (2026-02-27, Iteration 19)
+
+Completed in this iteration:
+
+1. Added pipeline application service:
+   - new `backend/application/services/pipeline_application_service.py`
+   - moved base64 image input normalization into application layer
+2. Migrated pipeline routes to application layer:
+   - `backend/routes/pipeline_routes.py` now depends on `get_pipeline_application_service()`
+   - route-level duplicated base64 decode blocks removed
+3. Eliminated import-cycle risk in application services package:
+   - `backend/application/services/__init__.py` rewritten to lazy-export style (`__getattr__`)
+   - avoids eager import chain for services that transitively depend on pipelines/skills
+4. Fixed provider-config import direction in pipeline service:
+   - `backend/services/pipeline_service.py` now imports provider config service directly from module file
+
+Verification:
+
+1. `python -m py_compile` passed for:
+   - `backend/application/services/__init__.py`
+   - `backend/application/services/pipeline_application_service.py`
+   - `backend/services/pipeline_service.py`
+   - `backend/routes/pipeline_routes.py`
+2. `GET /api/pipeline/types` returned `200` with `meta.trace_id`.
+3. `POST /api/pipeline/run` returned `200` with `meta.trace_id` (default request contract).
+4. `POST /api/pipeline/cancel` (missing run_id) returned `400` with `meta.trace_id`.
