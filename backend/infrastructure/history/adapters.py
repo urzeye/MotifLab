@@ -5,11 +5,13 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, List, Optional, Protocol
 
+from backend.domain.ports import HistoryRepositoryPort
+
 STORAGE_MODE_LOCAL = "local"
 STORAGE_MODE_SUPABASE = "supabase"
 
 
-class HistoryStorageAdapterProtocol(Protocol):
+class HistoryStorageAdapterProtocol(HistoryRepositoryPort, Protocol):
     """历史记录存储适配器协议。"""
 
     def create_record(
