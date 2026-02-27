@@ -13,10 +13,11 @@ API:
 
 import logging
 from flask import Blueprint, request
+from backend.application.services import get_knowledge_application_service
 from backend.interfaces.http import json_response
-from backend.knowledge import registry
 
 logger = logging.getLogger(__name__)
+knowledge_application_service = get_knowledge_application_service()
 
 
 def create_knowledge_blueprint():
@@ -46,21 +47,7 @@ def create_knowledge_blueprint():
         }
         """
         try:
-            frameworks = registry.list_frameworks()
-
-            # 转换为前端期望的格式
-            formatted = []
-            for f in frameworks:
-                formatted.append({
-                    "id": f.get("id"),
-                    "name": f.get("name", f.get("name_en", "")),
-                    "description": f.get("description", ""),
-                    "domains": f.get("keywords", []),  # 使用 keywords 作为 domains
-                    "components": f.get("visual_elements", []),
-                    "use_when": f.get("use_when", ""),
-                    "canonical_chart": f.get("canonical_chart"),
-                    "suggested_charts": f.get("suggested_charts", [])
-                })
+            formatted = knowledge_application_service.list_frameworks()
 
             return json_response({
                 "success": True,
@@ -91,28 +78,8 @@ def create_knowledge_blueprint():
             data = request.get_json(silent=True)
             if not data:
                 return json_response({"success": False, "error": "请求体不能为空"}, 400)
-
-            name = data.get('name')
-            if not name:
-                return json_response({"success": False, "error": "框架名称不能为空"}, 400)
-
-            # 生成 ID
-            framework_id = name.lower().replace(' ', '_').replace('(', '').replace(')', '')
-
-            framework_data = {
-                "id": framework_id,
-                "name": name,
-                "description": data.get('description', ''),
-                "keywords": data.get('keywords', data.get('domains', [])),
-                "visual_elements": data.get('visual_elements', data.get('components', [])),
-                "use_when": data.get('use_when', ''),
-                "canonical_chart": data.get('canonical_chart'),
-                "suggested_charts": data.get('suggested_charts', [])
-            }
-
-            # 保存到注册表（持久化到YAML文件）
-            registry.add_framework(framework_id, framework_data, persist=True)
-            logger.info(f"创建新框架: {name}")
+            framework_data = knowledge_application_service.create_framework(data)
+            logger.info(f"创建新框架: {framework_data.get('name')}")
 
             return json_response({
                 "success": True,
@@ -120,6 +87,8 @@ def create_knowledge_blueprint():
                 "framework": framework_data
             }, 200)
 
+        except ValueError as e:
+            return json_response({"success": False, "error": str(e)}, 400)
         except Exception as e:
             logger.error(f"创建框架失败: {e}")
             return json_response({"success": False, "error": str(e)}, 500)
@@ -136,17 +105,7 @@ def create_knowledge_blueprint():
         }
         """
         try:
-            chart_types = registry.list_chart_types()
-
-            # 转换为前端期望的格式
-            formatted = []
-            for c in chart_types:
-                formatted.append({
-                    "id": c.get("id"),
-                    "name": c.get("name", c.get("name_en", "")),
-                    "description": c.get("description", ""),
-                    "best_for": c.get("best_for", [])
-                })
+            formatted = knowledge_application_service.list_chart_types()
 
             return json_response({
                 "success": True,
@@ -170,21 +129,7 @@ def create_knowledge_blueprint():
         }
         """
         try:
-            visual_styles = registry.list_visual_styles()
-
-            # 转换为前端期望的格式
-            formatted = []
-            for s in visual_styles:
-                formatted.append({
-                    "id": s.get("id"),
-                    "name": s.get("name", ""),
-                    "description": s.get("description", ""),
-                    "colors": s.get("colors", {
-                        "primary": "#2F337",
-                        "secondary": "#8B7355",
-                        "background": "#F5F0E1"
-                    })
-                })
+            formatted = knowledge_application_service.list_visual_styles()
 
             return json_response({
                 "success": True,
@@ -204,15 +149,11 @@ def create_knowledge_blueprint():
         用于在添加新 YAML 文件后刷新知识库
         """
         try:
-            registry.reload()
+            stats = knowledge_application_service.reload_knowledge()
             return json_response({
                 "success": True,
                 "message": "知识库已重新加载",
-                "stats": {
-                    "frameworks": len(registry.frameworks),
-                    "chart_types": len(registry.chart_types),
-                    "visual_styles": len(registry.visual_styles)
-                }
+                "stats": stats
             }, 200)
 
         except Exception as e:
