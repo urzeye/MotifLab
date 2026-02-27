@@ -282,10 +282,13 @@ import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useGeneratorStore } from "../stores/generator";
 import {
+  appendUrlParams,
   downloadHistoryZip,
+  getImageUrl,
   getHistory,
   regenerateImage,
   updateHistory,
+  withAccessToken,
 } from "../api";
 import ContentDisplay from "../components/result/ContentDisplay.vue";
 import { useMessage, NTooltip } from "naive-ui";
@@ -298,7 +301,10 @@ const regeneratingIndex = ref<number | null>(null);
 
 const viewImage = (url: string) => {
   const baseUrl = url.split("?")[0];
-  window.open(baseUrl + "?thumbnail=false", "_blank");
+  window.open(
+    appendUrlParams(withAccessToken(baseUrl), { thumbnail: false }),
+    "_blank",
+  );
 };
 
 const startOver = () => {
@@ -314,7 +320,7 @@ const downloadOne = (image: any) => {
   if (image.url) {
     const link = document.createElement("a");
     const baseUrl = image.url.split("?")[0];
-    link.href = baseUrl + "?thumbnail=false";
+    link.href = appendUrlParams(withAccessToken(baseUrl), { thumbnail: false });
     link.download = `rednote_page_${image.index + 1}.png`;
     link.click();
   }
@@ -505,7 +511,7 @@ async function hydrateFromHistoryRecord(recordId: string) {
       const filename = generated[idx];
       return {
         index: idx,
-        url: filename ? `/api/images/${taskId}/${filename}` : "",
+        url: filename ? getImageUrl(taskId, filename) : "",
         status: filename ? "done" : "error",
         retryable: !filename,
       };

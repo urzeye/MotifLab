@@ -203,6 +203,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
+import { appendUrlParams, getImageUrl as buildImageUrl } from "../../api";
 
 /**
  * 图片画廊模态框组件
@@ -257,9 +258,9 @@ const titleExpanded = ref(false);
 const failedThumbs = ref(new Set<string>());
 
 function getImageUrl(filename: string, taskId: string) {
-  const baseUrl = `/api/images/${taskId}/${filename}`;
+  const baseUrl = buildImageUrl(taskId, filename, !failedThumbs.value.has(filename));
   if (failedThumbs.value.has(filename)) {
-    return `${baseUrl}?thumbnail=false&retry=${Date.now()}`;
+    return appendUrlParams(baseUrl, { retry: Date.now() });
   }
   return baseUrl;
 }

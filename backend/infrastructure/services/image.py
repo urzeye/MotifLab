@@ -438,8 +438,11 @@ class ImageService:
         Yields:
             进度事件字典
         """
-        if task_id is None:
+        normalized_task_id = (task_id or "").strip() if isinstance(task_id, str) or task_id is None else str(task_id).strip()
+        if not normalized_task_id:
             task_id = f"task_{uuid.uuid4().hex[:8]}"
+        else:
+            task_id = normalized_task_id
 
         logger.info(f"开始图片生成任务: task_id={task_id}, pages={len(pages)}")
 

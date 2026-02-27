@@ -25,13 +25,19 @@ def _validate_current_request_token():
         return None
 
     auth_header = request.headers.get('Authorization', '')
-    if not auth_header.startswith('Bearer '):
+    token = ''
+    if auth_header.startswith('Bearer '):
+        token = auth_header[7:].strip()
+    elif request.method in ('GET', 'HEAD'):
+        # 兼容图片、下载等浏览器直连请求：允许通过 query 传 access_token。
+        token = request.args.get('access_token', '').strip()
+
+    if not token:
         return jsonify({
             'success': False,
             'error': '未提供认证令牌。请在请求头中添加 Authorization: Bearer <token>'
         }), 401
 
-    token = auth_header[7:].strip()
     if token != auth_token:
         logger.warning(f"认证失败: path={request.path}, ip={request.remote_addr}")
         return jsonify({
@@ -70,4 +76,3 @@ def require_auth(f):
         return f(*args, **kwargs)
 
     return decorated
-

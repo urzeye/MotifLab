@@ -374,13 +374,16 @@
 import { ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import {
+  appendUrlParams,
   getHistoryList,
   deleteHistory,
   getHistory,
+  getImageUrl,
   type HistoryRecord,
   regenerateImage as apiRegenerateImage,
   updateHistory,
   scanAllTasks,
+  withAccessToken,
   // 概念可视化 API
   getConceptHistoryList,
   deleteConceptHistory,
@@ -648,9 +651,7 @@ async function loadRecord(id: string) {
         const filename = res.record!.images.generated[idx];
         return {
           index: idx,
-          url: filename
-            ? `/api/images/${res.record!.images.task_id}/${filename}`
-            : "",
+          url: filename ? getImageUrl(res.record!.images.task_id!, filename) : "",
           status: filename ? ("done" as const) : ("error" as const),
           retryable: !filename,
         };
@@ -835,7 +836,10 @@ async function regenerateHistoryImage(index: number) {
       );
       imgElements.forEach((img) => {
         const baseUrl = (img as HTMLImageElement).src.split("?")[0];
-        (img as HTMLImageElement).src = `${baseUrl}?t=${timestamp}`;
+        (img as HTMLImageElement).src = appendUrlParams(
+          withAccessToken(baseUrl),
+          { t: timestamp },
+        );
       });
 
       await updateHistory(viewingRecord.value.id, {
@@ -862,7 +866,7 @@ async function regenerateHistoryImage(index: number) {
 function downloadImage(filename: string, index: number) {
   if (!viewingRecord.value) return;
   const link = document.createElement("a");
-  link.href = `/api/images/${viewingRecord.value.images.task_id}/${filename}?thumbnail=false`;
+  link.href = getImageUrl(viewingRecord.value.images.task_id, filename, false);
   link.download = `page_${index + 1}.png`;
   link.click();
 }
@@ -873,7 +877,7 @@ function downloadImage(filename: string, index: number) {
 function downloadAllImages() {
   if (!viewingRecord.value) return;
   const link = document.createElement("a");
-  link.href = `/api/history/${viewingRecord.value.id}/download`;
+  link.href = withAccessToken(`/api/history/${viewingRecord.value.id}/download`);
   link.click();
 }
 
