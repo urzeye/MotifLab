@@ -363,3 +363,25 @@ Verification:
 3. `GET /api/history` returned `200` with `meta.trace_id`.
 4. `GET /api/history/stats` returned `200` with `meta.trace_id`.
 5. `GET /api/history/nonexistent-id/exists` returned `200` with `meta.trace_id`.
+
+## Execution Progress (2026-02-27, Iteration 10)
+
+Completed in this iteration:
+
+1. Unified response helper usage in content and outline routes:
+   - `backend/routes/content_routes.py` switched from `jsonify` to `json_response(...)`
+   - `backend/routes/outline_routes.py` switched from `jsonify` to `json_response(...)`
+   - error responses in SSE initializer branches now also include `meta.trace_id`
+2. Aligned content route history dependency with application layer:
+   - `backend/routes/content_routes.py` now uses `get_history_application_service()`
+   - removed direct dependency on `backend.services.history` from route layer
+3. Added safer JSON parsing in content route:
+   - non-dict payloads now normalize to empty dict before reading fields
+
+Verification:
+
+1. `python -m py_compile` passed for `content_routes.py`, `outline_routes.py`, `application/services/__init__.py`.
+2. `POST /api/content` (missing topic/outline) returned `400` with `meta.trace_id`.
+3. `POST /api/outline` (missing topic) returned `400` with `meta.trace_id`.
+4. `POST /api/outline/stream` (missing topic) returned `400` with `meta.trace_id`.
+5. `POST /api/outline/edit/stream` (invalid mode) returned `400` with `meta.trace_id`.

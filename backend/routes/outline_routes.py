@@ -9,7 +9,8 @@ import time
 import base64
 import json
 import logging
-from flask import Blueprint, request, jsonify, Response, stream_with_context
+from flask import Blueprint, request, Response, stream_with_context
+from backend.interfaces.http import json_response
 from backend.services.outline import get_outline_service
 from .utils import log_request, log_error
 
@@ -58,10 +59,10 @@ def create_outline_blueprint():
             # 验证必填参数
             if not topic:
                 logger.warning("大纲生成请求缺少 topic 参数")
-                return jsonify({
+                return json_response({
                     "success": False,
                     "error": "参数错误：topic 不能为空。\n请提供要生成图文的主题内容。"
-                }), 400
+                }, 400)
 
             # 调用大纲生成服务
             logger.info(f"🔄 开始生成大纲，主题: {topic[:50]}...")
@@ -78,18 +79,18 @@ def create_outline_blueprint():
             elapsed = time.time() - start_time
             if result["success"]:
                 logger.info(f"✅ 大纲生成成功，耗时 {elapsed:.2f}s，共 {len(result.get('pages', []))} 页")
-                return jsonify(result), 200
+                return json_response(result, 200)
             else:
                 logger.error(f"❌ 大纲生成失败: {result.get('error', '未知错误')}")
-                return jsonify(result), 500
+                return json_response(result, 500)
 
         except Exception as e:
             log_error('/outline', e)
             error_msg = str(e)
-            return jsonify({
+            return json_response({
                 "success": False,
                 "error": f"大纲生成异常。\n错误详情: {error_msg}\n建议：检查后端日志获取更多信息"
-            }), 500
+            }, 500)
 
     @outline_bp.route('/outline/stream', methods=['POST'])
     def generate_outline_stream():
@@ -112,10 +113,10 @@ def create_outline_blueprint():
             })
 
             if not topic:
-                return jsonify({
+                return json_response({
                     "success": False,
                     "error": "参数错误：topic 不能为空。\n请提供要生成图文的主题内容。"
-                }), 400
+                }, 400)
 
             outline_service = get_outline_service()
 
@@ -177,10 +178,10 @@ def create_outline_blueprint():
 
         except Exception as e:
             log_error('/outline/stream', e)
-            return jsonify({
+            return json_response({
                 "success": False,
                 "error": f"初始化流式大纲生成失败: {str(e)}"
-            }), 500
+            }, 500)
 
     @outline_bp.route('/outline/edit/stream', methods=['POST'])
     def edit_outline_stream():
@@ -210,22 +211,22 @@ def create_outline_blueprint():
                 template_ref = None
 
             if not topic:
-                return jsonify({
+                return json_response({
                     "success": False,
                     "error": "参数错误：topic 不能为空"
-                }), 400
+                }, 400)
 
             if mode not in {'suggest_only', 'revise'}:
-                return jsonify({
+                return json_response({
                     "success": False,
                     "error": "参数错误：mode 仅支持 suggest_only / revise"
-                }), 400
+                }, 400)
 
             if mode == 'revise' and not revision_request.strip():
-                return jsonify({
+                return json_response({
                     "success": False,
                     "error": "参数错误：revise 模式下 revision_request 不能为空"
-                }), 400
+                }, 400)
 
             if not isinstance(current_pages, list):
                 current_pages = []
@@ -308,10 +309,10 @@ def create_outline_blueprint():
 
         except Exception as e:
             log_error('/outline/edit/stream', e)
-            return jsonify({
+            return json_response({
                 "success": False,
                 "error": f"初始化流式编辑失败: {str(e)}"
-            }), 500
+            }, 500)
 
     return outline_bp
 
