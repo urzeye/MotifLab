@@ -301,3 +301,20 @@ Verification:
 
 1. `python -m py_compile ...` passed for application service and all migrated modules.
 2. `GET /api/health`, `GET /api/search/status`, `GET /api/concept/history`, `GET /api/pipeline/types` all returned `200` with `X-Request-ID`.
+
+## Execution Progress (2026-02-27, Iteration 7)
+
+Completed in this iteration:
+
+1. Extended interface-layer response helper usage to pipeline routes:
+   - `backend/routes/pipeline_routes.py` switched from direct `jsonify` to `json_response(...)`
+   - unified error/success responses now include `meta.trace_id`
+2. Preserved pipeline behavior:
+   - request/response payload fields remain backward compatible
+   - SSE stream endpoint behavior unchanged
+
+Verification:
+
+1. `python -m py_compile backend/routes/pipeline_routes.py` passed.
+2. `GET /api/pipeline/types` returned `200` with `meta.trace_id`.
+3. `POST /api/pipeline/cancel` (missing `run_id`) returned `400` with `meta.trace_id` and expected error contract.

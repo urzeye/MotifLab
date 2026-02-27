@@ -12,8 +12,9 @@ API:
 
 import json
 import logging
-from flask import Blueprint, request, jsonify, Response, stream_with_context
+from flask import Blueprint, request, Response, stream_with_context
 
+from backend.interfaces.http import json_response
 from backend.services.pipeline_service import get_pipeline_service
 
 logger = logging.getLogger(__name__)
@@ -39,16 +40,16 @@ def create_pipeline_blueprint():
         try:
             service = get_pipeline_service()
             pipelines = service.get_available_pipelines()
-            return jsonify({
+            return json_response({
                 "success": True,
                 "pipelines": pipelines
-            })
+            }, 200)
         except Exception as e:
             logger.error(f"获取流水线类型失败: {e}")
-            return jsonify({
+            return json_response({
                 "success": False,
                 "error": str(e)
-            }), 500
+            }, 500)
 
     @bp.route('/run', methods=['POST'])
     def run_pipeline():
@@ -76,7 +77,7 @@ def create_pipeline_blueprint():
         try:
             data = request.get_json()
             if not data:
-                return jsonify({"success": False, "error": "请求体不能为空"}), 400
+                return json_response({"success": False, "error": "请求体不能为空"}, 400)
 
             pipeline_type = data.get('pipeline', 'redbook')
             input_data = data.get('input', {})
@@ -97,14 +98,14 @@ def create_pipeline_blueprint():
             service = get_pipeline_service()
             result = service.run_pipeline(pipeline_type, input_data, config)
 
-            return jsonify(result)
+            return json_response(result, 200)
 
         except ValueError as e:
             logger.warning(f"流水线参数错误: {e}")
-            return jsonify({"success": False, "error": str(e)}), 400
+            return json_response({"success": False, "error": str(e)}, 400)
         except Exception as e:
             logger.exception(f"流水线执行失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     @bp.route('/run/stream', methods=['POST'])
     def run_pipeline_stream():
@@ -135,7 +136,7 @@ def create_pipeline_blueprint():
         try:
             data = request.get_json()
             if not data:
-                return jsonify({"success": False, "error": "请求体不能为空"}), 400
+                return json_response({"success": False, "error": "请求体不能为空"}, 400)
 
             pipeline_type = data.get('pipeline', 'redbook')
             input_data = data.get('input', {})
@@ -180,10 +181,10 @@ def create_pipeline_blueprint():
 
         except ValueError as e:
             logger.warning(f"流水线参数错误: {e}")
-            return jsonify({"success": False, "error": str(e)}), 400
+            return json_response({"success": False, "error": str(e)}, 400)
         except Exception as e:
             logger.exception(f"流水线初始化失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     @bp.route('/cancel', methods=['POST'])
     def cancel_pipeline():
@@ -206,18 +207,18 @@ def create_pipeline_blueprint():
             run_id = data.get('run_id')
 
             if not run_id:
-                return jsonify({"success": False, "error": "缺少 run_id"}), 400
+                return json_response({"success": False, "error": "缺少 run_id"}, 400)
 
             service = get_pipeline_service()
             cancelled = service.cancel_pipeline(run_id)
 
-            return jsonify({
+            return json_response({
                 "success": True,
                 "cancelled": cancelled
-            })
+            }, 200)
 
         except Exception as e:
             logger.error(f"取消流水线失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     return bp
