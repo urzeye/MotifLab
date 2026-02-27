@@ -9,9 +9,9 @@ from .image import BaseImageClient, get_image_client
 class ClientFactory:
     # 仅保留可观察的 provider 映射，不在导入阶段加载具体实现类
     TEXT_CLIENTS = {
-        "google_gemini": "backend.clients.text.google_genai.GoogleGenAITextClient",
-        "openai": "backend.clients.text.openai_compatible.OpenAICompatibleTextClient",
-        "openai_compatible": "backend.clients.text.openai_compatible.OpenAICompatibleTextClient",
+        "google_gemini": "backend.infrastructure.clients.text.google_genai.GoogleGenAITextClient",
+        "openai": "backend.infrastructure.clients.text.openai_compatible.OpenAICompatibleTextClient",
+        "openai_compatible": "backend.infrastructure.clients.text.openai_compatible.OpenAICompatibleTextClient",
     }
 
     @classmethod
@@ -30,3 +30,4 @@ class ClientFactory:
             return cls.create_image_client(provider_config)
         else:
             raise ValueError(f'Unknown client type: {client_type}')
+

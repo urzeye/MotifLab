@@ -7,10 +7,10 @@
 import logging
 from typing import Any, Dict, Generator, List, Optional
 
-from backend.core.base_pipeline import BasePipeline, PipelineEvent
-from backend.core.base_skill import BaseSkill, SkillResult
-from backend.skills.redbook import OutlineSkill, ContentSkill
-from backend.skills.generate import GenerateImageSkill
+from backend.application.core.base_pipeline import BasePipeline, PipelineEvent
+from backend.application.core.base_skill import BaseSkill, SkillResult
+from backend.application.skills.redbook import OutlineSkill, ContentSkill
+from backend.application.skills.generate import GenerateImageSkill
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class RedBookPipeline(BasePipeline):
         """
         import time
         import uuid
-        from backend.core.base_pipeline import PipelineContext, PipelineStatus
+        from backend.application.core.base_pipeline import PipelineContext, PipelineStatus
 
         # 初始化上下文
         self._context = PipelineContext()
@@ -324,3 +324,4 @@ class RedBookPipeline(BasePipeline):
     def get_accumulated_data(self) -> Dict[str, Any]:
         """获取累积的数据"""
         return self._accumulated_data.copy()
+

@@ -15,8 +15,8 @@ from dataclasses import dataclass, field
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from backend.application.services import get_provider_config_service
-from backend.core.base_skill import BaseSkill, SkillResult
-from backend.clients.factory import ClientFactory
+from backend.application.core.base_skill import BaseSkill, SkillResult
+from backend.infrastructure.clients.factory import ClientFactory
 from backend.utils.image_compressor import compress_image
 
 logger = logging.getLogger(__name__)
@@ -112,7 +112,7 @@ class GenerateImageSkill(BaseSkill):
     def _load_prompt_template(self, short: bool = False) -> str:
         """加载提示词模板"""
         filename = "image_prompt_short.txt" if short else "image_prompt.txt"
-        prompt_path = Path(__file__).parent.parent / "prompts" / filename
+        prompt_path = Path(__file__).parent.parent.parent / "prompts" / filename
         if prompt_path.exists():
             return prompt_path.read_text(encoding='utf-8')
         return ""
@@ -651,3 +651,4 @@ class GenerateImageSkill(BaseSkill):
         """清理任务状态"""
         if task_id in self._task_states:
             del self._task_states[task_id]
+

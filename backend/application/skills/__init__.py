@@ -14,7 +14,7 @@ Skills 技能层
 - concept/: 概念图专用技能
 """
 
-from backend.core.base_skill import BaseSkill, SkillResult, SkillStatus
+from backend.application.core.base_skill import BaseSkill, SkillResult, SkillStatus
 
 # 通用技能
 from .analyze import AnalyzeSkill
@@ -40,3 +40,4 @@ __all__ = [
     'OutlineSkill',
     'ContentSkill',
 ]
+

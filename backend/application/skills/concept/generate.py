@@ -12,8 +12,8 @@ from dataclasses import dataclass
 from typing import Union, List, Dict, Optional, Generator
 
 from backend.application.services import get_provider_config_service
-from backend.core.base_skill import BaseSkill, SkillResult
-from backend.clients.factory import ClientFactory
+from backend.application.core.base_skill import BaseSkill, SkillResult
+from backend.infrastructure.clients.factory import ClientFactory
 from backend.knowledge import registry
 
 logger = logging.getLogger(__name__)
@@ -320,3 +320,4 @@ class ConceptGenerateSkill(BaseSkill):
             lines.append(f"[{status}] {r.get('index')}. {r.get('title')}: {path}")
 
         return "\n".join(lines)
+

@@ -12,8 +12,8 @@ from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 
 from backend.application.services import get_provider_config_service
-from backend.core.base_skill import BaseSkill, SkillResult
-from backend.clients.factory import ClientFactory
+from backend.application.core.base_skill import BaseSkill, SkillResult
+from backend.infrastructure.clients.factory import ClientFactory
 
 logger = logging.getLogger(__name__)
 provider_config_service = get_provider_config_service()
@@ -57,7 +57,7 @@ class ContentSkill(BaseSkill):
     def prompt_template(self) -> str:
         """延迟加载提示词模板"""
         if self._prompt_template is None:
-            prompt_path = Path(__file__).parent.parent.parent / "prompts" / "content_prompt.txt"
+            prompt_path = Path(__file__).parent.parent.parent.parent / "prompts" / "content_prompt.txt"
             if prompt_path.exists():
                 self._prompt_template = prompt_path.read_text(encoding='utf-8')
             else:
@@ -229,3 +229,4 @@ class ContentSkill(BaseSkill):
                 error=detailed_error,
                 metadata={'skill': self.name}
             )
+

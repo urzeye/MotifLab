@@ -15,8 +15,8 @@ from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 
 from backend.application.services import get_provider_config_service
-from backend.core.base_skill import BaseSkill, SkillResult
-from backend.clients.factory import ClientFactory
+from backend.application.core.base_skill import BaseSkill, SkillResult
+from backend.infrastructure.clients.factory import ClientFactory
 
 logger = logging.getLogger(__name__)
 provider_config_service = get_provider_config_service()
@@ -219,3 +219,4 @@ class AnalyzeSkill(BaseSkill):
                 error=f"文本分析失败: {error_msg}",
                 metadata={'skill': self.name}
             )
+

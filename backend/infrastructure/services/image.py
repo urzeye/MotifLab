@@ -9,7 +9,7 @@ import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 from typing import Dict, Any, Generator, List, Optional, Tuple
 from backend.application.services.provider_config_service import get_provider_config_service
-from backend.generators.factory import ImageGeneratorFactory
+from backend.infrastructure.generators.factory import ImageGeneratorFactory
 from backend.utils.image_compressor import compress_image
 
 logger = logging.getLogger(__name__)
@@ -1063,3 +1063,4 @@ def reset_image_service():
     """重置全局服务实例（配置更新后调用）"""
     global _service_instance
     _service_instance = None
+
