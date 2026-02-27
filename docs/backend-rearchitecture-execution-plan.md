@@ -528,3 +528,31 @@ Verification:
 3. `GET /api/publish/search` (missing keyword) returned `400` with `meta.trace_id`.
 4. `POST /api/publish/xiaohongshu` (missing required fields) returned `400` with `meta.trace_id`.
 5. Xiaohongshu real publish end-to-end flow remains intentionally untested in this phase.
+
+## Execution Progress (2026-02-27, Iteration 17)
+
+Completed in this iteration:
+
+1. Added content/outline application services:
+   - new `backend/application/services/content_application_service.py`
+   - new `backend/application/services/outline_application_service.py`
+2. Migrated route-layer dependencies to application layer:
+   - `backend/routes/content_routes.py` now uses `get_content_application_service()`
+   - `backend/routes/outline_routes.py` now uses `get_outline_application_service()`
+3. Moved content history writeback orchestration into application layer:
+   - content generation success path now writes back `titles/copywriting/tags` via application service
+   - route no longer directly orchestrates history update details
+4. Updated application service export surface:
+   - `backend/application/services/__init__.py` now exports content/outline application service factories
+
+Verification:
+
+1. `python -m py_compile` passed for:
+   - `backend/application/services/content_application_service.py`
+   - `backend/application/services/outline_application_service.py`
+   - `backend/application/services/__init__.py`
+   - `backend/routes/content_routes.py`
+   - `backend/routes/outline_routes.py`
+2. `POST /api/content` (missing topic/outline) returned `400` with `meta.trace_id`.
+3. `POST /api/outline` (missing topic) returned `400` with `meta.trace_id`.
+4. `POST /api/outline/edit/stream` (invalid mode payload) returned `400` with `meta.trace_id`.

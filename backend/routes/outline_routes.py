@@ -10,11 +10,12 @@ import base64
 import json
 import logging
 from flask import Blueprint, request, Response, stream_with_context
+from backend.application.services import get_outline_application_service
 from backend.interfaces.http import json_response
-from backend.services.outline import get_outline_service
 from .utils import log_request, log_error
 
 logger = logging.getLogger(__name__)
+outline_application_service = get_outline_application_service()
 
 
 def create_outline_blueprint():
@@ -66,8 +67,7 @@ def create_outline_blueprint():
 
             # 调用大纲生成服务
             logger.info(f"🔄 开始生成大纲，主题: {topic[:50]}...")
-            outline_service = get_outline_service()
-            result = outline_service.generate_outline(
+            result = outline_application_service.generate_outline(
                 topic,
                 images if images else None,
                 source_content=source_content,
@@ -118,8 +118,6 @@ def create_outline_blueprint():
                     "error": "参数错误：topic 不能为空。\n请提供要生成图文的主题内容。"
                 }, 400)
 
-            outline_service = get_outline_service()
-
             def generate_events():
                 try:
                     start_event = {
@@ -128,7 +126,7 @@ def create_outline_blueprint():
                     }
                     yield f"event: start\ndata: {json.dumps(start_event, ensure_ascii=False)}\n\n"
 
-                    result = outline_service.generate_outline(
+                    result = outline_application_service.generate_outline(
                         topic,
                         images if images else None,
                         source_content=source_content,
@@ -242,8 +240,6 @@ def create_outline_blueprint():
                 'has_template_ref': bool(template_ref)
             })
 
-            outline_service = get_outline_service()
-
             def generate_events():
                 try:
                     start_event = {
@@ -253,7 +249,7 @@ def create_outline_blueprint():
                     }
                     yield f"event: start\ndata: {json.dumps(start_event, ensure_ascii=False)}\n\n"
 
-                    result = outline_service.edit_outline_with_suggestions(
+                    result = outline_application_service.edit_outline_with_suggestions(
                         topic=topic,
                         current_outline=current_outline,
                         current_pages=current_pages,
