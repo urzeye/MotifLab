@@ -530,13 +530,19 @@
 
           <div class="sidebar-footer">
             <div class="brand-badge">
-              <div class="brand-icon">R</div>
+              <div class="brand-icon">
+                <img
+                  src="/assets/avatars/avatar.gif"
+                  alt="小爱同学"
+                  class="brand-avatar"
+                />
+              </div>
               <div
                 class="brand-info"
                 v-show="!sidebarCollapsed"
               >
-                <div class="brand-name">渲染AI</div>
-                <div class="brand-sub">RenderAI</div>
+                <div class="brand-name">小爱同学</div>
+                <div class="brand-sub">默认用户</div>
               </div>
             </div>
           </div>
