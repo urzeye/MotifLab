@@ -10,8 +10,9 @@
 import logging
 from copy import deepcopy
 from pathlib import Path
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request
 from backend.config import get_config_service
+from backend.interfaces.http import json_response
 from backend.middleware import require_auth
 from .utils import prepare_providers_for_response
 
@@ -69,7 +70,7 @@ def create_config_blueprint():
                 "providers": _prepare_search_providers_for_response(search_providers),
             }
 
-            return jsonify({
+            return json_response({
                 "success": True,
                 "config": {
                     "text_generation": {
@@ -86,13 +87,13 @@ def create_config_blueprint():
                     },
                     "search": search_response
                 }
-            })
+            }, 200)
 
         except Exception as e:
-            return jsonify({
+            return json_response({
                 "success": False,
                 "error": f"获取配置失败: {str(e)}"
-            }), 500
+            }, 500)
 
     @config_bp.route('/config', methods=['POST'])
     @require_auth
@@ -111,10 +112,10 @@ def create_config_blueprint():
         try:
             data = request.get_json()
             if not isinstance(data, dict):
-                return jsonify({
+                return json_response({
                     "success": False,
                     "error": "请求体必须为 JSON 对象"
-                }), 400
+                }, 400)
 
             # 更新图片生成配置
             if 'image_generation' in data:
@@ -137,16 +138,16 @@ def create_config_blueprint():
             # 清除配置缓存，确保下次使用时读取新配置
             _clear_config_cache()
 
-            return jsonify({
+            return json_response({
                 "success": True,
                 "message": "配置已保存"
-            })
+            }, 200)
 
         except Exception as e:
-            return jsonify({
+            return json_response({
                 "success": False,
                 "error": f"更新配置失败: {str(e)}"
-            }), 500
+            }, 500)
 
     # ==================== 连接测试 ====================
 
@@ -170,12 +171,12 @@ def create_config_blueprint():
         try:
             data = request.get_json(silent=True)
             if not isinstance(data, dict):
-                return jsonify({"success": False, "error": "请求体必须为 JSON 对象"}), 400
+                return json_response({"success": False, "error": "请求体必须为 JSON 对象"}, 400)
             provider_type = str(data.get('type') or '').strip().lower()
             provider_name = data.get('provider_name')
 
             if not provider_type:
-                return jsonify({"success": False, "error": "缺少 type 参数"}), 400
+                return json_response({"success": False, "error": "缺少 type 参数"}, 400)
 
             # 构建配置
             config = {
@@ -190,14 +191,14 @@ def create_config_blueprint():
                 config = _load_provider_config(provider_type, provider_name, config)
 
             if not config['api_key'] and provider_type not in {'firecrawl', 'bing'}:
-                return jsonify({"success": False, "error": "API Key 未配置"}), 400
+                return json_response({"success": False, "error": "API Key 未配置"}, 400)
 
             # 根据类型执行测试
             result = _test_provider_connection(provider_type, config)
-            return jsonify(result), 200 if result['success'] else 400
+            return json_response(result, 200 if result['success'] else 400)
 
         except Exception as e:
-            return jsonify({"success": False, "error": str(e)}), 400
+            return json_response({"success": False, "error": str(e)}, 400)
 
     return config_bp
 
