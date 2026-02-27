@@ -340,3 +340,26 @@ Verification:
 3. `POST /api/config/test` (without API key) returned `400` with `meta.trace_id`.
 4. `GET /api/concept/history` returned `200` with `meta.trace_id`.
 5. `POST /api/concept/analyze` (missing `article`) returned `400` with `meta.trace_id`.
+
+## Execution Progress (2026-02-27, Iteration 9)
+
+Completed in this iteration:
+
+1. Added history application service to reduce route-layer coupling:
+   - added `backend/application/services/history_application_service.py`
+   - updated `backend/application/services/__init__.py` exports
+   - route now depends on application service instead of direct service factory lookups
+2. Unified history route JSON responses:
+   - `backend/routes/history_routes.py` switched from direct `jsonify` to `json_response(...)`
+   - API payload fields preserved and `meta.trace_id` is now consistently included
+3. Kept download behavior unchanged:
+   - `send_file` branch remains intact for ZIP download endpoints
+   - only JSON error/success responses were standardized
+
+Verification:
+
+1. `python -m py_compile` passed for `history_application_service.py`, `application/services/__init__.py`, `history_routes.py`.
+2. `POST /api/history` returned `200` with `meta.trace_id`.
+3. `GET /api/history` returned `200` with `meta.trace_id`.
+4. `GET /api/history/stats` returned `200` with `meta.trace_id`.
+5. `GET /api/history/nonexistent-id/exists` returned `200` with `meta.trace_id`.
