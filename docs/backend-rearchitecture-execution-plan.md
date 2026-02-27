@@ -452,3 +452,24 @@ Verification:
 3. `GET /api/publish/search` (missing keyword) returned `400` with `meta.trace_id`.
 4. `POST /api/publish/xiaohongshu` (missing required fields) returned `400` with `meta.trace_id`.
 5. `POST /api/publish/video` (missing required fields) returned `400` with `meta.trace_id`.
+
+## Execution Progress (2026-02-27, Iteration 14)
+
+Completed in this iteration:
+
+1. Added forward-compatible custom prompt extension for image generation:
+   - `backend/routes/image_routes.py` now accepts optional `custom_prompt` in `/generate`, `/retry`, `/regenerate`
+   - `backend/services/image.py` propagates `custom_prompt` through generation/retry/regenerate workflows
+2. Persisted custom prompt into task runtime context:
+   - image task state now stores `custom_prompt`
+   - retry/retry-failed flows can reuse the same custom prompt when caller does not resend it
+3. Injected custom prompt into model prompt assembly with safeguards:
+   - custom prompt appended as high-priority section
+   - input length capped to prevent prompt pollution from overlong payloads
+
+Verification:
+
+1. `python -m py_compile` passed for `image.py`, `image_routes.py`.
+2. `POST /api/retry` (missing task/page, with custom_prompt) returned `400` with `meta.trace_id`.
+3. `POST /api/regenerate` (missing task/page, with custom_prompt) returned `400` with `meta.trace_id`.
+4. `POST /api/generate` (missing pages, with custom_prompt) returned `400` with `meta.trace_id`.
