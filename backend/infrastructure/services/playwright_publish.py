@@ -24,9 +24,9 @@ class PlaywrightPublisher:
     - 更可靠的元素定位和交互
     """
 
-    # 浏览器配置 - 使用独立的 RenderInk 配置文件
+    # 浏览器配置 - 使用独立的 MotifLab 配置文件
     CHROMIUM_PATH = "/Users/joshuaspc/Library/Caches/ms-playwright/chromium-1194/chrome-mac/Chromium.app/Contents/MacOS/Chromium"
-    USER_DATA_DIR = "/Users/joshuaspc/Library/Application Support/RenderInk/browser_profile"
+    USER_DATA_DIR = "/Users/joshuaspc/Library/Application Support/MotifLab/browser_profile"
 
     # 小红书 URL
     PUBLISH_URL = "https://creator.xiaohongshu.com/publish/publish"

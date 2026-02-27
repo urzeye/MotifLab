@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
-DEFAULT_APP_NAME = "渲染AI 图文生成器"
+DEFAULT_APP_NAME = "MotifLab"
 DEFAULT_APP_VERSION = "0.1.0"
 
 
@@ -112,25 +112,27 @@ class AppSettings:
 
     @classmethod
     def from_env(cls) -> "AppSettings":
-        project_root = Path(os.getenv("RENDERINK_ROOT") or Path(__file__).resolve().parents[2])
+        project_root = Path(
+            os.getenv("MOTIFLAB_ROOT") or os.getenv("RENDERINK_ROOT") or Path(__file__).resolve().parents[2]
+        )
         default_app_name, default_app_version = _read_project_metadata(project_root)
         default_cors = ["http://localhost:5173", "http://localhost:3000"]
 
-        debug = _to_bool(os.getenv("REDINK_DEBUG"), default=True)
-        log_level = (os.getenv("REDINK_LOG_LEVEL") or ("DEBUG" if debug else "INFO")).upper()
+        debug = _to_bool(os.getenv("MOTIFLAB_DEBUG"), default=True)
+        log_level = (os.getenv("MOTIFLAB_LOG_LEVEL") or ("DEBUG" if debug else "INFO")).upper()
 
         return cls(
-            app_name=(os.getenv("REDINK_APP_NAME") or default_app_name).strip(),
-            app_version=(os.getenv("REDINK_APP_VERSION") or default_app_version).strip(),
+            app_name=(os.getenv("MOTIFLAB_APP_NAME") or default_app_name).strip(),
+            app_version=(os.getenv("MOTIFLAB_APP_VERSION") or default_app_version).strip(),
             app_env=(os.getenv("APP_ENV") or "development").strip().lower(),
             debug=debug,
-            host=(os.getenv("REDINK_HOST") or "0.0.0.0").strip(),
-            port=_to_int(os.getenv("REDINK_PORT"), 12398),
+            host=(os.getenv("MOTIFLAB_HOST") or "0.0.0.0").strip(),
+            port=_to_int(os.getenv("MOTIFLAB_PORT"), 12398),
             log_level=log_level,
-            structured_logging=_to_bool(os.getenv("REDINK_STRUCTURED_LOG"), default=True),
-            cors_origins=_to_list(os.getenv("REDINK_CORS_ORIGINS"), default_cors),
-            rate_limit=(os.getenv("REDINK_RATE_LIMIT") or "60 per minute").strip(),
-            rate_limit_storage_uri=(os.getenv("REDINK_RATE_LIMIT_STORAGE_URI") or "memory://").strip(),
+            structured_logging=_to_bool(os.getenv("MOTIFLAB_STRUCTURED_LOG"), default=True),
+            cors_origins=_to_list(os.getenv("MOTIFLAB_CORS_ORIGINS"), default_cors),
+            rate_limit=(os.getenv("MOTIFLAB_RATE_LIMIT") or "60 per minute").strip(),
+            rate_limit_storage_uri=(os.getenv("MOTIFLAB_RATE_LIMIT_STORAGE_URI") or "memory://").strip(),
             project_root=project_root,
             frontend_dist=project_root / "frontend" / "dist",
             output_dir=project_root / "output",

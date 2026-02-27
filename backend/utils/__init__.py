@@ -1,5 +1,5 @@
 """
-RenderInk 工具模块
+MotifLab 工具模块
 """
 
 from .mcp_manager import MCPManager, mcp_manager

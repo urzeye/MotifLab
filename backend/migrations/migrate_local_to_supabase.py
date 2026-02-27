@@ -154,7 +154,7 @@ def migrate_record(history_dir: Path, index_record: Dict) -> bool:
 def main():
     """主迁移流程"""
     logger.info("=" * 60)
-    logger.info("RenderInk 数据迁移：本地 → Supabase")
+    logger.info("MotifLab 数据迁移：本地 → Supabase")
     logger.info("=" * 60)
 
     # 验证 Supabase 配置

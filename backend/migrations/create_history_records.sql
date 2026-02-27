@@ -1,5 +1,5 @@
 -- 历史记录表
--- 用于存储 RenderInk 生成的图文历史记录
+-- 用于存储 MotifLab 生成的图文历史记录
 --
 -- 执行方式：
 -- 1. 登录 Supabase Dashboard: https://supabase.com/dashboard

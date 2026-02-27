@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const API_BASE_URL = '/api'
-const ACCESS_TOKEN_KEY = 'redink_access_token'
+const ACCESS_TOKEN_KEY = 'motiflab_access_token'
 
 let accessToken = localStorage.getItem(ACCESS_TOKEN_KEY) || ''
 

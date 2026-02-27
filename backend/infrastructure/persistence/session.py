@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session, scoped_session, sessionmaker
 _ENGINE: Engine | None = None
 _SESSION_FACTORY: scoped_session | None = None
 
-DB_URL_ENV = "REDINK_DATABASE_URL"
+DB_URL_ENV = "MOTIFLAB_DATABASE_URL"
 DB_URL_FALLBACK_ENV = "DATABASE_URL"
 
 
@@ -25,7 +25,7 @@ def _project_root() -> Path:
 
 def _default_sqlite_url() -> str:
     """生成默认 SQLite 连接串。"""
-    db_file = _project_root() / "data" / "redink.db"
+    db_file = _project_root() / "data" / "motiflab.db"
     db_file.parent.mkdir(parents=True, exist_ok=True)
     return f"sqlite:///{db_file.as_posix()}"
 

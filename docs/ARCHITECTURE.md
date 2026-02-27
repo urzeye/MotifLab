@@ -1,6 +1,6 @@
-# RenderInk + Concept Visualizer 统一架构设计方案
+# MotifLab + Concept Visualizer 统一架构设计方案
 
-> 本文档描述将 RenderInk（小红书图文生成器）与 Concept Visualizer Agent（科学概念图生成器）完全合并重构为统一平台的技术方案。
+> 本文档描述将 MotifLab（小红书图文生成器）与 Concept Visualizer Agent（科学概念图生成器）完全合并重构为统一平台的技术方案。
 
 ---
 
@@ -10,7 +10,7 @@
 
 | 项目 | 定位 | 技术栈 |
 |------|------|--------|
-| **RenderInk** | 小红书风格图文生成 | Flask + Vue 3 |
+| **MotifLab** | 小红书风格图文生成 | Flask + Vue 3 |
 | **Concept Visualizer** | 科学概念图生成 | Python CLI Agent |
 
 ### 1.2 整合目标
@@ -273,7 +273,7 @@ GET  /api/knowledge/visual-styles
 3. 创建 `config/` 统一配置
 
 ### Phase 2: 技能迁移
-1. RenderInk 服务 → `skills/redbook/`
+1. MotifLab 服务 → `skills/redbook/`
 2. Concept Viz 技能 → `skills/concept/`
 3. 知识库 → `knowledge/`
 

@@ -353,7 +353,7 @@ def create_image_blueprint():
             "success": True,
             "message": "服务正常运行",
             "auth_required": is_auth_enabled(),
-            "rate_limit": os.environ.get('REDINK_RATE_LIMIT', '60 per minute')
+            "rate_limit": os.environ.get('MOTIFLAB_RATE_LIMIT', '60 per minute')
         }, 200)
 
     return image_bp
