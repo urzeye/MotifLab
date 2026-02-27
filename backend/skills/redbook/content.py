@@ -11,12 +11,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 
+from backend.application.services import get_provider_config_service
 from backend.core.base_skill import BaseSkill, SkillResult
 from backend.clients.factory import ClientFactory
-from backend.config import get_config_service
 
 logger = logging.getLogger(__name__)
-config_service = get_config_service()
+provider_config_service = get_provider_config_service()
 
 
 @dataclass
@@ -47,10 +47,9 @@ class ContentSkill(BaseSkill):
     def client(self):
         """延迟加载客户端"""
         if self._client is None:
-            provider_config = self.config.get('text_provider', {})
-            if not provider_config:
-                provider_name = config_service.get_active_text_provider()
-                provider_config = config_service.get_text_provider_config(provider_name)
+            provider_config = provider_config_service.resolve_text_provider_config(
+                provider_config=self.config.get("text_provider", {}),
+            )
             self._client = ClientFactory.create_text_client(provider_config)
         return self._client
 

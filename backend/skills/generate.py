@@ -14,13 +14,13 @@ from typing import Any, Dict, Generator, List, Optional, Tuple
 from dataclasses import dataclass, field
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from backend.application.services import get_provider_config_service
 from backend.core.base_skill import BaseSkill, SkillResult
 from backend.clients.factory import ClientFactory
-from backend.config import get_config_service
 from backend.utils.image_compressor import compress_image
 
 logger = logging.getLogger(__name__)
-config_service = get_config_service()
+provider_config_service = get_provider_config_service()
 
 # 存储模式常量
 STORAGE_MODE_LOCAL = "local"
@@ -91,21 +91,18 @@ class GenerateImageSkill(BaseSkill):
     def client(self):
         """延迟加载图像生成客户端"""
         if self._client is None:
-            provider_config = self.config.get('image_provider', {})
-            if not provider_config:
-                provider_name = config_service.get_active_image_provider()
-                provider_config = config_service.get_image_provider_config(provider_name)
+            provider_config = provider_config_service.resolve_image_provider_config(
+                provider_config=self.config.get("image_provider", {}),
+            )
             self._client = ClientFactory.create_image_client(provider_config)
         return self._client
 
     @property
     def provider_config(self) -> Dict[str, Any]:
         """获取服务商配置"""
-        config = self.config.get('image_provider', {})
-        if not config:
-            provider_name = config_service.get_active_image_provider()
-            config = config_service.get_image_provider_config(provider_name)
-        return config
+        return provider_config_service.resolve_image_provider_config(
+            provider_config=self.config.get("image_provider", {}),
+        )
 
     @property
     def use_short_prompt(self) -> bool:

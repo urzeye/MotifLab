@@ -11,13 +11,13 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import Union, List, Dict, Optional, Generator
 
+from backend.application.services import get_provider_config_service
 from backend.core.base_skill import BaseSkill, SkillResult
 from backend.clients.factory import ClientFactory
-from backend.config import get_config_service
 from backend.knowledge import registry
 
 logger = logging.getLogger(__name__)
-config_service = get_config_service()
+provider_config_service = get_provider_config_service()
 
 
 @dataclass
@@ -47,10 +47,9 @@ class ConceptGenerateSkill(BaseSkill):
     def image_client(self):
         """延迟加载图像生成客户端"""
         if self._image_client is None:
-            provider_config = self.config.get('image_provider', {})
-            if not provider_config:
-                provider_name = config_service.get_active_image_provider()
-                provider_config = config_service.get_image_provider_config(provider_name)
+            provider_config = provider_config_service.resolve_image_provider_config(
+                provider_config=self.config.get("image_provider", {}),
+            )
             self._image_client = ClientFactory.create_image_client(provider_config)
         return self._image_client
 
