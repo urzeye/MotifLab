@@ -218,6 +218,11 @@ export interface FinishEvent {
   images: string[]
 }
 
+export interface ImagePromptContext {
+  userPrompt?: string
+  systemPrompt?: string
+}
+
 export interface HistoryRecord {
   id: string
   title: string
@@ -552,14 +557,21 @@ export async function regenerateImage(
   taskId: string,
   page: Page,
   useReference = true,
-  context?: { fullOutline?: string; userTopic?: string }
+  context?: {
+    fullOutline?: string
+    userTopic?: string
+    userPrompt?: string
+    systemPrompt?: string
+  }
 ): Promise<{ success: boolean; index: number; image_url?: string; error?: string }> {
   const response = await axios.post(`${API_BASE_URL}/regenerate`, {
     task_id: taskId,
     page,
     use_reference: useReference,
     full_outline: context?.fullOutline,
-    user_topic: context?.userTopic
+    user_topic: context?.userTopic,
+    user_prompt: context?.userPrompt,
+    system_prompt: context?.systemPrompt
   })
   return response.data
 }
@@ -571,11 +583,17 @@ export async function retryFailedImages(
   onComplete: (event: ProgressEvent) => void,
   onError: (event: ProgressEvent) => void,
   onFinish: (event: { success: boolean; total: number; completed: number; failed: number }) => void,
-  onStreamError: (error: Error) => void
+  onStreamError: (error: Error) => void,
+  promptContext?: ImagePromptContext
 ) {
   await handleSSEStream(
     `${API_BASE_URL}/retry-failed`,
-    { task_id: taskId, pages },
+    {
+      task_id: taskId,
+      pages,
+      user_prompt: promptContext?.userPrompt,
+      system_prompt: promptContext?.systemPrompt
+    },
     {
       retry_start: (data) => onProgress({ index: -1, status: 'generating', message: data.message }),
       complete: onComplete,
@@ -596,7 +614,8 @@ export async function generateImagesPost(
   onFinish: (event: FinishEvent) => void,
   onStreamError: (error: Error) => void,
   userImages?: File[],
-  userTopic?: string
+  userTopic?: string,
+  promptContext?: ImagePromptContext
 ) {
   let userImagesBase64: string[] = []
   if (userImages && userImages.length > 0) {
@@ -617,7 +636,9 @@ export async function generateImagesPost(
       task_id: taskId,
       full_outline: fullOutline,
       user_images: userImagesBase64.length > 0 ? userImagesBase64 : undefined,
-      user_topic: userTopic || ''
+      user_topic: userTopic || '',
+      user_prompt: promptContext?.userPrompt,
+      system_prompt: promptContext?.systemPrompt
     },
     { progress: onProgress, complete: onComplete, error: onError, finish: onFinish },
     onStreamError
@@ -873,12 +894,45 @@ export async function publishToXiaohongshu(
   onError: (event: PublishProgressEvent) => void,
   onStreamError: (error: Error) => void
 ) {
-  await handleSSEStream(
-    `${API_BASE_URL}/publish/xiaohongshu`,
-    data,
-    { progress: onProgress, complete: onComplete, error: onError },
-    onStreamError
-  )
+  try {
+    onProgress({
+      step: '提交请求',
+      message: '正在发布到小红书...',
+      progress: 30
+    })
+
+    const response = await axios.post(`${API_BASE_URL}/publish/xiaohongshu`, data, { timeout: 180000 })
+    const result = response.data || {}
+
+    if (result.success) {
+      onComplete({
+        step: '发布完成',
+        message: result.message || '发布成功',
+        progress: 100,
+        success: true,
+        post_url: result.post_url
+      })
+      return
+    }
+
+    const failMessage = result.error || result.message || '发布失败'
+    onError({
+      step: '发布失败',
+      message: failMessage,
+      success: false,
+      error: failMessage
+    })
+  } catch (error: any) {
+    const parsed = handleAxiosError(error, '发布失败')
+    const errorMessage = String(parsed?.error || error?.message || '发布失败')
+    onError({
+      step: '发布异常',
+      message: errorMessage,
+      success: false,
+      error: errorMessage
+    })
+    onStreamError(new Error(errorMessage))
+  }
 }
 
 // ==================== 概念可视化历史 API ====================

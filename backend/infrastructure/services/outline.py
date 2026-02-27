@@ -85,7 +85,7 @@ class OutlineService:
 
     def _load_prompt_template(self) -> str:
         prompt_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)),
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
             "prompts",
             "outline_prompt.txt"
         )
@@ -94,7 +94,7 @@ class OutlineService:
 
     def _load_image_suggestion_prompt_template(self) -> str:
         prompt_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)),
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
             "prompts",
             "outline_image_suggestion_prompt.txt"
         )

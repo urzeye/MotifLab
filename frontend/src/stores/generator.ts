@@ -70,6 +70,12 @@ export interface GeneratorState {
   // 用户上传的参考图片（File对象，不会被持久化）
   userImages: File[]
 
+  // 图片生成 Prompt 上下文
+  imagePrompt: {
+    userPrompt: string
+    systemPrompt: string
+  }
+
   // 生成的内容数据（标题、文案、标签）
   content: GeneratedContent
 
@@ -114,6 +120,7 @@ function saveState(state: GeneratorState) {
       images: state.images,                  // 生成的图片结果
       taskId: state.taskId,                  // 任务ID
       recordId: state.recordId,              // 历史记录ID
+      imagePrompt: state.imagePrompt,        // 图片生成 Prompt 上下文
       content: state.content,                // 生成的内容（标题、文案、标签）
       outlineStatus: state.outlineStatus,    // 大纲生成状态
       lastSavedAt: state.lastSavedAt         // 最后保存时间
@@ -254,6 +261,12 @@ export const useGeneratorStore = defineStore('generator', {
 
       // 用户上传的参考图片（不从 localStorage 恢复）
       userImages: [],
+
+      // 图片生成 Prompt 上下文
+      imagePrompt: saved.imagePrompt || {
+        userPrompt: '',
+        systemPrompt: ''
+      },
 
       // 生成的内容数据
       content: saved.content || {
@@ -549,6 +562,12 @@ export const useGeneratorStore = defineStore('generator', {
       // 清空用户上传的参考图片
       this.userImages = []
 
+      // 清空图片生成 Prompt 上下文
+      this.imagePrompt = {
+        userPrompt: '',
+        systemPrompt: ''
+      }
+
       // 重置生成的内容数据
       this.content = {
         titles: [],          // 清空标题列表
@@ -640,6 +659,15 @@ export const useGeneratorStore = defineStore('generator', {
     },
 
     /**
+     * 设置图片生成 Prompt 上下文
+     * @param payload Prompt 上下文
+     */
+    setImagePrompt(payload: { userPrompt?: string; systemPrompt?: string }) {
+      this.imagePrompt.userPrompt = String(payload.userPrompt || '')
+      this.imagePrompt.systemPrompt = String(payload.systemPrompt || '')
+    },
+
+    /**
      * 标记已保存到服务器
      * 更新最后保存时间为当前时间
      */
@@ -698,6 +726,7 @@ export function setupAutoSave() {
       images: store.images,                  // 生成的图片结果
       taskId: store.taskId,                  // 任务ID
       recordId: store.recordId,              // 历史记录ID
+      imagePrompt: store.imagePrompt,        // 图片生成 Prompt 上下文
       content: store.content,                // 生成的内容
       outlineStatus: store.outlineStatus,    // 大纲生成状态
       lastSavedAt: store.lastSavedAt         // 最后保存时间

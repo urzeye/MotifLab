@@ -15,6 +15,8 @@ _SYMBOL_TO_MODULE = {
     "get_history_application_service": "history_application_service",
     "ImageGenerationApplicationService": "image_generation_application_service",
     "get_image_generation_application_service": "image_generation_application_service",
+    "ImageJobApplicationService": "image_job_application_service",
+    "get_image_job_application_service": "image_job_application_service",
     "KnowledgeApplicationService": "knowledge_application_service",
     "get_knowledge_application_service": "knowledge_application_service",
     "OutlineApplicationService": "outline_application_service",

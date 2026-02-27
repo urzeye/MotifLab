@@ -314,7 +314,7 @@ def _clear_config_cache():
         pass
 
     try:
-        from backend.services.image import reset_image_service
+        from backend.infrastructure.services.image import reset_image_service
         reset_image_service()
     except Exception:
         pass
@@ -696,7 +696,7 @@ def _test_replicate(config: dict) -> dict:
 
 def _test_firecrawl(config: dict) -> dict:
     """测试 Firecrawl 连接。"""
-    from backend.services.search_service import test_provider
+    from backend.infrastructure.services.search_service import test_provider
 
     result = test_provider("firecrawl", {
         "type": "firecrawl",
@@ -710,7 +710,7 @@ def _test_firecrawl(config: dict) -> dict:
 
 def _test_exa(config: dict) -> dict:
     """测试 Exa 连接。"""
-    from backend.services.search_service import test_provider
+    from backend.infrastructure.services.search_service import test_provider
 
     result = test_provider("exa", {
         "type": "exa",
@@ -724,7 +724,7 @@ def _test_exa(config: dict) -> dict:
 
 def _test_tavily(config: dict) -> dict:
     """测试 Tavily 连接。"""
-    from backend.services.search_service import test_provider
+    from backend.infrastructure.services.search_service import test_provider
 
     result = test_provider("tavily", {
         "type": "tavily",
@@ -738,7 +738,7 @@ def _test_tavily(config: dict) -> dict:
 
 def _test_perplexity(config: dict) -> dict:
     """测试 Perplexity 连接。"""
-    from backend.services.search_service import test_provider
+    from backend.infrastructure.services.search_service import test_provider
 
     result = test_provider("perplexity", {
         "type": "perplexity",
@@ -753,7 +753,7 @@ def _test_perplexity(config: dict) -> dict:
 
 def _test_bing(config: dict) -> dict:
     """测试 Bing 抓取能力。"""
-    from backend.services.search_service import test_provider
+    from backend.infrastructure.services.search_service import test_provider
 
     result = test_provider("bing", {
         "type": "bing",

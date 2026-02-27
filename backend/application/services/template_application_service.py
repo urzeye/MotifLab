@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 
-from backend.services.template import TemplateService, get_template_service
+from backend.infrastructure.services.template import TemplateService, get_template_service
 
 _template_application_service: "TemplateApplicationService | None" = None
 

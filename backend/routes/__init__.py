@@ -9,6 +9,7 @@ API 路由模块
 - search_routes: 网页搜索与抓取 API
 - content_routes: 内容生成相关 API（标题、文案、标签）
 - publish_routes: 发布相关 API（xiaohongshu-mcp 集成）
+- image_job_routes: 异步图片任务 API
 - pipeline_routes: 统一流水线 API（新架构）
 - knowledge_routes: 知识库管理 API
 - concept_routes: 概念可视化 API
@@ -36,6 +37,7 @@ def create_api_blueprint():
     from .search_routes import create_search_blueprint
     from .content_routes import create_content_blueprint
     from .publish_routes import create_publish_blueprint
+    from .image_job_routes import create_image_job_blueprint
     from .pipeline_routes import create_pipeline_blueprint
     from .knowledge_routes import create_knowledge_blueprint
     from .concept_routes import create_concept_blueprint
@@ -53,6 +55,7 @@ def create_api_blueprint():
     api_bp.register_blueprint(create_search_blueprint())
     api_bp.register_blueprint(create_content_blueprint())
     api_bp.register_blueprint(create_publish_blueprint())
+    api_bp.register_blueprint(create_image_job_blueprint())
 
     # 新架构路由
     api_bp.register_blueprint(create_pipeline_blueprint())

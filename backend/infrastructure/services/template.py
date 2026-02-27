@@ -14,7 +14,7 @@ class TemplateService:
     """提供模板数据加载、搜索、分类统计等能力。"""
 
     def __init__(self) -> None:
-        self._project_root = Path(__file__).resolve().parents[2]
+        self._project_root = Path(__file__).resolve().parents[3]
         self._template_file = self._project_root / "data" / "template.json"
         self._templates: List[Dict[str, Any]] = []
         self._mtime: Optional[float] = None

@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 from typing import Any, Dict, Iterable
 
-from backend.services.pipeline_service import PipelineService, get_pipeline_service
+from backend.infrastructure.services.pipeline_service import PipelineService, get_pipeline_service
 
 _pipeline_application_service: "PipelineApplicationService | None" = None
 

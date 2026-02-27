@@ -5,9 +5,11 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Protocol
 
 from backend.domain.ports import ConceptHistoryRepositoryPort
+from backend.infrastructure.persistence import get_concept_repository
 
 STORAGE_MODE_LOCAL = "local"
 STORAGE_MODE_SUPABASE = "supabase"
+STORAGE_MODE_DATABASE = "database"
 
 
 class ConceptHistoryStorageAdapterProtocol(ConceptHistoryRepositoryPort, Protocol):
@@ -104,12 +106,66 @@ class LocalConceptHistoryStorageAdapter:
         return self.service._repair_all_records_local()
 
 
+class DatabaseConceptHistoryStorageAdapter:
+    """数据库概念历史存储适配器。"""
+
+    def __init__(self) -> None:
+        self.repository = get_concept_repository()
+
+    def create_record(
+        self,
+        title: str,
+        article: str,
+        task_id: str,
+        style: Optional[str] = None,
+    ) -> str:
+        return self.repository.create_record(title, article, task_id, style)
+
+    def get_record(self, record_id: str) -> Optional[Dict[str, Any]]:
+        return self.repository.get_record(record_id)
+
+    def update_record(
+        self,
+        record_id: str,
+        title: Optional[str] = None,
+        status: Optional[str] = None,
+        thumbnail: Optional[str] = None,
+        image_count: Optional[int] = None,
+        pipeline_data: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        return self.repository.update_record(
+            record_id,
+            title=title,
+            status=status,
+            thumbnail=thumbnail,
+            image_count=image_count,
+            pipeline_data=pipeline_data,
+        )
+
+    def delete_record(self, record_id: str) -> bool:
+        return self.repository.delete_record(record_id)
+
+    def list_records(self, page: int = 1, page_size: int = 20, status: Optional[str] = None) -> Dict[str, Any]:
+        return self.repository.list_records(page, page_size, status)
+
+    def get_record_by_task_id(self, task_id: str) -> Optional[Dict[str, Any]]:
+        return self.repository.get_record_by_task_id(task_id)
+
+    def repair_record_images(self, record_id: str) -> bool:
+        return self.repository.repair_record_images(record_id)
+
+    def repair_all_records(self) -> Dict[str, Any]:
+        return self.repository.repair_all_records()
+
+
 def create_concept_history_storage_adapter(
     storage_mode: str,
     service: Any,
 ) -> ConceptHistoryStorageAdapterProtocol:
     """根据存储模式创建概念历史存储适配器。"""
     normalized_mode = (storage_mode or STORAGE_MODE_LOCAL).strip().lower()
+    if normalized_mode in {STORAGE_MODE_DATABASE, "sqlalchemy", "db"}:
+        return DatabaseConceptHistoryStorageAdapter()
     if normalized_mode in {STORAGE_MODE_LOCAL, STORAGE_MODE_SUPABASE}:
         # 目前仅落地本地实现，保留 supabase 扩展口
         return LocalConceptHistoryStorageAdapter(service)

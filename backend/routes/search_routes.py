@@ -7,7 +7,7 @@ from flask import Blueprint, current_app, request
 
 from backend.config import get_config_service
 from backend.interfaces.http import json_response
-from backend.services.search_service import get_search_provider, is_valid_http_url
+from backend.infrastructure.services.search_service import get_search_provider, is_valid_http_url
 from .utils import log_error, log_request
 
 logger = logging.getLogger(__name__)

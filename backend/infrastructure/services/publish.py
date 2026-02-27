@@ -7,7 +7,8 @@
 import logging
 from typing import Dict, Any, List, Optional
 
-from backend.utils.mcp_manager import mcp_manager
+from backend.domain.ports import PublishGatewayPort
+from backend.infrastructure.gateways import get_publish_gateway
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +20,8 @@ class PublishService:
     封装 xiaohongshu-mcp 的发布相关功能，提供统一的接口。
     """
 
-    def __init__(self):
-        self.mcp = mcp_manager
+    def __init__(self, gateway: PublishGatewayPort | None = None):
+        self.gateway = gateway or get_publish_gateway()
 
     async def get_mcp_status(self) -> Dict[str, Any]:
         """
@@ -29,7 +30,7 @@ class PublishService:
         Returns:
             dict: 包含 running, url, binary_installed 等信息
         """
-        return self.mcp.get_status()
+        return self.gateway.get_status()
 
     async def check_login(self) -> Dict[str, Any]:
         """
@@ -43,7 +44,7 @@ class PublishService:
                 "user_info": dict (如果已登录)
             }
         """
-        result = await self.mcp.call_tool("check_login_status")
+        result = await self.gateway.check_login()
 
         if not result.get("success", True):
             return {
@@ -68,8 +69,7 @@ class PublishService:
         Returns:
             dict: 操作结果
         """
-        result = await self.mcp.call_tool("open_login_page")
-        return result
+        return await self.gateway.open_login_page()
 
     async def publish(
         self,
@@ -108,7 +108,7 @@ class PublishService:
         logger.info(f"开始发布到小红书: title={title}, images={len(images)}")
 
         # 调用 MCP 发布工具
-        result = await self.mcp.call_tool("publish_content", {
+        result = await self.gateway.publish({
             "title": title,
             "content": full_content,
             "images": images
@@ -154,7 +154,7 @@ class PublishService:
             tag_str = " ".join(f"#{tag}" for tag in tags[:5])
             full_content = f"{content}\n\n{tag_str}"
 
-        result = await self.mcp.call_tool("publish_with_video", {
+        result = await self.gateway.publish_video({
             "title": title[:20],
             "content": full_content,
             "video_path": video_path,
@@ -174,11 +174,7 @@ class PublishService:
         Returns:
             dict: 帖子列表
         """
-        result = await self.mcp.call_tool("list_feeds", {
-            "page": page,
-            "limit": limit
-        })
-        return result
+        return await self.gateway.list_posts({"page": page, "limit": limit})
 
     async def search_posts(self, keyword: str, page: int = 1) -> Dict[str, Any]:
         """
@@ -191,11 +187,7 @@ class PublishService:
         Returns:
             dict: 搜索结果
         """
-        result = await self.mcp.call_tool("search_feeds", {
-            "keyword": keyword,
-            "page": page
-        })
-        return result
+        return await self.gateway.search_posts({"keyword": keyword, "page": page})
 
 
 # 全局服务实例

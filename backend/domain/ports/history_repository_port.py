@@ -87,3 +87,9 @@ class ConceptHistoryRepositoryPort(Protocol):
 
     def repair_all_records(self) -> Dict[str, Any]:
         ...
+
+
+class ConceptRepositoryPort(ConceptHistoryRepositoryPort, Protocol):
+    """概念记录仓储端口（与概念历史记录仓储保持同一契约）。"""
+
+    ...

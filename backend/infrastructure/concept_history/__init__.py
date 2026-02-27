@@ -2,6 +2,7 @@
 
 from .adapters import (
     ConceptHistoryStorageAdapterProtocol,
+    DatabaseConceptHistoryStorageAdapter,
     LocalConceptHistoryStorageAdapter,
     create_concept_history_storage_adapter,
 )
@@ -9,5 +10,6 @@ from .adapters import (
 __all__ = [
     "ConceptHistoryStorageAdapterProtocol",
     "LocalConceptHistoryStorageAdapter",
+    "DatabaseConceptHistoryStorageAdapter",
     "create_concept_history_storage_adapter",
 ]
