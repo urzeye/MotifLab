@@ -7,10 +7,11 @@ from pathlib import Path
 
 from flask import Flask, request, send_from_directory
 
-from backend.config import Config
+from backend.config import Config, get_config_service
 from backend.middleware import authenticate_request, is_auth_enabled
 from backend.routes import register_routes
 
+from .container import build_container
 from .logging import configure_logging
 from .settings import AppSettings
 from .tracing import register_tracing
@@ -123,15 +124,17 @@ def _register_root_routes(app: Flask, settings: AppSettings) -> None:
 
 def _validate_config_on_startup(logger: logging.Logger) -> None:
     """启动时验证关键配置可用性。"""
+    config_service = get_config_service()
+
     logger.info("📋 检查配置存储...")
     try:
-        storage_mode = Config.get_config_storage_mode()
+        storage_mode = config_service.get_config_storage_mode()
     except Exception:
         storage_mode = "yaml"
     logger.info(f"📦 配置存储模式: {storage_mode}")
 
     try:
-        text_config = Config.load_text_providers_config()
+        text_config = config_service.load_text_providers_config()
         active = text_config.get("active_provider", "未设置")
         providers = list((text_config.get("providers") or {}).keys())
         logger.info(f"✅ 文本生成配置: 激活={active}, 可用服务商={providers}")
@@ -145,7 +148,7 @@ def _validate_config_on_startup(logger: logging.Logger) -> None:
         logger.error(f"❌ 读取文本配置失败: {exc}")
 
     try:
-        image_config = Config.load_image_providers_config()
+        image_config = config_service.load_image_providers_config()
         active = image_config.get("active_provider", "未设置")
         providers = list((image_config.get("providers") or {}).keys())
         logger.info(f"✅ 图片生成配置: 激活={active}, 可用服务商={providers}")
@@ -168,6 +171,8 @@ def create_app(settings: AppSettings | None = None) -> Flask:
     logger.info("🚀 正在启动 渲染AI 图文生成器...")
 
     app = _create_flask_app(runtime_settings, logger)
+    app.extensions["backend_container"] = build_container()
+
     app.config.from_object(Config)
     app.config.update(
         DEBUG=runtime_settings.debug,

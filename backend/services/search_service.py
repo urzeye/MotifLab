@@ -534,20 +534,56 @@ class BingSearchProvider(BaseSearchProvider):
         return _build_success(target_url, final_title, final_content)
 
 
+class SearchProviderRegistry:
+    """搜索服务商注册表，支持按名称动态注册与扩展。"""
+
+    def __init__(self) -> None:
+        self._providers: Dict[str, type[BaseSearchProvider]] = {}
+
+    def register(self, provider_type: str, provider_class: type[BaseSearchProvider]) -> None:
+        """注册服务商实现类。"""
+        normalized = (provider_type or "").strip().lower()
+        if not normalized:
+            raise ValueError("provider_type 不能为空")
+        if not issubclass(provider_class, BaseSearchProvider):
+            raise TypeError("provider_class 必须继承 BaseSearchProvider")
+        self._providers[normalized] = provider_class
+
+    def create(self, provider_type: str) -> BaseSearchProvider:
+        """创建服务商实例。"""
+        normalized = (provider_type or "").strip().lower()
+        provider_class = self._providers.get(normalized)
+        if provider_class is None:
+            raise ValueError(f"不支持的搜索服务商: {provider_type}")
+        return provider_class()
+
+    def list_types(self) -> list[str]:
+        """返回已注册的服务商类型列表。"""
+        return sorted(self._providers.keys())
+
+
+def build_default_search_provider_registry() -> SearchProviderRegistry:
+    """构建默认搜索服务商注册表。"""
+    registry = SearchProviderRegistry()
+    registry.register("bing", BingSearchProvider)
+    registry.register("firecrawl", FirecrawlSearchProvider)
+    registry.register("exa", ExaSearchProvider)
+    registry.register("tavily", TavilySearchProvider)
+    registry.register("perplexity", PerplexitySearchProvider)
+    return registry
+
+
+_search_provider_registry = build_default_search_provider_registry()
+
+
+def register_search_provider(provider_type: str, provider_class: type[BaseSearchProvider]) -> None:
+    """注册自定义搜索服务商实现。"""
+    _search_provider_registry.register(provider_type, provider_class)
+
+
 def get_search_provider(provider_type: str) -> BaseSearchProvider:
     """按 provider type 获取抓取实现。"""
-    normalized = (provider_type or "").strip().lower()
-    if normalized == "bing":
-        return BingSearchProvider()
-    if normalized == "firecrawl":
-        return FirecrawlSearchProvider()
-    if normalized == "exa":
-        return ExaSearchProvider()
-    if normalized == "tavily":
-        return TavilySearchProvider()
-    if normalized == "perplexity":
-        return PerplexitySearchProvider()
-    raise ValueError(f"不支持的搜索服务商: {provider_type}")
+    return _search_provider_registry.create(provider_type)
 
 
 def scrape_with_provider(url: str, provider_config: Dict[str, Any]) -> Dict[str, Any]:

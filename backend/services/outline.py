@@ -3,7 +3,7 @@ import os
 import re
 import json
 from typing import Dict, List, Any, Optional
-from backend.config import Config
+from backend.config import get_config_service
 from backend.utils.text_client import get_text_chat_client
 
 logger = logging.getLogger(__name__)
@@ -12,8 +12,9 @@ logger = logging.getLogger(__name__)
 class OutlineService:
     def __init__(self):
         logger.debug("初始化 OutlineService...")
+        self.config_service = get_config_service()
         # 加载完整文本配置（保留多服务商信息，便于按能力回退）
-        self.text_config = Config.load_text_providers_config()
+        self.text_config = self.config_service.load_text_providers_config()
         # 启动时校验至少有一个可用服务商
         self._get_client()
         self.prompt_template = self._load_prompt_template()

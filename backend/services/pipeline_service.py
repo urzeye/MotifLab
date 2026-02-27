@@ -9,7 +9,7 @@ from typing import Any, Dict, Generator, Optional
 
 from backend.pipelines import RedBookPipeline, ConceptPipeline
 from backend.core.base_pipeline import BasePipeline, PipelineEvent
-from backend.config import Config
+from backend.config import get_config_service
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ class PipelineService:
     }
 
     def __init__(self):
+        self.config_service = get_config_service()
         self._active_pipelines: Dict[str, BasePipeline] = {}
 
     def _get_provider_configs(self) -> Dict[str, Any]:
@@ -32,16 +33,16 @@ class PipelineService:
 
         # 获取文本服务商配置
         try:
-            text_provider = Config.get_active_text_provider()
-            config['text_provider'] = Config.get_text_provider_config(text_provider)
+            text_provider = self.config_service.get_active_text_provider()
+            config['text_provider'] = self.config_service.get_text_provider_config(text_provider)
         except Exception as e:
             logger.warning(f"获取文本服务商配置失败: {e}")
             config['text_provider'] = {}
 
         # 获取图片服务商配置
         try:
-            image_provider = Config.get_active_image_provider()
-            config['image_provider'] = Config.get_image_provider_config(image_provider)
+            image_provider = self.config_service.get_active_image_provider()
+            config['image_provider'] = self.config_service.get_image_provider_config(image_provider)
         except Exception as e:
             logger.warning(f"获取图片服务商配置失败: {e}")
             config['image_provider'] = {}
