@@ -282,3 +282,22 @@ Verification:
 
 1. `python -m py_compile ...` passed for new interface layer files and updated routes.
 2. `GET /api/search/status` returned `200`, with `success=true` and `meta.trace_id` present.
+
+## Execution Progress (2026-02-27, Iteration 6)
+
+Completed in this iteration:
+
+1. Added application-layer provider config service:
+   - `backend/application/services/provider_config_service.py`
+   - unified text/image provider config resolving API
+2. Migrated repeated provider-config resolution logic to application layer:
+   - all skill modules now use `ProviderConfigService` for default provider fallback
+   - `backend/services/pipeline_service.py` now uses provider bundle from application service
+   - `backend/routes/concept_routes.py` now uses provider bundle from application service
+3. Refined image service dependency direction:
+   - `backend/services/image.py` switched to application-layer provider config service
+
+Verification:
+
+1. `python -m py_compile ...` passed for application service and all migrated modules.
+2. `GET /api/health`, `GET /api/search/status`, `GET /api/concept/history`, `GET /api/pipeline/types` all returned `200` with `X-Request-ID`.

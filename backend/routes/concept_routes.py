@@ -14,6 +14,7 @@ import json
 import logging
 from flask import Blueprint, request, jsonify, Response, stream_with_context
 
+from backend.application.services import get_provider_config_service
 from backend.skills.concept import (
     ConceptAnalyzeSkill,
     ConceptMapSkill,
@@ -25,31 +26,15 @@ from backend.skills.concept.map_framework import MapInput
 from backend.skills.concept.design import DesignInput
 from backend.skills.concept.generate import GenerateInput
 from backend.pipelines import ConceptPipeline
-from backend.config import get_config_service
 from backend.services.concept_history import get_concept_history_service
 
 logger = logging.getLogger(__name__)
-config_service = get_config_service()
+provider_config_service = get_provider_config_service()
 
 
 def _get_provider_configs():
     """获取服务商配置"""
-    config = {}
-    try:
-        text_provider = config_service.get_active_text_provider()
-        config['text_provider'] = config_service.get_text_provider_config(text_provider)
-    except Exception as e:
-        logger.warning(f"获取文本服务商配置失败: {e}")
-        config['text_provider'] = {}
-
-    try:
-        image_provider = config_service.get_active_image_provider()
-        config['image_provider'] = config_service.get_image_provider_config(image_provider)
-    except Exception as e:
-        logger.warning(f"获取图片服务商配置失败: {e}")
-        config['image_provider'] = {}
-
-    return config
+    return provider_config_service.build_provider_bundle(logger=logger, swallow_errors=True)
 
 
 def create_concept_blueprint():

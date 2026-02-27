@@ -7,9 +7,9 @@
 import logging
 from typing import Any, Dict, Generator, Optional
 
+from backend.application.services import get_provider_config_service
 from backend.pipelines import RedBookPipeline, ConceptPipeline
 from backend.core.base_pipeline import BasePipeline, PipelineEvent
-from backend.config import get_config_service
 
 logger = logging.getLogger(__name__)
 
@@ -24,30 +24,12 @@ class PipelineService:
     }
 
     def __init__(self):
-        self.config_service = get_config_service()
+        self.provider_config_service = get_provider_config_service()
         self._active_pipelines: Dict[str, BasePipeline] = {}
 
     def _get_provider_configs(self) -> Dict[str, Any]:
         """获取服务商配置"""
-        config = {}
-
-        # 获取文本服务商配置
-        try:
-            text_provider = self.config_service.get_active_text_provider()
-            config['text_provider'] = self.config_service.get_text_provider_config(text_provider)
-        except Exception as e:
-            logger.warning(f"获取文本服务商配置失败: {e}")
-            config['text_provider'] = {}
-
-        # 获取图片服务商配置
-        try:
-            image_provider = self.config_service.get_active_image_provider()
-            config['image_provider'] = self.config_service.get_image_provider_config(image_provider)
-        except Exception as e:
-            logger.warning(f"获取图片服务商配置失败: {e}")
-            config['image_provider'] = {}
-
-        return config
+        return self.provider_config_service.build_provider_bundle(logger=logger, swallow_errors=True)
 
     def create_pipeline(
         self,
