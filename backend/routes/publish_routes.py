@@ -6,11 +6,23 @@
 
 import logging
 import asyncio
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request
 
+from backend.interfaces.http import json_response
 from backend.services.publish import publish_service
 
 logger = logging.getLogger(__name__)
+
+
+def _run_async(coro):
+    """在独立事件循环中执行协程，避免污染现有循环状态。"""
+    loop = asyncio.new_event_loop()
+    try:
+        asyncio.set_event_loop(loop)
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+        asyncio.set_event_loop(None)
 
 
 def create_publish_blueprint():
@@ -30,21 +42,18 @@ def create_publish_blueprint():
         - url: MCP 服务地址
         """
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            status = loop.run_until_complete(publish_service.get_mcp_status())
-            loop.close()
+            status = _run_async(publish_service.get_mcp_status())
 
-            return jsonify({
+            return json_response({
                 "success": True,
                 **status
-            })
+            }, 200)
         except Exception as e:
             logger.error(f"获取 MCP 状态失败: {e}")
-            return jsonify({
+            return json_response({
                 "success": False,
                 "error": str(e)
-            }), 500
+            }, 500)
 
     # ==================== 登录状态 ====================
 
@@ -59,19 +68,16 @@ def create_publish_blueprint():
         - user_info: 用户信息（如果已登录）
         """
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            result = loop.run_until_complete(publish_service.check_login())
-            loop.close()
+            result = _run_async(publish_service.check_login())
 
-            return jsonify(result)
+            return json_response(result, 200)
         except Exception as e:
             logger.error(f"检查登录状态失败: {e}")
-            return jsonify({
+            return json_response({
                 "success": False,
                 "logged_in": False,
                 "message": f"检查失败: {str(e)}"
-            }), 500
+            }, 500)
 
     @publish_bp.route('/publish/login', methods=['POST'])
     def open_login():
@@ -81,18 +87,15 @@ def create_publish_blueprint():
         用户需要在弹出的浏览器中手动完成登录。
         """
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            result = loop.run_until_complete(publish_service.open_login_page())
-            loop.close()
+            result = _run_async(publish_service.open_login_page())
 
-            return jsonify(result)
+            return json_response(result, 200)
         except Exception as e:
             logger.error(f"打开登录页面失败: {e}")
-            return jsonify({
+            return json_response({
                 "success": False,
                 "error": str(e)
-            }), 500
+            }, 500)
 
     # ==================== 发布功能 ====================
 
@@ -113,7 +116,9 @@ def create_publish_blueprint():
         - post_url: 发布成功后的链接
         """
         try:
-            data = request.get_json()
+            data = request.get_json(silent=True)
+            if not isinstance(data, dict):
+                data = {}
 
             title = data.get('title')
             content = data.get('content')
@@ -122,27 +127,25 @@ def create_publish_blueprint():
 
             # 参数校验
             if not title:
-                return jsonify({
+                return json_response({
                     "success": False,
                     "error": "标题不能为空"
-                }), 400
+                }, 400)
 
             if not content:
-                return jsonify({
+                return json_response({
                     "success": False,
                     "error": "正文不能为空"
-                }), 400
+                }, 400)
 
             if not images or len(images) == 0:
-                return jsonify({
+                return json_response({
                     "success": False,
                     "error": "至少需要一张图片"
-                }), 400
+                }, 400)
 
             # 执行发布
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            result = loop.run_until_complete(
+            result = _run_async(
                 publish_service.publish(
                     title=title,
                     content=content,
@@ -150,17 +153,16 @@ def create_publish_blueprint():
                     tags=tags
                 )
             )
-            loop.close()
 
             status_code = 200 if result.get('success') else 500
-            return jsonify(result), status_code
+            return json_response(result, status_code)
 
         except Exception as e:
             logger.error(f"发布失败: {e}")
-            return jsonify({
+            return json_response({
                 "success": False,
                 "error": str(e)
-            }), 500
+            }, 500)
 
     @publish_bp.route('/publish/video', methods=['POST'])
     def publish_video():
@@ -175,7 +177,9 @@ def create_publish_blueprint():
         - tags: 标签列表（可选）
         """
         try:
-            data = request.get_json()
+            data = request.get_json(silent=True)
+            if not isinstance(data, dict):
+                data = {}
 
             title = data.get('title')
             content = data.get('content')
@@ -184,14 +188,12 @@ def create_publish_blueprint():
             tags = data.get('tags', [])
 
             if not title or not content or not video_path:
-                return jsonify({
+                return json_response({
                     "success": False,
                     "error": "标题、正文和视频路径为必填项"
-                }), 400
+                }, 400)
 
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            result = loop.run_until_complete(
+            result = _run_async(
                 publish_service.publish_with_video(
                     title=title,
                     content=content,
@@ -200,17 +202,16 @@ def create_publish_blueprint():
                     tags=tags
                 )
             )
-            loop.close()
 
             status_code = 200 if result.get('success') else 500
-            return jsonify(result), status_code
+            return json_response(result, status_code)
 
         except Exception as e:
             logger.error(f"发布视频失败: {e}")
-            return jsonify({
+            return json_response({
                 "success": False,
                 "error": str(e)
-            }), 500
+            }, 500)
 
     # ==================== 帖子管理 ====================
 
@@ -227,20 +228,17 @@ def create_publish_blueprint():
             page = request.args.get('page', 1, type=int)
             limit = request.args.get('limit', 20, type=int)
 
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            result = loop.run_until_complete(
+            result = _run_async(
                 publish_service.list_my_posts(page=page, limit=limit)
             )
-            loop.close()
 
-            return jsonify(result)
+            return json_response(result, 200)
         except Exception as e:
             logger.error(f"获取帖子列表失败: {e}")
-            return jsonify({
+            return json_response({
                 "success": False,
                 "error": str(e)
-            }), 500
+            }, 500)
 
     @publish_bp.route('/publish/search', methods=['GET'])
     def search_posts():
@@ -256,24 +254,21 @@ def create_publish_blueprint():
             page = request.args.get('page', 1, type=int)
 
             if not keyword:
-                return jsonify({
+                return json_response({
                     "success": False,
                     "error": "搜索关键词不能为空"
-                }), 400
+                }, 400)
 
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            result = loop.run_until_complete(
+            result = _run_async(
                 publish_service.search_posts(keyword=keyword, page=page)
             )
-            loop.close()
 
-            return jsonify(result)
+            return json_response(result, 200)
         except Exception as e:
             logger.error(f"搜索失败: {e}")
-            return jsonify({
+            return json_response({
                 "success": False,
                 "error": str(e)
-            }), 500
+            }, 500)
 
     return publish_bp
