@@ -1,43 +1,66 @@
-"""图片生成器工厂"""
-from typing import Dict, Any
+"""图片生成器工厂。"""
+
+from __future__ import annotations
+
+import importlib
+from typing import Any, Dict, Tuple
+
 from .base import ImageGeneratorBase
-from .google_genai import GoogleGenAIGenerator
-from .openai_compatible import OpenAICompatibleGenerator
-from .image_api import ImageApiGenerator
-from .dashscope_sdk import DashScopeSdkGenerator
-from .dashscope_edit import DashScopeImageEditGenerator
-from .modelscope import ModelScopeGenerator
-from .replicate_gen import ReplicateGenerator
 
 
 class ImageGeneratorFactory:
     """图片生成器工厂类"""
 
-    # 注册的生成器类型
-    GENERATORS = {
-        'openai_compatible': OpenAICompatibleGenerator,
-        'openai': OpenAICompatibleGenerator,
-        'google_genai': GoogleGenAIGenerator,
-        'image_api': ImageApiGenerator,
-        'dashscope': DashScopeSdkGenerator,
-        'dashscope_edit': DashScopeImageEditGenerator,
-        'modelscope': ModelScopeGenerator,
-        'replicate': ReplicateGenerator,
+    # 生成器注册表：provider -> (模块路径, 类名)
+    GENERATORS: Dict[str, Tuple[str, str]] = {
+        "openai_compatible": ("backend.generators.openai_compatible", "OpenAICompatibleGenerator"),
+        "openai": ("backend.generators.openai_compatible", "OpenAICompatibleGenerator"),
+        "google_genai": ("backend.generators.google_genai", "GoogleGenAIGenerator"),
+        "image_api": ("backend.generators.image_api", "ImageApiGenerator"),
+        "dashscope": ("backend.generators.dashscope_sdk", "DashScopeSdkGenerator"),
+        "dashscope_edit": ("backend.generators.dashscope_edit", "DashScopeImageEditGenerator"),
+        "modelscope": ("backend.generators.modelscope", "ModelScopeGenerator"),
+        "replicate": ("backend.generators.replicate_gen", "ReplicateGenerator"),
     }
+
+    # 已加载的生成器类缓存，避免重复 import
+    _GENERATOR_CLASS_CACHE: Dict[str, type] = {}
+
+    @classmethod
+    def _load_generator_class(cls, provider: str) -> type:
+        """按需加载生成器类。"""
+        if provider in cls._GENERATOR_CLASS_CACHE:
+            return cls._GENERATOR_CLASS_CACHE[provider]
+
+        module_path, class_name = cls.GENERATORS[provider]
+        try:
+            module = importlib.import_module(module_path)
+            generator_class = getattr(module, class_name)
+        except Exception as exc:
+            raise ImportError(f"加载图片生成器失败: provider={provider}, error={exc}") from exc
+
+        if not issubclass(generator_class, ImageGeneratorBase):
+            raise TypeError(
+                f"加载失败：{class_name} 必须继承自 ImageGeneratorBase，"
+                f"当前类型: {generator_class}"
+            )
+
+        cls._GENERATOR_CLASS_CACHE[provider] = generator_class
+        return generator_class
 
     @classmethod
     def create(cls, provider: str, config: Dict[str, Any]) -> ImageGeneratorBase:
         """
         创建图片生成器实例
 
-        Args:
-            provider: 服务商类型 ('google_genai', 'openai', 'openai_compatible')
+        参数:
+            provider: 服务商类型（如 google_genai、openai、openai_compatible）
             config: 配置字典
 
-        Returns:
+        返回:
             图片生成器实例
 
-        Raises:
+        异常:
             ValueError: 不支持的服务商类型
         """
         if provider not in cls.GENERATORS:
@@ -51,7 +74,7 @@ class ImageGeneratorFactory:
                 "3. 或使用环境变量 IMAGE_PROVIDER 指定服务商"
             )
 
-        generator_class = cls.GENERATORS[provider]
+        generator_class = cls._load_generator_class(provider)
         return generator_class(config)
 
     @classmethod
@@ -59,7 +82,7 @@ class ImageGeneratorFactory:
         """
         注册自定义生成器
 
-        Args:
+        参数:
             name: 生成器名称
             generator_class: 生成器类
         """
@@ -70,4 +93,5 @@ class ImageGeneratorFactory:
                 f"基类: ImageGeneratorBase"
             )
 
-        cls.GENERATORS[name] = generator_class
+        cls.GENERATORS[name] = (generator_class.__module__, generator_class.__name__)
+        cls._GENERATOR_CLASS_CACHE[name] = generator_class
