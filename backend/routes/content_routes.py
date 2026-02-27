@@ -7,12 +7,14 @@
 
 import time
 import logging
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request
+from backend.application.services import get_history_application_service
+from backend.interfaces.http import json_response
 from backend.services.content import get_content_service
-from backend.services.history import get_history_service
 from .utils import log_request, log_error
 
 logger = logging.getLogger(__name__)
+history_application_service = get_history_application_service()
 
 
 def create_content_blueprint():
@@ -38,7 +40,9 @@ def create_content_blueprint():
         start_time = time.time()
 
         try:
-            data = request.get_json()
+            data = request.get_json(silent=True)
+            if not isinstance(data, dict):
+                data = {}
             topic = data.get('topic', '')
             outline = data.get('outline', '')
             record_id = data.get('record_id')
@@ -52,17 +56,17 @@ def create_content_blueprint():
             # 验证必填参数
             if not topic:
                 logger.warning("内容生成请求缺少 topic 参数")
-                return jsonify({
+                return json_response({
                     "success": False,
                     "error": "参数错误：topic 不能为空。\n请提供主题内容。"
-                }), 400
+                }, 400)
 
             if not outline:
                 logger.warning("内容生成请求缺少 outline 参数")
-                return jsonify({
+                return json_response({
                     "success": False,
                     "error": "参数错误：outline 不能为空。\n请先生成大纲。"
-                }), 400
+                }, 400)
 
             # 调用内容生成服务
             logger.info(f"🔄 开始生成内容，主题: {topic[:50]}...")
@@ -75,30 +79,29 @@ def create_content_blueprint():
                 # 可选：生成成功后回写到历史记录（只后端落库，不依赖前端展示）
                 if record_id:
                     try:
-                        history_service = get_history_service()
                         content_payload = {
                             "titles": result.get("titles", []),
                             "copywriting": result.get("copywriting", ""),
                             "tags": result.get("tags", [])
                         }
-                        updated = history_service.update_record(record_id, content=content_payload)
+                        updated = history_application_service.update_record(record_id, content=content_payload)
                         if not updated:
                             logger.warning(f"内容回写历史记录失败: record_id={record_id}")
                     except Exception as history_error:
                         logger.warning(f"内容回写历史记录异常（已忽略）: record_id={record_id}, error={history_error}")
 
                 logger.info(f"✅ 内容生成成功，耗时 {elapsed:.2f}s")
-                return jsonify(result), 200
+                return json_response(result, 200)
             else:
                 logger.error(f"❌ 内容生成失败: {result.get('error', '未知错误')}")
-                return jsonify(result), 500
+                return json_response(result, 500)
 
         except Exception as e:
             log_error('/content', e)
             error_msg = str(e)
-            return jsonify({
+            return json_response({
                 "success": False,
                 "error": f"内容生成异常。\n错误详情: {error_msg}\n建议：检查后端日志获取更多信息"
-            }), 500
+            }, 500)
 
     return content_bp
