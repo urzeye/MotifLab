@@ -79,6 +79,7 @@ def create_image_blueprint():
         - full_outline: 完整大纲文本
         - user_topic: 用户原始输入主题
         - user_images: base64 编码的用户参考图片列表
+        - custom_prompt: 用户自定义提示词（可选）
 
         返回：
         SSE 事件流，包含以下事件类型：
@@ -94,6 +95,7 @@ def create_image_blueprint():
             task_id = data.get('task_id')
             full_outline = data.get('full_outline', '')
             user_topic = data.get('user_topic', '')
+            custom_prompt = str(data.get('custom_prompt', '') or '').strip()
 
             # 解析 base64 格式的用户参考图片
             user_images = _parse_base64_images(data.get('user_images', []))
@@ -102,7 +104,8 @@ def create_image_blueprint():
                 'pages_count': len(pages) if pages else 0,
                 'task_id': task_id,
                 'user_topic': user_topic[:50] if user_topic else None,
-                'user_images': user_images
+                'user_images': user_images,
+                'has_custom_prompt': bool(custom_prompt)
             })
 
             if not isinstance(pages, list) or not pages:
@@ -130,7 +133,8 @@ def create_image_blueprint():
                     for event in image_service.generate_images(
                         pages, task_id, full_outline,
                         user_images=user_images if user_images else None,
-                        user_topic=user_topic
+                        user_topic=user_topic,
+                        custom_prompt=custom_prompt
                     ):
                         event_type = event["event"]
                         event_data = event["data"]
@@ -289,6 +293,7 @@ def create_image_blueprint():
         - task_id: 任务 ID（必填）
         - page: 页面信息（必填）
         - use_reference: 是否使用参考图（默认 true）
+        - custom_prompt: 用户自定义提示词（可选）
 
         返回：
         - success: 是否成功
@@ -301,6 +306,7 @@ def create_image_blueprint():
             task_id = data.get('task_id')
             page = data.get('page')
             use_reference = data.get('use_reference', True)
+            custom_prompt = str(data.get('custom_prompt', '') or '').strip()
 
             log_request('/retry', {
                 'task_id': task_id,
@@ -316,7 +322,12 @@ def create_image_blueprint():
 
             logger.info(f"🔄 重试生成图片: task={task_id}, page={page.get('index')}")
             image_service = get_image_service()
-            result = image_service.retry_single_image(task_id, page, use_reference)
+            result = image_service.retry_single_image(
+                task_id,
+                page,
+                use_reference,
+                custom_prompt=custom_prompt,
+            )
 
             if result["success"]:
                 logger.info(f"✅ 图片重试成功: {result.get('image_url')}")
@@ -409,6 +420,7 @@ def create_image_blueprint():
         - use_reference: 是否使用参考图（默认 true）
         - full_outline: 完整大纲文本（用于上下文）
         - user_topic: 用户原始输入主题
+        - custom_prompt: 用户自定义提示词（可选）
 
         返回：
         - success: 是否成功
@@ -423,6 +435,7 @@ def create_image_blueprint():
             use_reference = data.get('use_reference', True)
             full_outline = data.get('full_outline', '')
             user_topic = data.get('user_topic', '')
+            custom_prompt = str(data.get('custom_prompt', '') or '').strip()
 
             log_request('/regenerate', {
                 'task_id': task_id,
@@ -441,7 +454,8 @@ def create_image_blueprint():
             result = image_service.regenerate_image(
                 task_id, page, use_reference,
                 full_outline=full_outline,
-                user_topic=user_topic
+                user_topic=user_topic,
+                custom_prompt=custom_prompt,
             )
 
             if result["success"]:
