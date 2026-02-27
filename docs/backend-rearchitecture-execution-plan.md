@@ -406,3 +406,27 @@ Verification:
 3. `POST /api/knowledge/frameworks` (empty payload) returned `400` with `meta.trace_id`.
 4. `GET /api/templates` returned `200` with `meta.trace_id`.
 5. `GET /api/templates/categories` returned `200` with `meta.trace_id`.
+
+## Execution Progress (2026-02-27, Iteration 12)
+
+Completed in this iteration:
+
+1. Unified response helper usage in image routes:
+   - `backend/routes/image_routes.py` switched from `jsonify` to `json_response(...)`
+   - all JSON branches now include `meta.trace_id`
+2. Preserved image route behavior:
+   - SSE endpoints (`/generate`, `/retry-failed`) keep stream protocol unchanged
+   - file download endpoints continue returning `send_file` / redirect where applicable
+3. Kept validation and status contracts intact:
+   - existing 400/404/500 branch conditions are preserved
+   - success/error payload fields remain backward compatible
+
+Verification:
+
+1. `python -m py_compile` passed for `image_routes.py`.
+2. `GET /api/images/task/1.txt` returned `400` with `meta.trace_id` (unsupported extension).
+3. `POST /api/retry` (missing params) returned `400` with `meta.trace_id`.
+4. `POST /api/retry-failed` (missing params) returned `400` with `meta.trace_id`.
+5. `POST /api/regenerate` (missing params) returned `400` with `meta.trace_id`.
+6. `GET /api/task/nonexistent` returned `404` with `meta.trace_id`.
+7. `GET /api/health` returned `200` with `meta.trace_id`.
