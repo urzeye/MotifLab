@@ -16,6 +16,11 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 
+from backend.infrastructure.concept_history import (
+    ConceptHistoryStorageAdapterProtocol,
+    create_concept_history_storage_adapter,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,11 +32,17 @@ class ConceptRecordStatus:
     ERROR = "error"           # 错误：生成过程中出现错误
 
 
+STORAGE_MODE_LOCAL = "local"
+STORAGE_MODE_SUPABASE = "supabase"
+
+
 class ConceptHistoryService:
     """概念可视化历史记录服务"""
 
     def __init__(self):
         """初始化概念历史记录服务"""
+        self.storage_mode = os.getenv("CONCEPT_HISTORY_STORAGE_MODE", STORAGE_MODE_LOCAL)
+
         # 项目根目录
         project_root = Path(__file__).parent.parent.parent
 
@@ -42,8 +53,12 @@ class ConceptHistoryService:
         # 索引文件
         self.index_file = self.history_dir / "index.json"
         self._init_index()
+        self.storage_adapter: ConceptHistoryStorageAdapterProtocol = create_concept_history_storage_adapter(
+            self.storage_mode,
+            self,
+        )
 
-        logger.info(f"概念历史服务初始化，存储目录: {self.history_dir}")
+        logger.info(f"概念历史服务初始化，存储目录: {self.history_dir}, 存储模式: {self.storage_mode}")
 
     def _init_index(self) -> None:
         """初始化索引文件"""
@@ -77,6 +92,27 @@ class ConceptHistoryService:
     ) -> str:
         """
         创建新的概念历史记录
+
+        Args:
+            title: 主题标题（从 analyze 结果提取，或默认取文章前20字）
+            article: 原始文章内容
+            task_id: Pipeline 任务 ID
+            style: 可视化风格
+
+        Returns:
+            str: 新创建的记录 ID
+        """
+        return self.storage_adapter.create_record(title, article, task_id, style)
+
+    def _create_record_local(
+        self,
+        title: str,
+        article: str,
+        task_id: str,
+        style: Optional[str] = None
+    ) -> str:
+        """
+        本地模式创建新的概念历史记录
 
         Args:
             title: 主题标题（从 analyze 结果提取，或默认取文章前20字）
@@ -148,6 +184,18 @@ class ConceptHistoryService:
         Returns:
             记录详情，不存在则返回 None
         """
+        return self.storage_adapter.get_record(record_id)
+
+    def _get_record_local(self, record_id: str) -> Optional[Dict]:
+        """
+        本地模式获取历史记录详情
+
+        Args:
+            record_id: 记录 ID
+
+        Returns:
+            记录详情，不存在则返回 None
+        """
         record_path = self._get_record_path(record_id)
 
         if not record_path.exists():
@@ -183,7 +231,39 @@ class ConceptHistoryService:
         Returns:
             bool: 更新是否成功
         """
-        record = self.get_record(record_id)
+        return self.storage_adapter.update_record(
+            record_id,
+            title=title,
+            status=status,
+            thumbnail=thumbnail,
+            image_count=image_count,
+            pipeline_data=pipeline_data,
+        )
+
+    def _update_record_local(
+        self,
+        record_id: str,
+        title: Optional[str] = None,
+        status: Optional[str] = None,
+        thumbnail: Optional[str] = None,
+        image_count: Optional[int] = None,
+        pipeline_data: Optional[Dict] = None
+    ) -> bool:
+        """
+        本地模式更新历史记录
+
+        Args:
+            record_id: 记录 ID
+            title: 标题（可选）
+            status: 状态（可选）
+            thumbnail: 缩略图路径（可选）
+            image_count: 图片数量（可选）
+            pipeline_data: Pipeline 数据，部分更新（可选）
+
+        Returns:
+            bool: 更新是否成功
+        """
+        record = self._get_record_local(record_id)
         if not record:
             return False
 
@@ -242,7 +322,23 @@ class ConceptHistoryService:
         Returns:
             bool: 删除是否成功
         """
-        record = self.get_record(record_id)
+        return self.storage_adapter.delete_record(record_id)
+
+    def _delete_record_local(self, record_id: str) -> bool:
+        """
+        本地模式删除历史记录
+
+        同时删除：
+        1. 记录 JSON 文件
+        2. 关联的图片目录 (output/concepts/{task_id})
+
+        Args:
+            record_id: 记录 ID
+
+        Returns:
+            bool: 删除是否成功
+        """
+        record = self._get_record_local(record_id)
         if not record:
             return False
 
@@ -291,6 +387,25 @@ class ConceptHistoryService:
         Returns:
             Dict: 分页结果
         """
+        return self.storage_adapter.list_records(page, page_size, status)
+
+    def _list_records_local(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        status: Optional[str] = None
+    ) -> Dict:
+        """
+        本地模式分页获取历史记录列表
+
+        Args:
+            page: 页码，从 1 开始
+            page_size: 每页记录数
+            status: 状态过滤（可选）
+
+        Returns:
+            Dict: 分页结果
+        """
         index = self._load_index()
         records = index.get("records", [])
 
@@ -322,10 +437,22 @@ class ConceptHistoryService:
         Returns:
             记录详情，不存在则返回 None
         """
+        return self.storage_adapter.get_record_by_task_id(task_id)
+
+    def _get_record_by_task_id_local(self, task_id: str) -> Optional[Dict]:
+        """
+        本地模式根据 task_id 获取记录
+
+        Args:
+            task_id: Pipeline 任务 ID
+
+        Returns:
+            记录详情，不存在则返回 None
+        """
         index = self._load_index()
         for idx_record in index.get("records", []):
             if idx_record.get("task_id") == task_id:
-                return self.get_record(idx_record["id"])
+                return self._get_record_local(idx_record["id"])
         return None
 
     def repair_record_images(self, record_id: str) -> bool:
@@ -340,7 +467,21 @@ class ConceptHistoryService:
         Returns:
             bool: 修复是否成功
         """
-        record = self.get_record(record_id)
+        return self.storage_adapter.repair_record_images(record_id)
+
+    def _repair_record_images_local(self, record_id: str) -> bool:
+        """
+        本地模式修复记录的图片信息
+
+        扫描输出目录，填充 image_count、thumbnail 和 pipeline_data.generate.results
+
+        Args:
+            record_id: 记录 ID
+
+        Returns:
+            bool: 修复是否成功
+        """
+        record = self._get_record_local(record_id)
         if not record:
             return False
 
@@ -371,7 +512,7 @@ class ConceptHistoryService:
             })
 
         # 更新记录
-        self.update_record(
+        self._update_record_local(
             record_id,
             thumbnail=images[0],
             image_count=len(images),
@@ -389,17 +530,26 @@ class ConceptHistoryService:
         Returns:
             Dict: 修复结果统计
         """
+        return self.storage_adapter.repair_all_records()
+
+    def _repair_all_records_local(self) -> Dict:
+        """
+        本地模式修复所有缺失图片信息的记录
+
+        Returns:
+            Dict: 修复结果统计
+        """
         index = self._load_index()
         repaired = 0
         failed = 0
 
         for idx_record in index.get("records", []):
             record_id = idx_record["id"]
-            record = self.get_record(record_id)
+            record = self._get_record_local(record_id)
 
             # 检查是否需要修复
             if record and record.get("image_count", 0) == 0 and record.get("task_id"):
-                if self.repair_record_images(record_id):
+                if self._repair_record_images_local(record_id):
                     repaired += 1
                 else:
                     failed += 1

@@ -10,8 +10,10 @@ from typing import Union, List, Dict, Optional
 
 from backend.core.base_skill import BaseSkill, SkillResult
 from backend.clients.factory import ClientFactory
+from backend.config import get_config_service
 from backend.knowledge import registry
 
+config_service = get_config_service()
 
 @dataclass
 class DesignInput:
@@ -80,9 +82,8 @@ class ConceptDesignSkill(BaseSkill):
         if self._text_client is None:
             provider_config = self.config.get('text_provider', {})
             if not provider_config:
-                from backend.config import Config
-                provider_name = Config.get_active_text_provider()
-                provider_config = Config.get_text_provider_config(provider_name)
+                provider_name = config_service.get_active_text_provider()
+                provider_config = config_service.get_text_provider_config(provider_name)
             self._text_client = ClientFactory.create_text_client(provider_config)
         return self._text_client
 
