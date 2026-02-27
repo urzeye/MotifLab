@@ -3,10 +3,10 @@
 import logging
 from typing import Any, Dict, Optional
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
 from backend.config import get_config_service
-from backend.services.search_service import is_valid_http_url, scrape_with_provider
+from backend.services.search_service import get_search_provider, is_valid_http_url
 from .utils import log_error, log_request
 
 logger = logging.getLogger(__name__)
@@ -81,9 +81,25 @@ def _handle_scrape_request(route: str, provider_override: Optional[str]):
                 }), 400
             return jsonify({"success": False, "error": error_text}), 400
 
-        result = scrape_with_provider(url, provider_config)
+        provider_type = (provider_config.get("type") or "").strip().lower()
+        provider = _resolve_search_provider(provider_type)
+        result = provider.scrape(url, provider_config)
         return jsonify(result), 200 if result.get("success") else 400
 
     except Exception as e:
         log_error(route, e)
         return jsonify({"success": False, "error": f"抓取网页失败: {str(e)}"}), 500
+
+
+def _resolve_search_provider(provider_type: str):
+    """优先使用容器中的注册表，未提供时回退到默认实现。"""
+    try:
+        container = current_app.extensions.get("backend_container")
+        if container:
+            registry = container.get_adapter("search_provider_registry")
+            if registry:
+                return registry.create(provider_type)
+    except Exception:
+        logger.debug("容器搜索注册表不可用，回退默认搜索服务商实现")
+
+    return get_search_provider(provider_type)

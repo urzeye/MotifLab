@@ -208,3 +208,34 @@ Verification:
 2. `create_app()` initialization passed.
 3. `GET /api/health` returned `200` and still includes `X-Request-ID`.
 4. `search_routes` and `concept_routes` import checks passed.
+
+## Execution Progress (2026-02-27, Iteration 3)
+
+Completed in this iteration:
+
+1. Finished default config lookup migration in skill layer:
+   - `backend/skills/analyze.py`
+   - `backend/skills/design.py`
+   - `backend/skills/generate.py`
+   - `backend/skills/redbook/outline.py`
+   - `backend/skills/redbook/content.py`
+   - `backend/skills/concept/analyze.py`
+   - `backend/skills/concept/design.py`
+   - `backend/skills/concept/generate.py`
+   - `backend/skills/concept/map_framework.py`
+2. Introduced concept-history storage adapter abstraction:
+   - added `backend/infrastructure/concept_history/adapters.py`
+   - added `backend/infrastructure/concept_history/__init__.py`
+   - `ConceptHistoryService` now delegates to adapter interfaces (local implementation in place)
+3. Connected search route to container adapter registry:
+   - `backend/routes/search_routes.py` now resolves providers from `backend_container.search_provider_registry` first
+   - falls back to default provider lookup to keep backward compatibility
+4. Kept behavior compatibility:
+   - API routes and response contracts remain unchanged
+   - default storage mode remains local-first
+
+Verification:
+
+1. `python -m py_compile ...` passed for all newly modified skill and concept-history files.
+2. `GET /api/concept/history` returned `200` and includes `X-Request-ID`.
+3. `GET /api/health` / `GET /api/config` / `GET /api/search/status` still returned `200`.

@@ -16,9 +16,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from backend.core.base_skill import BaseSkill, SkillResult
 from backend.clients.factory import ClientFactory
+from backend.config import get_config_service
 from backend.utils.image_compressor import compress_image
 
 logger = logging.getLogger(__name__)
+config_service = get_config_service()
 
 # 存储模式常量
 STORAGE_MODE_LOCAL = "local"
@@ -91,9 +93,8 @@ class GenerateImageSkill(BaseSkill):
         if self._client is None:
             provider_config = self.config.get('image_provider', {})
             if not provider_config:
-                from backend.config import Config
-                provider_name = Config.get_active_image_provider()
-                provider_config = Config.get_image_provider_config(provider_name)
+                provider_name = config_service.get_active_image_provider()
+                provider_config = config_service.get_image_provider_config(provider_name)
             self._client = ClientFactory.create_image_client(provider_config)
         return self._client
 
@@ -102,9 +103,8 @@ class GenerateImageSkill(BaseSkill):
         """获取服务商配置"""
         config = self.config.get('image_provider', {})
         if not config:
-            from backend.config import Config
-            provider_name = Config.get_active_image_provider()
-            config = Config.get_image_provider_config(provider_name)
+            provider_name = config_service.get_active_image_provider()
+            config = config_service.get_image_provider_config(provider_name)
         return config
 
     @property

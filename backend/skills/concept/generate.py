@@ -13,9 +13,11 @@ from typing import Union, List, Dict, Optional, Generator
 
 from backend.core.base_skill import BaseSkill, SkillResult
 from backend.clients.factory import ClientFactory
+from backend.config import get_config_service
 from backend.knowledge import registry
 
 logger = logging.getLogger(__name__)
+config_service = get_config_service()
 
 
 @dataclass
@@ -47,9 +49,8 @@ class ConceptGenerateSkill(BaseSkill):
         if self._image_client is None:
             provider_config = self.config.get('image_provider', {})
             if not provider_config:
-                from backend.config import Config
-                provider_name = Config.get_active_image_provider()
-                provider_config = Config.get_image_provider_config(provider_name)
+                provider_name = config_service.get_active_image_provider()
+                provider_config = config_service.get_image_provider_config(provider_name)
             self._image_client = ClientFactory.create_image_client(provider_config)
         return self._image_client
 

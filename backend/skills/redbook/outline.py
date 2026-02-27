@@ -12,8 +12,10 @@ from dataclasses import dataclass
 
 from backend.core.base_skill import BaseSkill, SkillResult
 from backend.clients.factory import ClientFactory
+from backend.config import get_config_service
 
 logger = logging.getLogger(__name__)
+config_service = get_config_service()
 
 
 @dataclass
@@ -60,9 +62,8 @@ class OutlineSkill(BaseSkill):
             provider_config = self.config.get('text_provider', {})
             if not provider_config:
                 # 从全局配置获取
-                from backend.config import Config
-                provider_name = Config.get_active_text_provider()
-                provider_config = Config.get_text_provider_config(provider_name)
+                provider_name = config_service.get_active_text_provider()
+                provider_config = config_service.get_text_provider_config(provider_name)
             self._client = ClientFactory.create_text_client(provider_config)
         return self._client
 
