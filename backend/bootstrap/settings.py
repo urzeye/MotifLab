@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List
 
 DEFAULT_APP_NAME = "MotifLab"
-DEFAULT_APP_VERSION = "0.1.0"
+DEFAULT_APP_VERSION = "0.2.0"
 
 
 def _to_bool(value: str | None, default: bool = False) -> bool:
