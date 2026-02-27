@@ -197,6 +197,10 @@ Completed in this iteration:
    - `backend/services/search_service.py` now includes `SearchProviderRegistry`
    - supports dynamic provider registration via `register_search_provider(...)`
    - default registry is prewired into `AppContainer` as `search_provider_registry`
+5. Started database adapter abstraction (history domain):
+   - added `backend/infrastructure/history/adapters.py`
+   - added `HistoryStorageAdapterProtocol` with local/supabase adapters
+   - `HistoryService` now delegates CRUD/list/search/statistics to storage adapter
 
 Verification:
 

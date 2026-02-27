@@ -20,6 +20,11 @@ from typing import Dict, List, Optional, Any
 from pathlib import Path
 from enum import Enum
 
+from backend.infrastructure.history import (
+    HistoryStorageAdapterProtocol,
+    create_history_storage_adapter,
+)
+
 logger = logging.getLogger(__name__)
 
 # 存储模式常量
@@ -98,6 +103,11 @@ class HistoryService:
             self.index_file = os.path.join(self.history_dir, "index.json")
             self._init_index()
 
+        self.storage_adapter: HistoryStorageAdapterProtocol = create_history_storage_adapter(
+            self.storage_mode,
+            self,
+        )
+
     @property
     def is_supabase_mode(self) -> bool:
         """是否使用 Supabase 存储模式"""
@@ -172,9 +182,7 @@ class HistoryService:
         状态流转：
             新建 -> draft（草稿状态）
         """
-        if self.is_supabase_mode:
-            return self._create_record_supabase(topic, outline, task_id, content)
-        return self._create_record_local(topic, outline, task_id, content)
+        return self.storage_adapter.create_record(topic, outline, task_id, content)
 
     def _create_record_supabase(
         self,
@@ -287,9 +295,7 @@ class HistoryService:
             - status: 当前状态
             - thumbnail: 缩略图文件名
         """
-        if self.is_supabase_mode:
-            return self._get_record_supabase(record_id)
-        return self._get_record_local(record_id)
+        return self.storage_adapter.get_record(record_id)
 
     def _get_record_supabase(self, record_id: str) -> Optional[Dict]:
         """Supabase 模式：获取历史记录"""
@@ -345,12 +351,7 @@ class HistoryService:
         Returns:
             bool: 记录是否存在
         """
-        if self.is_supabase_mode:
-            from backend.utils.supabase_client import get_history_record as sb_get
-            result = sb_get(record_id)
-            return result.get("success", False)
-        record_path = self._get_record_path(record_id)
-        return os.path.exists(record_path)
+        return self.storage_adapter.record_exists(record_id)
 
     def update_record(
         self,
@@ -386,9 +387,14 @@ class HistoryService:
             partial -> generating: 继续生成剩余图片
             partial -> completed: 剩余图片生成完成
         """
-        if self.is_supabase_mode:
-            return self._update_record_supabase(record_id, outline, images, status, thumbnail, content)
-        return self._update_record_local(record_id, outline, images, status, thumbnail, content)
+        return self.storage_adapter.update_record(
+            record_id,
+            outline=outline,
+            images=images,
+            status=status,
+            thumbnail=thumbnail,
+            content=content,
+        )
 
     def _update_record_supabase(
         self,
@@ -526,9 +532,7 @@ class HistoryService:
         Returns:
             bool: 删除是否成功，记录不存在时返回 False
         """
-        if self.is_supabase_mode:
-            return self._delete_record_supabase(record_id)
-        return self._delete_record_local(record_id)
+        return self.storage_adapter.delete_record(record_id)
 
     def _delete_record_supabase(self, record_id: str) -> bool:
         """Supabase 模式：删除历史记录"""
@@ -591,9 +595,7 @@ class HistoryService:
                 - page_size: 每页大小
                 - total_pages: 总页数
         """
-        if self.is_supabase_mode:
-            return self._list_records_supabase(page, page_size, status)
-        return self._list_records_local(page, page_size, status)
+        return self.storage_adapter.list_records(page, page_size, status)
 
     def _list_records_supabase(self, page: int, page_size: int, status: Optional[str]) -> Dict:
         """Supabase 模式：获取历史记录列表"""
@@ -650,9 +652,7 @@ class HistoryService:
         Returns:
             List[Dict]: 匹配的记录列表（按创建时间倒序）
         """
-        if self.is_supabase_mode:
-            return self._search_records_supabase(keyword)
-        return self._search_records_local(keyword)
+        return self.storage_adapter.search_records(keyword)
 
     def _search_records_supabase(self, keyword: str) -> List[Dict]:
         """Supabase 模式：搜索历史记录"""
@@ -691,9 +691,7 @@ class HistoryService:
                     - completed: 已完成数
                     - error: 错误数
         """
-        if self.is_supabase_mode:
-            return self._get_statistics_supabase()
-        return self._get_statistics_local()
+        return self.storage_adapter.get_statistics()
 
     def _get_statistics_supabase(self) -> Dict:
         """Supabase 模式：获取统计信息"""
