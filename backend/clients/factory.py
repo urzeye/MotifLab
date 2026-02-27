@@ -1,14 +1,17 @@
-"""Unified client factory for text and image clients"""
-from typing import Dict, Any, Optional, Union
-from .text import BaseTextClient, OpenAICompatibleTextClient, GoogleGenAITextClient, get_text_client
+"""统一客户端工厂。"""
+
+from typing import Dict, Any, Union
+
+from .text import BaseTextClient, get_text_client
 from .image import BaseImageClient, get_image_client
 
 
 class ClientFactory:
+    # 仅保留可观察的 provider 映射，不在导入阶段加载具体实现类
     TEXT_CLIENTS = {
-        'google_gemini': GoogleGenAITextClient,
-        'openai': OpenAICompatibleTextClient,
-        'openai_compatible': OpenAICompatibleTextClient,
+        "google_gemini": "backend.clients.text.google_genai.GoogleGenAITextClient",
+        "openai": "backend.clients.text.openai_compatible.OpenAICompatibleTextClient",
+        "openai_compatible": "backend.clients.text.openai_compatible.OpenAICompatibleTextClient",
     }
 
     @classmethod
