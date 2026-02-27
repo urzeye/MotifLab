@@ -15,12 +15,13 @@ import base64
 import logging
 import re
 from flask import Blueprint, request, Response, send_file
+from backend.application.services import get_image_generation_application_service
 from backend.interfaces.http import json_response
-from backend.services.image import get_image_service
 from backend.middleware import is_auth_enabled
 from .utils import log_request, log_error
 
 logger = logging.getLogger(__name__)
+image_generation_app_service = get_image_generation_application_service()
 
 _SAFE_SEGMENT_RE = re.compile(r'^[A-Za-z0-9._-]+$')
 _ALLOWED_IMAGE_EXTS = {'.png', '.jpg', '.jpeg', '.webp'}
@@ -79,7 +80,8 @@ def create_image_blueprint():
         - full_outline: 完整大纲文本
         - user_topic: 用户原始输入主题
         - user_images: base64 编码的用户参考图片列表
-        - custom_prompt: 用户自定义提示词（可选）
+        - user_prompt/custom_prompt: 用户自定义提示词（可选，兼容双字段）
+        - system_prompt: 用户自定义系统提示词（可选）
 
         返回：
         SSE 事件流，包含以下事件类型：
@@ -95,7 +97,8 @@ def create_image_blueprint():
             task_id = data.get('task_id')
             full_outline = data.get('full_outline', '')
             user_topic = data.get('user_topic', '')
-            custom_prompt = str(data.get('custom_prompt', '') or '').strip()
+            user_prompt = str(data.get('user_prompt', data.get('custom_prompt', '')) or '').strip()
+            system_prompt = str(data.get('system_prompt', '') or '').strip()
 
             # 解析 base64 格式的用户参考图片
             user_images = _parse_base64_images(data.get('user_images', []))
@@ -105,7 +108,8 @@ def create_image_blueprint():
                 'task_id': task_id,
                 'user_topic': user_topic[:50] if user_topic else None,
                 'user_images': user_images,
-                'has_custom_prompt': bool(custom_prompt)
+                'has_user_prompt': bool(user_prompt),
+                'has_system_prompt': bool(system_prompt)
             })
 
             if not isinstance(pages, list) or not pages:
@@ -121,8 +125,6 @@ def create_image_blueprint():
                 }, 400)
 
             logger.info(f"🖼️  开始图片生成任务: {task_id}, 共 {len(pages)} 页")
-            image_service = get_image_service()
-
             def generate():
                 """SSE 事件生成器"""
                 completed_indices = set()
@@ -130,11 +132,12 @@ def create_image_blueprint():
                 sent_finish = False
 
                 try:
-                    for event in image_service.generate_images(
+                    for event in image_generation_app_service.generate_images(
                         pages, task_id, full_outline,
                         user_images=user_images if user_images else None,
                         user_topic=user_topic,
-                        custom_prompt=custom_prompt
+                        user_prompt=user_prompt,
+                        system_prompt=system_prompt,
                     ):
                         event_type = event["event"]
                         event_data = event["data"]
@@ -293,7 +296,8 @@ def create_image_blueprint():
         - task_id: 任务 ID（必填）
         - page: 页面信息（必填）
         - use_reference: 是否使用参考图（默认 true）
-        - custom_prompt: 用户自定义提示词（可选）
+        - user_prompt/custom_prompt: 用户自定义提示词（可选，兼容双字段）
+        - system_prompt: 用户自定义系统提示词（可选）
 
         返回：
         - success: 是否成功
@@ -306,11 +310,16 @@ def create_image_blueprint():
             task_id = data.get('task_id')
             page = data.get('page')
             use_reference = data.get('use_reference', True)
-            custom_prompt = str(data.get('custom_prompt', '') or '').strip()
+            full_outline = data.get('full_outline', '')
+            user_topic = data.get('user_topic', '')
+            user_prompt = str(data.get('user_prompt', data.get('custom_prompt', '')) or '').strip()
+            system_prompt = str(data.get('system_prompt', '') or '').strip()
 
             log_request('/retry', {
                 'task_id': task_id,
-                'page_index': page.get('index') if page else None
+                'page_index': page.get('index') if page else None,
+                'has_user_prompt': bool(user_prompt),
+                'has_system_prompt': bool(system_prompt)
             })
 
             if not task_id or not _is_valid_page(page):
@@ -321,12 +330,14 @@ def create_image_blueprint():
                 }, 400)
 
             logger.info(f"🔄 重试生成图片: task={task_id}, page={page.get('index')}")
-            image_service = get_image_service()
-            result = image_service.retry_single_image(
+            result = image_generation_app_service.retry_single_image(
                 task_id,
                 page,
                 use_reference,
-                custom_prompt=custom_prompt,
+                full_outline=full_outline,
+                user_topic=user_topic,
+                user_prompt=user_prompt,
+                system_prompt=system_prompt,
             )
 
             if result["success"]:
@@ -381,11 +392,10 @@ def create_image_blueprint():
                 }, 400)
 
             logger.info(f"🔄 批量重试失败图片: task={task_id}, 共 {len(pages)} 页")
-            image_service = get_image_service()
 
             def generate():
                 """SSE 事件生成器"""
-                for event in image_service.retry_failed_images(task_id, pages):
+                for event in image_generation_app_service.retry_failed_images(task_id, pages):
                     event_type = event["event"]
                     event_data = event["data"]
 
@@ -420,7 +430,8 @@ def create_image_blueprint():
         - use_reference: 是否使用参考图（默认 true）
         - full_outline: 完整大纲文本（用于上下文）
         - user_topic: 用户原始输入主题
-        - custom_prompt: 用户自定义提示词（可选）
+        - user_prompt/custom_prompt: 用户自定义提示词（可选，兼容双字段）
+        - system_prompt: 用户自定义系统提示词（可选）
 
         返回：
         - success: 是否成功
@@ -435,11 +446,14 @@ def create_image_blueprint():
             use_reference = data.get('use_reference', True)
             full_outline = data.get('full_outline', '')
             user_topic = data.get('user_topic', '')
-            custom_prompt = str(data.get('custom_prompt', '') or '').strip()
+            user_prompt = str(data.get('user_prompt', data.get('custom_prompt', '')) or '').strip()
+            system_prompt = str(data.get('system_prompt', '') or '').strip()
 
             log_request('/regenerate', {
                 'task_id': task_id,
-                'page_index': page.get('index') if page else None
+                'page_index': page.get('index') if page else None,
+                'has_user_prompt': bool(user_prompt),
+                'has_system_prompt': bool(system_prompt)
             })
 
             if not task_id or not _is_valid_page(page):
@@ -450,12 +464,12 @@ def create_image_blueprint():
                 }, 400)
 
             logger.info(f"🔄 重新生成图片: task={task_id}, page={page.get('index')}")
-            image_service = get_image_service()
-            result = image_service.regenerate_image(
+            result = image_generation_app_service.regenerate_image(
                 task_id, page, use_reference,
                 full_outline=full_outline,
                 user_topic=user_topic,
-                custom_prompt=custom_prompt,
+                user_prompt=user_prompt,
+                system_prompt=system_prompt,
             )
 
             if result["success"]:
@@ -491,8 +505,7 @@ def create_image_blueprint():
           - has_cover: 是否有封面图
         """
         try:
-            image_service = get_image_service()
-            state = image_service.get_task_state(task_id)
+            state = image_generation_app_service.get_task_state(task_id)
 
             if state is None:
                 return json_response({
