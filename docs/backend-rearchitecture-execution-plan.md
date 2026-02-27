@@ -172,3 +172,35 @@ Verification:
 2. Flask test client `GET /api/health`: status `200`, response header includes `X-Request-ID`.
 3. `python -m py_compile ...`: passed for all modified files.
 4. `pytest -q`: no tests discovered in current repository (`no tests ran`).
+
+## Execution Progress (2026-02-27, Iteration 2)
+
+Completed in this iteration:
+
+1. Added unified config service entry:
+   - `backend/config/service.py` with `ConfigService` + `get_config_service()`
+   - `backend/config/__init__.py` exports service symbols
+   - `backend/bootstrap/container.py` with `AppContainer` as dependency registration point
+2. Started Phase 2 migration by switching core modules from direct `Config` static usage to `ConfigService`:
+   - `backend/bootstrap/flask_factory.py` (startup config validation path)
+   - `backend/routes/config_routes.py`
+   - `backend/services/content.py`
+   - `backend/services/image.py`
+   - `backend/services/outline.py`
+   - `backend/services/pipeline_service.py`
+   - `backend/routes/search_routes.py`
+   - `backend/routes/concept_routes.py`
+3. Kept backward compatibility:
+   - Existing `Config` class and API contracts remain available
+   - Migration is incremental and non-breaking for untouched modules
+4. Added moderate search adapter abstraction for extensibility:
+   - `backend/services/search_service.py` now includes `SearchProviderRegistry`
+   - supports dynamic provider registration via `register_search_provider(...)`
+   - default registry is prewired into `AppContainer` as `search_provider_registry`
+
+Verification:
+
+1. `python -m py_compile ...` passed for all newly modified files.
+2. `create_app()` initialization passed.
+3. `GET /api/health` returned `200` and still includes `X-Request-ID`.
+4. `search_routes` and `concept_routes` import checks passed.

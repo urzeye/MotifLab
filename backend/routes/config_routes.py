@@ -11,10 +11,12 @@ import logging
 from copy import deepcopy
 from pathlib import Path
 from flask import Blueprint, request, jsonify
+from backend.config import get_config_service
 from backend.middleware import require_auth
 from .utils import prepare_providers_for_response
 
 logger = logging.getLogger(__name__)
+config_service = get_config_service()
 
 # 配置标识（保留 Path 形式，兼容现有调用签名）
 CONFIG_DIR = Path(__file__).parent.parent.parent
@@ -45,11 +47,9 @@ def create_config_blueprint():
         - config: 配置对象
           - text_generation: 文本生成配置
           - image_generation: 图片生成配置
-          - search: 通用搜索配置
+        - search: 通用搜索配置
         """
         try:
-            from backend.config import Config
-
             # 读取图片生成配置
             image_config = _read_config(IMAGE_CONFIG_PATH, {
                 'active_provider': 'google_genai',
@@ -62,7 +62,7 @@ def create_config_blueprint():
                 'providers': {}
             })
 
-            search_config = Config.load_search_providers_config()
+            search_config = config_service.load_search_providers_config()
             search_providers = search_config.get("providers", {})
             search_response = {
                 "active_provider": search_config.get("active_provider", "bing"),
@@ -232,16 +232,15 @@ def _prepare_search_providers_for_response(providers: dict) -> dict:
 
 
 def _read_config(path: Path, default: dict) -> dict:
-    """读取配置（由 Config 决定是 YAML 还是 Supabase）"""
-    from backend.config import Config
+    """读取配置（由配置服务决定是 YAML 还是 Supabase）。"""
 
     config_name = _CONFIG_NAME_BY_PATH.get(path)
     if config_name == "image_providers":
-        data = Config.load_image_providers_config()
+        data = config_service.load_image_providers_config()
     elif config_name == "text_providers":
-        data = Config.load_text_providers_config()
+        data = config_service.load_text_providers_config()
     elif config_name == "search_providers":
-        data = Config.load_search_providers_config()
+        data = config_service.load_search_providers_config()
     else:
         logger.warning(f"未知配置路径，回退默认值: {path}")
         return deepcopy(default)
@@ -252,18 +251,17 @@ def _read_config(path: Path, default: dict) -> dict:
 
 
 def _write_config(path: Path, config: dict):
-    """写入配置（由 Config 决定是 YAML 还是 Supabase）"""
-    from backend.config import Config
+    """写入配置（由配置服务决定是 YAML 还是 Supabase）。"""
 
     config_name = _CONFIG_NAME_BY_PATH.get(path)
     if config_name == "image_providers":
-        Config.save_image_providers_config(config)
+        config_service.save_image_providers_config(config)
         return
     if config_name == "text_providers":
-        Config.save_text_providers_config(config)
+        config_service.save_text_providers_config(config)
         return
     if config_name == "search_providers":
-        Config.save_search_providers_config(config)
+        config_service.save_search_providers_config(config)
         return
 
     raise ValueError(f"不支持写入的配置路径: {path}")
@@ -310,11 +308,7 @@ def _update_provider_config(config_path: Path, new_data: dict):
 def _clear_config_cache():
     """清除配置缓存"""
     try:
-        from backend.config import Config
-        if hasattr(Config, 'reload_config'):
-            Config.reload_config()
-        elif hasattr(Config, '_configs'):
-            Config._configs.clear()
+        config_service.reload()
     except Exception:
         pass
 
@@ -327,12 +321,10 @@ def _clear_config_cache():
 
 def _update_search_config(new_data: dict):
     """更新通用搜索配置。"""
-    from backend.config import Config
-
     if not isinstance(new_data, dict):
         return
 
-    existing_config = Config.load_search_providers_config()
+    existing_config = config_service.load_search_providers_config()
     existing_providers = existing_config.get("providers", {})
 
     if "providers" in new_data and isinstance(new_data["providers"], dict):
@@ -366,7 +358,7 @@ def _update_search_config(new_data: dict):
         existing_config["active_provider"] = str(new_data.get("active_provider") or "").strip()
 
     existing_config["providers"] = existing_providers
-    Config.save_search_providers_config(existing_config)
+    config_service.save_search_providers_config(existing_config)
 
 
 def _load_provider_config(provider_type: str, provider_name: str, config: dict) -> dict:
@@ -383,8 +375,7 @@ def _load_provider_config(provider_type: str, provider_name: str, config: dict) 
     """
     # 搜索服务商配置独立保存（firecrawl/exa/tavily/perplexity/bing）
     if provider_type in ['firecrawl', 'exa', 'tavily', 'perplexity', 'bing']:
-        from backend.config import Config
-        search_config = Config.load_search_providers_config()
+        search_config = config_service.load_search_providers_config()
         providers = search_config.get("providers", {})
         saved = providers.get(provider_name) or providers.get(provider_type) or {}
 

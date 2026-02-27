@@ -8,7 +8,7 @@ import threading
 import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 from typing import Dict, Any, Generator, List, Optional, Tuple
-from backend.config import Config
+from backend.config import get_config_service
 from backend.generators.factory import ImageGeneratorFactory
 from backend.utils.image_compressor import compress_image
 
@@ -35,6 +35,7 @@ class ImageService:
             provider_name: 服务商名称，如果为None则使用配置文件中的激活服务商
         """
         logger.debug("初始化 ImageService...")
+        self.config_service = get_config_service()
 
         # 存储模式（默认为本地）
         self.storage_mode = os.getenv("HISTORY_STORAGE_MODE", STORAGE_MODE_LOCAL)
@@ -42,10 +43,10 @@ class ImageService:
 
         # 获取服务商配置
         if provider_name is None:
-            provider_name = Config.get_active_image_provider()
+            provider_name = self.config_service.get_active_image_provider()
 
         logger.info(f"使用图片服务商: {provider_name}")
-        provider_config = Config.get_image_provider_config(provider_name)
+        provider_config = self.config_service.get_image_provider_config(provider_name)
 
         # 创建生成器实例
         provider_type = provider_config.get('type', provider_name)

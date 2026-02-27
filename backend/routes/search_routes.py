@@ -5,11 +5,12 @@ from typing import Any, Dict, Optional
 
 from flask import Blueprint, jsonify, request
 
-from backend.config import Config
+from backend.config import get_config_service
 from backend.services.search_service import is_valid_http_url, scrape_with_provider
 from .utils import log_error, log_request
 
 logger = logging.getLogger(__name__)
+config_service = get_config_service()
 
 
 def create_search_blueprint():
@@ -36,8 +37,8 @@ def create_search_blueprint():
 
 
 def _build_provider_status(provider_name: Optional[str] = None) -> Dict[str, Any]:
-    provider_name = provider_name or Config.get_active_search_provider()
-    search_config = Config.load_search_providers_config()
+    provider_name = provider_name or config_service.get_active_search_provider()
+    search_config = config_service.load_search_providers_config()
     providers = search_config.get("providers") or {}
     provider_config = providers.get(provider_name) or {}
 
@@ -69,11 +70,11 @@ def _handle_scrape_request(route: str, provider_override: Optional[str]):
             return jsonify({"success": False, "error": "参数错误：url 必须是有效的 http/https 地址"}), 400
 
         try:
-            provider_config = Config.get_search_provider_config(provider_name, require_enabled=True)
+            provider_config = config_service.get_search_provider_config(provider_name, require_enabled=True)
         except ValueError as config_error:
             error_text = str(config_error)
             if "未启用" in error_text:
-                provider_for_msg = provider_name or Config.get_active_search_provider()
+                provider_for_msg = provider_name or config_service.get_active_search_provider()
                 return jsonify({
                     "success": False,
                     "error": f"搜索服务商 [{provider_for_msg}] 未启用。请在系统设置中启用并配置。",

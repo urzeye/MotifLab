@@ -9,7 +9,7 @@ import logging
 import os
 import re
 from typing import Dict, List, Any, Optional
-from backend.config import Config
+from backend.config import get_config_service
 from backend.utils.text_client import get_text_chat_client
 
 logger = logging.getLogger(__name__)
@@ -20,6 +20,7 @@ class ContentService:
 
     def __init__(self):
         logger.debug("初始化 ContentService...")
+        self.config_service = get_config_service()
         self.text_config = self._load_text_config()
         self.client, self.active_provider, self.active_provider_config = self._get_client()
         self.prompt_template = self._load_prompt_template()
@@ -27,7 +28,7 @@ class ContentService:
 
     def _load_text_config(self) -> dict:
         """加载文本生成配置（支持 .env 变量解析）。"""
-        config = Config.load_text_providers_config()
+        config = self.config_service.load_text_providers_config()
         logger.debug(f"文本配置加载成功: active={config.get('active_provider')}")
         return config
 
