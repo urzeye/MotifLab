@@ -35,6 +35,8 @@ def _to_list(value: str | None, default: List[str]) -> List[str]:
 
 @dataclass(frozen=True)
 class AppSettings:
+    app_name: str
+    app_version: str
     app_env: str
     debug: bool
     host: str
@@ -61,6 +63,8 @@ class AppSettings:
         log_level = (os.getenv("REDINK_LOG_LEVEL") or ("DEBUG" if debug else "INFO")).upper()
 
         return cls(
+            app_name=(os.getenv("REDINK_APP_NAME") or "渲染AI 图文生成器").strip(),
+            app_version=(os.getenv("REDINK_APP_VERSION") or "0.1.0").strip(),
             app_env=(os.getenv("APP_ENV") or "development").strip().lower(),
             debug=debug,
             host=(os.getenv("REDINK_HOST") or "0.0.0.0").strip(),

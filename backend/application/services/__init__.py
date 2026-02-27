@@ -25,6 +25,8 @@ _SYMBOL_TO_MODULE = {
     "get_pipeline_application_service": "pipeline_application_service",
     "PublishApplicationService": "publish_application_service",
     "get_publish_application_service": "publish_application_service",
+    "SearchApplicationService": "search_application_service",
+    "get_search_application_service": "search_application_service",
     "TemplateApplicationService": "template_application_service",
     "get_template_application_service": "template_application_service",
 }

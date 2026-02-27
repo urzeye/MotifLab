@@ -30,17 +30,17 @@ def create_api_blueprint():
     Returns:
         配置好的 api Blueprint
     """
-    from .outline_routes import create_outline_blueprint
-    from .image_routes import create_image_blueprint
-    from .history_routes import create_history_blueprint
-    from .config_routes import create_config_blueprint
-    from .search_routes import create_search_blueprint
-    from .content_routes import create_content_blueprint
-    from .publish_routes import create_publish_blueprint
-    from .image_job_routes import create_image_job_blueprint
-    from .pipeline_routes import create_pipeline_blueprint
-    from .knowledge_routes import create_knowledge_blueprint
     from .concept_routes import create_concept_blueprint
+    from .config_routes import create_config_blueprint
+    from .content_routes import create_content_blueprint
+    from .history_routes import create_history_blueprint
+    from .image_job_routes import create_image_job_blueprint
+    from .image_routes import create_image_blueprint
+    from .knowledge_routes import create_knowledge_blueprint
+    from .outline_routes import create_outline_blueprint
+    from .pipeline_routes import create_pipeline_blueprint
+    from .publish_routes import create_publish_blueprint
+    from .search_routes import create_search_blueprint
     from .template_routes import create_template_blueprint
 
     # 创建主 API 蓝图

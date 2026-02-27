@@ -707,3 +707,41 @@ Verification:
 Remaining intentionally out-of-scope in this phase:
 
 1. Xiaohongshu real publish end-to-end verification remains intentionally skipped.
+
+## Execution Progress (2026-02-27, Iteration 23)
+
+Completed in this iteration:
+
+1. Switched startup database strategy to migration-first:
+   - `backend/bootstrap/flask_factory.py` now executes `alembic upgrade head` first.
+   - falls back to `SQLAlchemy create_all` baseline only when migration fails.
+2. Removed route-layer direct dependency on infrastructure search implementations:
+   - added `backend/application/services/search_application_service.py`.
+   - `backend/routes/search_routes.py` now relies on application layer.
+   - `backend/routes/config_routes.py` search-provider test paths now call application-layer API.
+3. Migrated frontend main generation flow to async image job API:
+   - `frontend/src/api/index.ts` adds `createImageJob(...)` and `getImageJob(...)`.
+   - `frontend/src/views/GenerateView.vue` now uses `create -> poll -> finish` job lifecycle.
+4. Added route-level automated tests:
+   - `tests/test_database_startup_migration.py`
+   - `tests/test_image_job_routes.py`
+   - `tests/test_search_routes.py`
+5. Established executable quality gates for rearchitecture core scope:
+   - lint: `ruff check backend tests`
+   - typing: `mypy`
+   - backend regression: `pytest -q` + `pytest --cov=backend --cov-report=term-missing -q`
+   - frontend regression: `cd frontend && npm run quality`
+   - quality configuration is constrained to rearchitecture core and intentionally excludes legacy-heavy paths during this phase.
+
+Verification:
+
+1. `ruff check backend tests`: passed.
+2. `mypy`: passed.
+3. `python -m compileall backend tests`: passed.
+4. `pytest -q`: passed (`9 passed`).
+5. `pytest --cov=backend --cov-report=term-missing -q`: passed (`9 passed`).
+6. `cd frontend && npm run quality`: passed.
+
+Out-of-scope unchanged in this phase:
+
+1. Xiaohongshu real publish end-to-end verification remains intentionally skipped.

@@ -8,7 +8,7 @@ from pathlib import Path
 from flask import Flask, request, send_from_directory
 
 from backend.config import Config, get_config_service
-from backend.infrastructure.persistence import init_database_schema
+from backend.infrastructure.persistence import init_database_schema, upgrade_database_schema
 from backend.middleware import authenticate_request, is_auth_enabled
 from backend.routes import register_routes
 
@@ -79,7 +79,7 @@ def _configure_rate_limiter(app: Flask, settings: AppSettings, logger: logging.L
             default_limits=[settings.rate_limit],
             storage_uri=settings.rate_limit_storage_uri,
         )
-        app.limiter = limiter
+        app.extensions["limiter"] = limiter
         logger.info(f"🚦 已启用全局限流: {settings.rate_limit}")
     except Exception as exc:
         logger.warning(f"⚠️ 限流组件初始化失败，已跳过: {exc}")
@@ -96,24 +96,27 @@ def _register_output_route(app: Flask, output_dir: Path) -> None:
 def _register_root_routes(app: Flask, settings: AppSettings) -> None:
     """注册根路由与前端回退路由。"""
     if settings.serve_frontend:
+        static_folder = app.static_folder
+        if not static_folder:
+            raise RuntimeError("前端静态目录未配置，无法启用前端托管模式")
 
         @app.route("/")
         def _serve_index():
-            return send_from_directory(app.static_folder, "index.html")
+            return send_from_directory(static_folder, "index.html")
 
         @app.errorhandler(404)
         def _fallback(_error):
             if request.path.startswith("/api/"):
                 return {"success": False, "error": "Not found"}, 404
-            return send_from_directory(app.static_folder, "index.html")
+            return send_from_directory(static_folder, "index.html")
 
         return
 
     @app.route("/")
     def _index():
         return {
-            "message": "渲染AI 图文生成器 API",
-            "version": "0.1.0",
+            "message": app.config.get("APP_MESSAGE", f"{settings.app_name} API"),
+            "version": app.config.get("APP_VERSION", settings.app_version),
             "endpoints": {
                 "health": "/api/health",
                 "outline": "POST /api/outline",
@@ -166,12 +169,17 @@ def _validate_config_on_startup(logger: logging.Logger) -> None:
 
 
 def _init_database_on_startup(logger: logging.Logger) -> None:
-    """启动时初始化数据库基线表结构。"""
+    """启动时执行数据库迁移（优先 Alembic）。"""
     try:
-        init_database_schema()
-        logger.info("✅ 数据库基线初始化完成（SQLAlchemy）")
+        upgrade_database_schema("head")
+        logger.info("✅ 数据库迁移完成（Alembic upgrade head）")
     except Exception as exc:
-        logger.warning(f"⚠️ 数据库基线初始化失败，已跳过: {exc}")
+        logger.warning(f"⚠️ Alembic 迁移失败，回退 create_all 基线初始化: {exc}")
+        try:
+            init_database_schema()
+            logger.info("✅ 数据库基线初始化完成（SQLAlchemy create_all）")
+        except Exception as fallback_exc:
+            logger.warning(f"⚠️ 数据库基线初始化失败，已跳过: {fallback_exc}")
 
 
 def create_app(settings: AppSettings | None = None) -> Flask:
@@ -190,6 +198,8 @@ def create_app(settings: AppSettings | None = None) -> Flask:
         PORT=runtime_settings.port,
         CORS_ORIGINS=runtime_settings.cors_origins,
         OUTPUT_DIR=str(runtime_settings.output_dir),
+        APP_MESSAGE=f"{runtime_settings.app_name} API",
+        APP_VERSION=runtime_settings.app_version,
     )
 
     _configure_cors(app, runtime_settings, logger)

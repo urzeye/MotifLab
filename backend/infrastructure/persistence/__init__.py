@@ -18,6 +18,7 @@ from .session import (
     init_database_schema,
     reset_database_engine,
     session_scope,
+    upgrade_database_schema,
 )
 
 __all__ = [
@@ -30,6 +31,7 @@ __all__ = [
     "get_session_factory",
     "session_scope",
     "init_database_schema",
+    "upgrade_database_schema",
     "reset_database_engine",
     "get_history_repository",
     "get_concept_repository",

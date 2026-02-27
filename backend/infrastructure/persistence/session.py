@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
@@ -89,10 +89,25 @@ def session_scope() -> Iterator[Session]:
 
 def init_database_schema() -> None:
     """初始化数据库表结构（基线模式）。"""
-    from .base import Base
     from . import models  # noqa: F401
+    from .base import Base
 
     Base.metadata.create_all(bind=get_engine())
+
+
+def upgrade_database_schema(revision: str = "head") -> None:
+    """通过 Alembic 升级数据库结构。"""
+    from alembic import command
+    from alembic.config import Config as AlembicConfig
+
+    project_root = _project_root()
+    alembic_ini = project_root / "alembic.ini"
+    migration_dir = project_root / "backend" / "migrations" / "alembic"
+
+    config = AlembicConfig(str(alembic_ini))
+    config.set_main_option("script_location", str(migration_dir.as_posix()))
+    config.set_main_option("sqlalchemy.url", get_database_url())
+    command.upgrade(config, revision)
 
 
 def reset_database_engine() -> None:

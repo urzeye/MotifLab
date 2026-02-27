@@ -161,7 +161,8 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useGeneratorStore } from "../stores/generator";
 import {
-  generateImagesPost,
+  createImageJob,
+  getImageJob,
   regenerateImage as apiRegenerateImage,
   retryFailedImages as apiRetryFailed,
   createHistory,
@@ -309,6 +310,73 @@ async function retryAllFailed() {
   }
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function pollImageJobUntilFinished(jobId: string): Promise<{
+  taskId: string;
+  status: "success" | "failed" | "cancelled";
+}> {
+  const seenSuccess = new Set<number>();
+  const seenFailed = new Set<number>();
+  let finalTaskId = store.taskId || `task_${Date.now()}_job`;
+  let consecutiveErrors = 0;
+
+  while (true) {
+    const result = await getImageJob(jobId);
+    if (!result.success || !result.data) {
+      consecutiveErrors += 1;
+      if (consecutiveErrors >= 5) {
+        throw new Error(result.error || "轮询图片任务失败");
+      }
+      await sleep(1200);
+      continue;
+    }
+
+    consecutiveErrors = 0;
+    const job = result.data;
+    const items = Array.isArray(job.items) ? job.items : [];
+    for (const item of items) {
+      const index = Number(item.page_index);
+      if (!Number.isFinite(index) || index < 0) continue;
+
+      if (item.status === "success" && !seenSuccess.has(index) && item.image_url) {
+        seenSuccess.add(index);
+        seenFailed.delete(index);
+        store.updateProgress(index, "done", item.image_url);
+      } else if (
+        item.status === "failed" &&
+        !seenFailed.has(index) &&
+        !seenSuccess.has(index)
+      ) {
+        seenFailed.add(index);
+        store.updateProgress(index, "error", undefined, item.error || "生成失败");
+      }
+    }
+
+    const candidateTaskId =
+      String(job.task_id || "") || String((job.result as any)?.task_id || "");
+    if (candidateTaskId) {
+      finalTaskId = candidateTaskId;
+    }
+
+    if (
+      job.status === "success" ||
+      job.status === "failed" ||
+      job.status === "cancelled"
+    ) {
+      store.finishGeneration(finalTaskId);
+      return {
+        taskId: finalTaskId,
+        status: job.status,
+      };
+    }
+
+    await sleep(1000);
+  }
+}
+
 onMounted(async () => {
   if (store.outline.pages.length === 0) {
     router.push("/");
@@ -363,95 +431,80 @@ onMounted(async () => {
     return;
   }
 
-  generateImagesPost(
-    pagesToGenerate,
-    store.taskId,
-    store.outline.raw, // 传入完整大纲文本
-    // onProgress
-    (event) => {
-      console.log("Progress:", event);
-    },
-    // onComplete
-    (event) => {
-      console.log("Complete:", event);
-      if (event.image_url) {
-        store.updateProgress(event.index, "done", event.image_url);
-      }
-    },
-    // onError
-    (event) => {
-      console.error("Error:", event);
-      store.updateProgress(event.index, "error", undefined, event.message);
-    },
-    // onFinish
-    async (event) => {
-      console.log("Finish:", event);
-      store.finishGeneration(event.task_id);
+  try {
+    const createResult = await createImageJob(
+      pagesToGenerate,
+      store.taskId,
+      store.outline.raw,
+      store.userImages.length > 0 ? store.userImages : undefined,
+      store.topic,
+      {
+        userPrompt: store.imagePrompt.userPrompt || "",
+        systemPrompt: store.imagePrompt.systemPrompt || "",
+      },
+    );
+    if (!createResult.success || !createResult.job_id) {
+      throw new Error(createResult.error || "创建图片任务失败");
+    }
 
-      // 更新历史记录
-      if (store.recordId) {
-        try {
-          // 构建完整列表：保留已完成图片，未完成位置保持空字符串
-          const generatedImages = store.outline.pages.map((p) => {
-            const img = store.images.find((i) => i.index === p.index);
-            if (img && img.status === "done" && img.url) {
-              return img.url.split("/").pop()?.split("?")[0] || "";
-            }
-            return "";
-          });
-          const completedCount = generatedImages.filter(
-            (name) => name !== "",
-          ).length;
+    const finished = await pollImageJobUntilFinished(createResult.job_id);
+    if (finished.status === "cancelled") {
+      error.value = "图片生成任务已取消";
+      store.progress.status = "error";
+      return;
+    }
 
-          // 确定状态
-          let status = "completed";
-          if (hasFailedImages.value) {
-            status = completedCount > 0 ? "partial" : "draft";
+    // 更新历史记录
+    if (store.recordId) {
+      try {
+        // 构建完整列表：保留已完成图片，未完成位置保持空字符串
+        const generatedImages = store.outline.pages.map((p) => {
+          const img = store.images.find((i) => i.index === p.index);
+          if (img && img.status === "done" && img.url) {
+            return img.url.split("/").pop()?.split("?")[0] || "";
           }
+          return "";
+        });
+        const completedCount = generatedImages.filter((name) => name !== "").length;
 
-          // 优先使用第一页图片作为缩略图
-          const firstPage = store.images.find((img) => img.index === 0);
-          const thumbnail =
-            firstPage && firstPage.status === "done" && firstPage.url
-              ? firstPage.url.split("/").pop()?.split("?")[0]
-              : generatedImages.find((name) => name !== "") || null;
-
-          await updateHistory(store.recordId, {
-            images: {
-              task_id: event.task_id,
-              generated: generatedImages,
-            },
-            status: status,
-            thumbnail: thumbnail || undefined,
-          });
-          console.log("历史记录已更新");
-        } catch (e) {
-          console.error("更新历史记录失败:", e);
+        // 确定状态
+        let status = "completed";
+        if (hasFailedImages.value) {
+          status = completedCount > 0 ? "partial" : "draft";
         }
-      }
 
-      // 如果没有失败的，跳转到结果页
-      if (!hasFailedImages.value) {
-        setTimeout(() => {
-          router.push("/redbook/result");
-        }, 1000);
+        // 优先使用第一页图片作为缩略图
+        const firstPage = store.images.find((img) => img.index === 0);
+        const thumbnail =
+          firstPage && firstPage.status === "done" && firstPage.url
+            ? firstPage.url.split("/").pop()?.split("?")[0]
+            : generatedImages.find((name) => name !== "") || null;
+
+        await updateHistory(store.recordId, {
+          images: {
+            task_id: finished.taskId,
+            generated: generatedImages,
+          },
+          status: status,
+          thumbnail: thumbnail || undefined,
+        });
+        console.log("历史记录已更新");
+      } catch (e) {
+        console.error("更新历史记录失败:", e);
       }
-    },
-    // onStreamError
-    (err) => {
-      console.error("Stream Error:", err);
-      error.value = "生成失败: " + err.message;
-    },
-    // userImages - 用户上传的参考图片
-    store.userImages.length > 0 ? store.userImages : undefined,
-    // userTopic - 用户原始输入
-    store.topic,
-    // promptContext - 用户自定义 prompt 上下文
-    {
-      userPrompt: store.imagePrompt.userPrompt || "",
-      systemPrompt: store.imagePrompt.systemPrompt || "",
-    },
-  );
+    }
+
+    // 如果没有失败的，跳转到结果页
+    if (!hasFailedImages.value) {
+      setTimeout(() => {
+        router.push("/redbook/result");
+      }, 1000);
+    }
+  } catch (err: any) {
+    console.error("Image Job Error:", err);
+    error.value = "生成失败: " + (err?.message || String(err));
+    store.progress.status = "error";
+  }
 });
 </script>
 

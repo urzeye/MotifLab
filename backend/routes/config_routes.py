@@ -10,14 +10,22 @@
 import logging
 from copy import deepcopy
 from pathlib import Path
+
 from flask import Blueprint, request
+
+from backend.application.services import (
+    get_image_generation_application_service,
+    get_search_application_service,
+)
 from backend.config import get_config_service
 from backend.interfaces.http import json_response
 from backend.middleware import require_auth
+
 from .utils import prepare_providers_for_response
 
 logger = logging.getLogger(__name__)
 config_service = get_config_service()
+search_application_service = get_search_application_service()
 
 # 配置标识（保留 Path 形式，兼容现有调用签名）
 CONFIG_DIR = Path(__file__).parent.parent.parent
@@ -158,7 +166,8 @@ def create_config_blueprint():
         测试服务商连接
 
         请求体：
-        - type: 服务商类型（google_genai/google_gemini/openai_compatible/image_api/firecrawl/exa/tavily/perplexity/bing）
+        - type: 服务商类型
+          （google_genai/google_gemini/openai_compatible/image_api/firecrawl/exa/tavily/perplexity/bing）
         - provider_name: 服务商名称（用于从配置读取 API Key）
         - api_key: API Key（可选，若不提供则从配置读取）
         - base_url: Base URL（可选）
@@ -314,8 +323,7 @@ def _clear_config_cache():
         pass
 
     try:
-        from backend.infrastructure.services.image import reset_image_service
-        reset_image_service()
+        get_image_generation_application_service().reset_runtime_cache()
     except Exception:
         pass
 
@@ -489,7 +497,7 @@ def _test_google_genai(config: dict) -> dict:
                 "message": "连接成功！仅代表连接稳定，不确定是否可以稳定支持图片生成"
             }
         except Exception as e:
-            raise Exception(f"连接测试失败: {str(e)}")
+            raise Exception(f"连接测试失败: {str(e)}") from e
     else:
         return {
             "success": True,
@@ -565,8 +573,8 @@ def _test_openai_compatible(config: dict, test_prompt: str) -> dict:
 
 def _test_dashscope(config: dict) -> dict:
     """测试 DashScope SDK 图片生成服务"""
-    from dashscope import MultiModalConversation
     import dashscope
+    from dashscope import MultiModalConversation
 
     base_url = (config.get('base_url') or '').strip().rstrip('/')
     if base_url:
@@ -674,7 +682,7 @@ def _test_replicate(config: dict) -> dict:
     try:
         import replicate
     except Exception as e:
-        raise Exception(f"未安装 replicate 依赖: {e}")
+        raise Exception(f"未安装 replicate 依赖: {e}") from e
 
     client = replicate.Client(api_token=config['api_key'])
     model_id = config.get('model') or (
@@ -686,7 +694,7 @@ def _test_replicate(config: dict) -> dict:
     try:
         model = client.models.get(model_name)
     except Exception as e:
-        raise Exception(f"连接失败或模型不可访问: {e}")
+        raise Exception(f"连接失败或模型不可访问: {e}") from e
 
     return {
         "success": True,
@@ -696,9 +704,7 @@ def _test_replicate(config: dict) -> dict:
 
 def _test_firecrawl(config: dict) -> dict:
     """测试 Firecrawl 连接。"""
-    from backend.infrastructure.services.search_service import test_provider
-
-    result = test_provider("firecrawl", {
+    result = search_application_service.test_provider_connection("firecrawl", {
         "type": "firecrawl",
         "api_key": config.get("api_key"),
         "base_url": config.get("base_url"),
@@ -710,9 +716,7 @@ def _test_firecrawl(config: dict) -> dict:
 
 def _test_exa(config: dict) -> dict:
     """测试 Exa 连接。"""
-    from backend.infrastructure.services.search_service import test_provider
-
-    result = test_provider("exa", {
+    result = search_application_service.test_provider_connection("exa", {
         "type": "exa",
         "api_key": config.get("api_key"),
         "base_url": config.get("base_url"),
@@ -724,9 +728,7 @@ def _test_exa(config: dict) -> dict:
 
 def _test_tavily(config: dict) -> dict:
     """测试 Tavily 连接。"""
-    from backend.infrastructure.services.search_service import test_provider
-
-    result = test_provider("tavily", {
+    result = search_application_service.test_provider_connection("tavily", {
         "type": "tavily",
         "api_key": config.get("api_key"),
         "base_url": config.get("base_url"),
@@ -738,9 +740,7 @@ def _test_tavily(config: dict) -> dict:
 
 def _test_perplexity(config: dict) -> dict:
     """测试 Perplexity 连接。"""
-    from backend.infrastructure.services.search_service import test_provider
-
-    result = test_provider("perplexity", {
+    result = search_application_service.test_provider_connection("perplexity", {
         "type": "perplexity",
         "api_key": config.get("api_key"),
         "base_url": config.get("base_url"),
@@ -753,9 +753,7 @@ def _test_perplexity(config: dict) -> dict:
 
 def _test_bing(config: dict) -> dict:
     """测试 Bing 抓取能力。"""
-    from backend.infrastructure.services.search_service import test_provider
-
-    result = test_provider("bing", {
+    result = search_application_service.test_provider_connection("bing", {
         "type": "bing",
         "base_url": config.get("base_url"),
     })

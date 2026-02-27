@@ -223,6 +223,27 @@ export interface ImagePromptContext {
   systemPrompt?: string
 }
 
+export interface ImageJobItem {
+  page_index: number
+  status: 'queued' | 'success' | 'failed'
+  image_url?: string
+  error?: string
+  updated_at?: string
+}
+
+export interface ImageJobDetail {
+  id: string
+  status: 'queued' | 'running' | 'success' | 'failed' | 'cancelled'
+  task_id?: string | null
+  payload?: Record<string, any>
+  result?: Record<string, any>
+  error?: string | null
+  total_pages: number
+  completed_pages: number
+  failed_pages: number
+  items?: ImageJobItem[]
+}
+
 export interface HistoryRecord {
   id: string
   title: string
@@ -553,6 +574,56 @@ export function getImageUrl(taskId: string, filename: string, thumbnail = true):
   return `${API_BASE_URL}/images/${taskId}/${filename}?thumbnail=${thumbnail}`
 }
 
+async function toBase64Images(userImages?: File[]): Promise<string[]> {
+  if (!userImages || userImages.length === 0) return []
+  return Promise.all(
+    userImages.map(file => new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    }))
+  )
+}
+
+export async function createImageJob(
+  pages: Page[],
+  taskId: string | null,
+  fullOutline: string,
+  userImages?: File[],
+  userTopic?: string,
+  promptContext?: ImagePromptContext
+): Promise<{ success: boolean; job_id?: string; status?: string; error?: string }> {
+  try {
+    const userImagesBase64 = await toBase64Images(userImages)
+    const response = await axios.post(`${API_BASE_URL}/image-jobs`, {
+      pages,
+      task_id: taskId,
+      full_outline: fullOutline,
+      user_images: userImagesBase64.length > 0 ? userImagesBase64 : undefined,
+      user_topic: userTopic || '',
+      user_prompt: promptContext?.userPrompt,
+      system_prompt: promptContext?.systemPrompt
+    })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '创建图片任务失败')
+  }
+}
+
+export async function getImageJob(jobId: string): Promise<{
+  success: boolean
+  data?: ImageJobDetail
+  error?: string
+}> {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/image-jobs/${jobId}`)
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '获取图片任务失败')
+  }
+}
+
 export async function regenerateImage(
   taskId: string,
   page: Page,
@@ -617,17 +688,7 @@ export async function generateImagesPost(
   userTopic?: string,
   promptContext?: ImagePromptContext
 ) {
-  let userImagesBase64: string[] = []
-  if (userImages && userImages.length > 0) {
-    userImagesBase64 = await Promise.all(
-      userImages.map(file => new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      }))
-    )
-  }
+  const userImagesBase64 = await toBase64Images(userImages)
 
   await handleSSEStream(
     `${API_BASE_URL}/generate`,

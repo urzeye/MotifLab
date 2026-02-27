@@ -29,4 +29,76 @@ packages = ["backend"]
 [tool.uv]
 dev-dependencies = [
     "pytest>=8.2.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.6.2",
+    "mypy>=1.11.2",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["backend"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+
+[tool.ruff]
+target-version = "py39"
+line-length = 120
+src = ["backend", "tests"]
+extend-exclude = [
+    "backend/app.py",
+    "backend/bootstrap/__init__.py",
+    "backend/clients",
+    "backend/config",
+    "backend/core",
+    "backend/generators",
+    "backend/infrastructure/concept_history",
+    "backend/infrastructure/gateways",
+    "backend/infrastructure/history",
+    "backend/infrastructure/services",
+    "backend/knowledge",
+    "backend/middleware.py",
+    "backend/migrations",
+    "backend/pipelines",
+    "backend/routes/concept_routes.py",
+    "backend/routes/content_routes.py",
+    "backend/routes/history_routes.py",
+    "backend/routes/image_routes.py",
+    "backend/routes/knowledge_routes.py",
+    "backend/routes/outline_routes.py",
+    "backend/routes/pipeline_routes.py",
+    "backend/routes/publish_routes.py",
+    "backend/routes/template_routes.py",
+    "backend/skills",
+    "backend/utils",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.9"
+files = [
+    "backend/bootstrap/flask_factory.py",
+    "backend/infrastructure/persistence/session.py",
+    "backend/infrastructure/persistence/__init__.py",
+    "backend/application/services/image_generation_application_service.py",
+    "backend/application/services/search_application_service.py",
+    "backend/application/services/__init__.py",
+    "backend/routes/search_routes.py",
+    "backend/routes/config_routes.py",
+    "tests/test_database_startup_migration.py",
+    "tests/test_image_job_routes.py",
+    "tests/test_search_routes.py",
+]
+ignore_missing_imports = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+check_untyped_defs = true
+follow_imports = "skip"
+disable_error_code = ["import-untyped"]
