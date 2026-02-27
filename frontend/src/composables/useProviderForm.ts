@@ -1,4 +1,5 @@
 import { ref, Ref } from 'vue'
+import { useMessage } from 'naive-ui'
 import { getConfig, updateConfig, testConnection, type Config } from '../api'
 
 export interface Provider {
@@ -44,6 +45,7 @@ interface ProviderPreset {
 }
 
 type ProviderCategory = 'text' | 'image' | 'search'
+type MessageApi = ReturnType<typeof useMessage>
 
 const SEARCH_NO_KEY_REQUIRED_TYPES = new Set(['firecrawl', 'bing'])
 
@@ -216,6 +218,7 @@ function createProviderHandler(
   editing: Ref<string | null>,
   testing: Ref<boolean>,
   category: ProviderCategory,
+  message: MessageApi,
   autoSave: () => Promise<void>
 ) {
   const isImage = category === 'image'
@@ -261,13 +264,20 @@ function createProviderHandler(
 
   const save = async () => {
     const name = editing.value || form.value.name
-    if (!name) return alert('请填写服务商名称')
-    if (!form.value.type) return alert('请选择服务商类型')
+    if (!name) {
+      message.warning('请填写服务商名称')
+      return
+    }
+    if (!form.value.type) {
+      message.warning('请选择服务商类型')
+      return
+    }
 
     const apiKey = form.value.api_key.trim()
     const needApiKey = !isSearch || !SEARCH_NO_KEY_REQUIRED_TYPES.has(form.value.type)
     if (!editing.value && !apiKey && needApiKey) {
-      return alert('请填写 API Key')
+      message.warning('请填写 API Key')
+      return
     }
 
     const existing = config.value.providers[name] || {}
@@ -332,9 +342,13 @@ function createProviderHandler(
       }
 
       const result = await testConnection(payload)
-      if (result.success) alert('✅ ' + result.message)
+      if (result.success) {
+        message.success(result.message || '连接成功')
+      } else {
+        message.error('连接失败：' + (result.error || result.message || '未知错误'))
+      }
     } catch (e: any) {
-      alert('❌ 连接失败：' + (e.response?.data?.error || e.message))
+      message.error('连接失败：' + (e.response?.data?.error || e.message))
     } finally {
       testing.value = false
     }
@@ -355,9 +369,13 @@ function createProviderHandler(
       }
 
       const result = await testConnection(payload)
-      if (result.success) alert('✅ ' + result.message)
+      if (result.success) {
+        message.success(result.message || '连接成功')
+      } else {
+        message.error('连接失败：' + (result.error || result.message || '未知错误'))
+      }
     } catch (e: any) {
-      alert('❌ 连接失败：' + (e.response?.data?.error || e.message))
+      message.error('连接失败：' + (e.response?.data?.error || e.message))
     }
   }
 
@@ -375,6 +393,7 @@ function normalizeProviderConfig(data: any, fallbackActive = ''): ProviderConfig
 }
 
 export function useProviderForm() {
+  const message = useMessage()
   const loading = ref(true)
   const saving = ref(false)
   const testingText = ref(false)
@@ -406,10 +425,10 @@ export function useProviderForm() {
         imageConfig.value = normalizeProviderConfig(result.config.image_generation)
         searchConfig.value = normalizeProviderConfig(result.config.search, 'bing')
       } else {
-        alert('加载配置失败: ' + (result.error || '未知错误'))
+        message.error('加载配置失败: ' + (result.error || '未知错误'))
       }
     } catch (e) {
-      alert('加载配置失败: ' + String(e))
+      message.error('加载配置失败: ' + String(e))
     } finally {
       loading.value = false
     }
@@ -439,6 +458,7 @@ export function useProviderForm() {
     editingTextProvider,
     testingText,
     'text',
+    message,
     autoSaveConfig
   )
   const imageHandler = createProviderHandler(
@@ -448,6 +468,7 @@ export function useProviderForm() {
     editingImageProvider,
     testingImage,
     'image',
+    message,
     autoSaveConfig
   )
   const searchHandler = createProviderHandler(
@@ -457,6 +478,7 @@ export function useProviderForm() {
     editingSearchProvider,
     testingSearch,
     'search',
+    message,
     autoSaveConfig
   )
 
