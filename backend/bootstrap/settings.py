@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
+DEFAULT_APP_NAME = "渲染AI 图文生成器"
+DEFAULT_APP_VERSION = "0.1.0"
+
 
 def _to_bool(value: str | None, default: bool = False) -> bool:
     if value is None:
@@ -33,6 +36,59 @@ def _to_list(value: str | None, default: List[str]) -> List[str]:
     return [item for item in items if item]
 
 
+def _parse_toml_string(value: str) -> str | None:
+    value = value.strip()
+    if len(value) < 2:
+        return None
+    quote = value[0]
+    if quote not in {"'", '"'} or value[-1] != quote:
+        return None
+    return value[1:-1].strip()
+
+
+def _read_project_metadata(project_root: Path) -> tuple[str, str]:
+    pyproject = project_root / "pyproject.toml"
+    if not pyproject.exists():
+        return DEFAULT_APP_NAME, DEFAULT_APP_VERSION
+
+    try:
+        content = pyproject.read_text(encoding="utf-8")
+    except Exception:
+        return DEFAULT_APP_NAME, DEFAULT_APP_VERSION
+
+    in_project_section = False
+    project_name: str | None = None
+    project_description: str | None = None
+    project_version: str | None = None
+
+    for raw_line in content.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            in_project_section = line == "[project]"
+            continue
+        if not in_project_section or "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        parsed = _parse_toml_string(value)
+        if parsed is None:
+            continue
+
+        normalized_key = key.strip()
+        if normalized_key == "name":
+            project_name = parsed
+        elif normalized_key == "description":
+            project_description = parsed
+        elif normalized_key == "version":
+            project_version = parsed
+
+    app_name = (project_description or project_name or DEFAULT_APP_NAME).strip() or DEFAULT_APP_NAME
+    app_version = (project_version or DEFAULT_APP_VERSION).strip() or DEFAULT_APP_VERSION
+    return app_name, app_version
+
+
 @dataclass(frozen=True)
 class AppSettings:
     app_name: str
@@ -57,14 +113,15 @@ class AppSettings:
     @classmethod
     def from_env(cls) -> "AppSettings":
         project_root = Path(os.getenv("RENDERINK_ROOT") or Path(__file__).resolve().parents[2])
+        default_app_name, default_app_version = _read_project_metadata(project_root)
         default_cors = ["http://localhost:5173", "http://localhost:3000"]
 
         debug = _to_bool(os.getenv("REDINK_DEBUG"), default=True)
         log_level = (os.getenv("REDINK_LOG_LEVEL") or ("DEBUG" if debug else "INFO")).upper()
 
         return cls(
-            app_name=(os.getenv("REDINK_APP_NAME") or "渲染AI 图文生成器").strip(),
-            app_version=(os.getenv("REDINK_APP_VERSION") or "0.1.0").strip(),
+            app_name=(os.getenv("REDINK_APP_NAME") or default_app_name).strip(),
+            app_version=(os.getenv("REDINK_APP_VERSION") or default_app_version).strip(),
             app_env=(os.getenv("APP_ENV") or "development").strip().lower(),
             debug=debug,
             host=(os.getenv("REDINK_HOST") or "0.0.0.0").strip(),
