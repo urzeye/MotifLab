@@ -12,7 +12,8 @@ API:
 """
 
 import logging
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request
+from backend.interfaces.http import json_response
 from backend.knowledge import registry
 
 logger = logging.getLogger(__name__)
@@ -61,15 +62,15 @@ def create_knowledge_blueprint():
                     "suggested_charts": f.get("suggested_charts", [])
                 })
 
-            return jsonify({
+            return json_response({
                 "success": True,
                 "frameworks": formatted,
                 "total": len(formatted)
-            })
+            }, 200)
 
         except Exception as e:
             logger.error(f"获取框架列表失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     @bp.route('/frameworks', methods=['POST'])
     def create_framework():
@@ -87,13 +88,13 @@ def create_knowledge_blueprint():
         }
         """
         try:
-            data = request.get_json()
+            data = request.get_json(silent=True)
             if not data:
-                return jsonify({"success": False, "error": "请求体不能为空"}), 400
+                return json_response({"success": False, "error": "请求体不能为空"}, 400)
 
             name = data.get('name')
             if not name:
-                return jsonify({"success": False, "error": "框架名称不能为空"}), 400
+                return json_response({"success": False, "error": "框架名称不能为空"}, 400)
 
             # 生成 ID
             framework_id = name.lower().replace(' ', '_').replace('(', '').replace(')', '')
@@ -113,15 +114,15 @@ def create_knowledge_blueprint():
             registry.add_framework(framework_id, framework_data, persist=True)
             logger.info(f"创建新框架: {name}")
 
-            return jsonify({
+            return json_response({
                 "success": True,
                 "message": "框架创建成功",
                 "framework": framework_data
-            })
+            }, 200)
 
         except Exception as e:
             logger.error(f"创建框架失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     @bp.route('/chart-types', methods=['GET'])
     def get_chart_types():
@@ -147,15 +148,15 @@ def create_knowledge_blueprint():
                     "best_for": c.get("best_for", [])
                 })
 
-            return jsonify({
+            return json_response({
                 "success": True,
                 "chart_types": formatted,
                 "total": len(formatted)
-            })
+            }, 200)
 
         except Exception as e:
             logger.error(f"获取图表类型失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     @bp.route('/visual-styles', methods=['GET'])
     def get_visual_styles():
@@ -185,15 +186,15 @@ def create_knowledge_blueprint():
                     })
                 })
 
-            return jsonify({
+            return json_response({
                 "success": True,
                 "visual_styles": formatted,
                 "total": len(formatted)
-            })
+            }, 200)
 
         except Exception as e:
             logger.error(f"获取视觉风格失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     @bp.route('/reload', methods=['POST'])
     def reload_knowledge():
@@ -204,7 +205,7 @@ def create_knowledge_blueprint():
         """
         try:
             registry.reload()
-            return jsonify({
+            return json_response({
                 "success": True,
                 "message": "知识库已重新加载",
                 "stats": {
@@ -212,10 +213,10 @@ def create_knowledge_blueprint():
                     "chart_types": len(registry.chart_types),
                     "visual_styles": len(registry.visual_styles)
                 }
-            })
+            }, 200)
 
         except Exception as e:
             logger.error(f"重新加载知识库失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     return bp
