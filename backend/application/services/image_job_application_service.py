@@ -63,9 +63,10 @@ class ImageJobApplicationService:
         system_prompt: str = "",
     ) -> str:
         """创建异步任务并启动后台执行。"""
+        normalized_task_id = (task_id or "").strip() if isinstance(task_id, str) or task_id is None else str(task_id).strip()
         payload = {
             "pages": pages,
-            "task_id": task_id,
+            "task_id": normalized_task_id or None,
             "full_outline": full_outline,
             "user_images": user_images_base64 or [],
             "user_topic": user_topic,
@@ -114,6 +115,8 @@ class ImageJobApplicationService:
             return
 
         task_id = payload.get("task_id")
+        if isinstance(task_id, str):
+            task_id = task_id.strip() or None
         full_outline = str(payload.get("full_outline") or "")
         user_topic = str(payload.get("user_topic") or "")
         user_prompt = str(payload.get("user_prompt") or "")

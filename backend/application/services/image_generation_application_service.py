@@ -27,7 +27,9 @@ class ImageGenerationApplicationService:
         system_prompt: str = "",
     ) -> Generator[dict[str, Any], None, None]:
         """发起图片生成任务并返回事件流。"""
-        resolved_task_id = task_id or ""
+        normalized_task_id = (task_id or "").strip()
+        # 重要：空字符串必须转回 None，底层服务才会自动生成 task_id。
+        resolved_task_id = normalized_task_id or None
         return self._image_service.generate_images(
             pages=pages,
             task_id=resolved_task_id,

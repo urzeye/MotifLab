@@ -152,18 +152,19 @@
             v-for="(title, index) in content.titles"
             :key="index"
             class="title-item"
-            @click="copyTitle(title, index)"
           >
             <span class="title-badge">{{
               index === 0 ? "推荐" : `备选${index}`
             }}</span>
             <span class="title-text">{{ title }}</span>
-            <span
-              class="copy-hint"
-              :class="{ show: copiedTitleIndex === index }"
+            <button
+              type="button"
+              class="title-copy-btn"
+              :class="{ copied: copiedTitleIndex === index }"
+              @click.stop="copyTitle(title, index)"
             >
-              {{ copiedTitleIndex === index ? "已复制" : "点击复制" }}
-            </span>
+              {{ copiedTitleIndex === index ? "已复制" : "复制" }}
+            </button>
           </div>
         </div>
       </div>
@@ -716,13 +717,63 @@ async function copyTag(tag: string, index: number) {
   transition: opacity 0.2s ease;
 }
 
-.title-item:hover .copy-hint {
-  opacity: 1;
+.titles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.copy-hint.show {
-  opacity: 1;
-  color: #13c2c2;
+.title-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-body);
+}
+
+.title-badge {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.title-text {
+  flex: 1;
+  color: var(--text-main);
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.title-copy-btn {
+  flex-shrink: 0;
+  min-width: 62px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-sub);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.title-copy-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+.title-copy-btn.copied {
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
+  color: var(--color-success);
 }
 
 /* 文案内容 */

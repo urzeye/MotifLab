@@ -190,6 +190,7 @@ import {
   getSearchStatus,
   getTemplateDetail,
   type OutlineStreamFinishEvent,
+  type Page,
   type ScrapeResult,
   type TemplateItem,
 } from "../api";
@@ -288,6 +289,60 @@ function buildTopicWithPageCount(rawTopic: string, totalPages: number): string {
 }
 
 /**
+ * 兜底解析大纲文本，避免后端偶发缺失 pages 时阻断流程。
+ */
+function parsePagesFromRawOutline(rawOutline: string): Page[] {
+  const raw = String(rawOutline || "").replace(/\r\n/g, "\n").trim();
+  if (!raw) return [];
+
+  const chunks = raw
+    .split(/\n?\s*<page>\s*\n?/gi)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (chunks.length === 0) return [];
+
+  return chunks.map((content, index) => {
+    let type: "cover" | "content" | "summary" = "content";
+    if (index === 0) type = "cover";
+    else if (index === chunks.length - 1) type = "summary";
+
+    return {
+      index,
+      type,
+      content,
+    };
+  });
+}
+
+/**
+ * 异步落库大纲快照，不阻塞页面跳转。
+ */
+async function persistOutlineHistory(
+  title: string,
+  raw: string,
+  pages: Page[],
+): Promise<void> {
+  try {
+    const historyResult = await createHistory(title, {
+      raw,
+      pages,
+    });
+
+    if (historyResult.success && historyResult.record_id) {
+      store.setRecordId(historyResult.record_id);
+      return;
+    }
+
+    console.error("创建历史记录失败:", historyResult.error || "未知错误");
+    store.setRecordId(null);
+  } catch (err: any) {
+    console.error("创建历史记录异常:", err?.message || err);
+    store.setRecordId(null);
+  }
+}
+
+/**
  * 生成大纲
  */
 async function handleGenerate() {
@@ -339,32 +394,19 @@ async function handleGenerate() {
       },
     );
 
-    if (result.success && result.pages) {
+    const resolvedOutline = result.outline || "";
+    const resolvedPages =
+      Array.isArray(result.pages) && result.pages.length > 0
+        ? result.pages
+        : parsePagesFromRawOutline(resolvedOutline);
+
+    if (result.success && (resolvedPages.length > 0 || !!resolvedOutline.trim())) {
+      // 新主题成功生成大纲后，先清空旧任务上下文，避免复用历史图片/任务ID。
+      store.resetGenerationContext();
+
       // 设置主题和大纲到 store
       store.setTopic(rawTopic);
-      store.setOutline(result.outline || "", result.pages);
-
-      // 大纲生成成功后，立即创建历史记录
-      // 这样即使用户刷新页面或关闭浏览器，大纲也不会丢失
-      try {
-        const historyResult = await createHistory(rawTopic, {
-          raw: result.outline || "",
-          pages: result.pages,
-        });
-
-        // 保存历史记录 ID 到 store，后续生成正文和图片时会使用
-        if (historyResult.success && historyResult.record_id) {
-          store.setRecordId(historyResult.record_id);
-        } else {
-          // 创建历史记录失败，记录错误但不阻断流程
-          console.error("创建历史记录失败:", historyResult.error || "未知错误");
-          store.setRecordId(null);
-        }
-      } catch (err: any) {
-        // 创建历史记录异常，记录错误但不阻断流程
-        console.error("创建历史记录异常:", err.message || err);
-        store.setRecordId(null);
-      }
+      store.setOutline(resolvedOutline, resolvedPages);
 
       // 保存用户上传的图片到 store
       if (imageFiles.length > 0) {
@@ -379,7 +421,9 @@ async function handleGenerate() {
       uploadedImageFiles.value = [];
       urlContent.value = null;
 
-      router.push("/redbook/outline");
+      // 先进入大纲页，历史记录异步写入，避免被网络/数据库慢请求卡住跳转。
+      void router.push("/redbook/outline");
+      void persistOutlineHistory(rawTopic, resolvedOutline, resolvedPages);
     } else {
       error.value = result.error || "生成大纲失败";
     }

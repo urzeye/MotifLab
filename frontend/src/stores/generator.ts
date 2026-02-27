@@ -14,6 +14,7 @@
  * 4. result: 查看生成结果
  */
 import { defineStore } from 'pinia'
+import { appendUrlParams, withAccessToken } from '../api'
 import type { Page } from '../api'
 
 /**
@@ -286,6 +287,23 @@ export const useGeneratorStore = defineStore('generator', {
 
   actions: {
     /**
+     * 开始一轮全新的主题创作前，清理旧任务上下文
+     * 保留：当前主题/大纲由调用方后续重新写入
+     * 清理：图片、任务ID、历史记录ID、进度、内容结果
+     */
+    resetGenerationContext() {
+      this.progress = {
+        current: 0,
+        total: 0,
+        status: 'idle'
+      }
+      this.images = []
+      this.taskId = null
+      this.recordId = null
+      this.clearContent()
+    },
+
+    /**
      * 设置用户输入的主题
      * @param topic 主题内容
      */
@@ -419,9 +437,18 @@ export const useGeneratorStore = defineStore('generator', {
      */
     startGeneration() {
       this.stage = 'generating'
+
+      // 仅复用同一任务下的已完成图片，避免把历史任务图片误用到新主题里。
+      const canReuseExistingImage = (pageIndex: number) => {
+        const existing = this.images.find(img => img.index === pageIndex)
+        if (!existing || existing.status !== 'done' || !existing.url) return false
+        if (!this.taskId) return false
+        const imagePath = String(existing.url).split('?')[0]
+        return imagePath.includes(`/api/images/${this.taskId}/`)
+      }
+
       const completedCount = this.outline.pages.filter(page => {
-        const existing = this.images.find(img => img.index === page.index)
-        return !!(existing && existing.status === 'done' && existing.url)
+        return canReuseExistingImage(page.index)
       }).length
       this.progress.current = completedCount
       this.progress.total = this.outline.pages.length
@@ -431,7 +458,7 @@ export const useGeneratorStore = defineStore('generator', {
       // 为每个页面创建占位对象，已完成的页面保留已生成图片
       this.images = this.outline.pages.map(page => {
         const existing = this.images.find(img => img.index === page.index)
-        if (existing && existing.status === 'done' && existing.url) {
+        if (existing && canReuseExistingImage(page.index)) {
           return existing
         }
         return {
@@ -453,7 +480,7 @@ export const useGeneratorStore = defineStore('generator', {
       const image = this.images.find(img => img.index === index)
       if (image) {
         image.status = status
-        if (url) image.url = url
+        if (url) image.url = withAccessToken(url)
         if (error) image.error = error
       }
       // 成功完成时增加计数
@@ -470,9 +497,9 @@ export const useGeneratorStore = defineStore('generator', {
     updateImage(index: number, newUrl: string) {
       const image = this.images.find(img => img.index === index)
       if (image) {
-        // 添加时间戳避免缓存
+        // 添加时间戳避免缓存，并确保图片直连请求携带访问令牌。
         const timestamp = Date.now()
-        image.url = `${newUrl}?t=${timestamp}`
+        image.url = appendUrlParams(withAccessToken(newUrl), { t: timestamp })
         image.status = 'done'
         delete image.error
       }

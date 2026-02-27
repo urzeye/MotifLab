@@ -66,6 +66,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { getImageUrl } from '../../api'
 
 /**
  * 历史记录卡片组件
@@ -126,7 +127,7 @@ const thumbnailUrl = computed(() => {
     return `/output/concepts/${props.record.task_id}/${props.record.thumbnail}`
   }
   // 小红书图文路径
-  return `/api/images/${props.record.task_id}/${props.record.thumbnail}`
+  return getImageUrl(props.record.task_id, props.record.thumbnail)
 })
 
 /**

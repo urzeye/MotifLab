@@ -28,6 +28,53 @@ export function clearAccessToken() {
   localStorage.removeItem(ACCESS_TOKEN_KEY)
 }
 
+/**
+ * 为 URL 追加查询参数（会覆盖同名参数）。
+ */
+export function appendUrlParams(
+  rawUrl: string,
+  params: Record<string, string | number | boolean | undefined>
+): string {
+  if (!rawUrl) return rawUrl
+
+  const hashIndex = rawUrl.indexOf('#')
+  const hash = hashIndex >= 0 ? rawUrl.slice(hashIndex) : ''
+  const withoutHash = hashIndex >= 0 ? rawUrl.slice(0, hashIndex) : rawUrl
+  const [basePath, queryString = ''] = withoutHash.split('?')
+  const searchParams = new URLSearchParams(queryString)
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return
+    searchParams.set(key, String(value))
+  })
+
+  const nextQuery = searchParams.toString()
+  return `${basePath}${nextQuery ? `?${nextQuery}` : ''}${hash}`
+}
+
+/**
+ * 为同源 API URL 自动附加 access_token（用于 img/src、a[href] 等无法带请求头的场景）。
+ */
+export function withAccessToken(rawUrl: string): string {
+  if (!accessToken || !rawUrl) return rawUrl
+  const isAbsoluteHttp = /^https?:\/\//i.test(rawUrl)
+
+  if (isAbsoluteHttp) {
+    try {
+      const parsed = new URL(rawUrl)
+      const isSameOriginApi =
+        parsed.origin === window.location.origin && parsed.pathname.startsWith('/api/')
+      if (!isSameOriginApi) return rawUrl
+    } catch {
+      return rawUrl
+    }
+  } else if (!rawUrl.startsWith('/api/')) {
+    return rawUrl
+  }
+
+  return appendUrlParams(rawUrl, { access_token: accessToken })
+}
+
 axios.interceptors.request.use((config) => {
   if (accessToken) {
     config.headers = config.headers || {}
@@ -114,31 +161,91 @@ async function handleSSEStream(
 
     const decoder = new TextDecoder()
     let buffer = ''
+    let currentEventType = 'message'
+    let currentDataLines: string[] = []
+
+    const dispatchEvent = () => {
+      if (currentDataLines.length === 0) {
+        currentEventType = 'message'
+        return
+      }
+
+      const rawData = currentDataLines.join('\n').trim()
+      currentDataLines = []
+      if (!rawData) {
+        currentEventType = 'message'
+        return
+      }
+
+      try {
+        const parsed = JSON.parse(rawData)
+        const handler = handlers[currentEventType]
+        if (handler) handler(parsed)
+      } catch (e) {
+        console.error('解析 SSE 数据失败:', e)
+      } finally {
+        currentEventType = 'message'
+      }
+    }
+
+    const consumeBufferByLine = (flushRemaining: boolean) => {
+      let newlineIndex = buffer.indexOf('\n')
+      while (newlineIndex >= 0) {
+        let line = buffer.slice(0, newlineIndex)
+        buffer = buffer.slice(newlineIndex + 1)
+
+        if (line.endsWith('\r')) {
+          line = line.slice(0, -1)
+        }
+
+        // 空行表示一个 SSE 事件结束，触发分发
+        if (!line.trim()) {
+          dispatchEvent()
+          newlineIndex = buffer.indexOf('\n')
+          continue
+        }
+
+        if (line.startsWith('event:')) {
+          currentEventType = line.slice(6).trim() || 'message'
+        } else if (line.startsWith('data:')) {
+          currentDataLines.push(line.slice(5).trimStart())
+        }
+
+        newlineIndex = buffer.indexOf('\n')
+      }
+
+      if (!flushRemaining) return
+
+      // 处理尾包未换行的最后一行
+      if (buffer.length > 0) {
+        let line = buffer
+        buffer = ''
+        if (line.endsWith('\r')) {
+          line = line.slice(0, -1)
+        }
+
+        if (line.startsWith('event:')) {
+          currentEventType = line.slice(6).trim() || 'message'
+        } else if (line.startsWith('data:')) {
+          currentDataLines.push(line.slice(5).trimStart())
+        }
+      }
+
+      dispatchEvent()
+    }
 
     while (true) {
       const { done, value } = await reader.read()
-      if (done) break
 
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n\n')
-      buffer = lines.pop() || ''
+      if (value) {
+        buffer += decoder.decode(value, { stream: true })
+        consumeBufferByLine(false)
+      }
 
-      for (const line of lines) {
-        if (!line.trim()) continue
-
-        const [eventLine, dataLine] = line.split('\n')
-        if (!eventLine || !dataLine) continue
-
-        const eventType = eventLine.replace('event: ', '').trim()
-        const eventData = dataLine.replace('data: ', '').trim()
-
-        try {
-          const data = JSON.parse(eventData)
-          const handler = handlers[eventType]
-          if (handler) handler(data)
-        } catch (e) {
-          console.error('解析 SSE 数据失败:', e)
-        }
+      if (done) {
+        buffer += decoder.decode()
+        consumeBufferByLine(true)
+        break
       }
     }
   } catch (error) {
@@ -570,8 +677,18 @@ export async function editOutlineStream(
 
 // ==================== 图片生成 API ====================
 
-export function getImageUrl(taskId: string, filename: string, thumbnail = true): string {
-  return `${API_BASE_URL}/images/${taskId}/${filename}?thumbnail=${thumbnail}`
+export function getImageUrl(
+  taskId: string | null | undefined,
+  filename: string | null | undefined,
+  thumbnail = true
+): string {
+  if (!taskId || !filename) return ''
+
+  return withAccessToken(
+    appendUrlParams(`${API_BASE_URL}/images/${taskId}/${filename}`, {
+      thumbnail
+    })
+  )
 }
 
 async function toBase64Images(userImages?: File[]): Promise<string[]> {

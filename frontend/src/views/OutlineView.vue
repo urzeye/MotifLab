@@ -1,7 +1,7 @@
 <template>
   <div class="container outline-page-container">
     <div class="page-header outline-page-header">
-      <div>
+      <div class="outline-header-main">
         <h1 class="page-title">编辑大纲</h1>
         <div
           class="typing-tip-banner"
@@ -1018,17 +1018,27 @@ watch(
 .outline-page-header {
   max-width: 1240px;
   margin: 0 auto 28px auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 16px;
+  row-gap: 12px;
+}
+
+.outline-header-main {
+  min-width: 0;
 }
 
 .header-actions {
   display: flex;
   gap: 12px;
+  align-self: start;
+  flex-shrink: 0;
 }
 
 .typing-tip-banner {
   margin-top: 12px;
-  width: fit-content;
-  max-width: min(100%, 760px);
+  width: min(100%, 760px);
   padding: 8px 16px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-color);
@@ -1053,6 +1063,7 @@ watch(
 }
 
 .typing-tip-text {
+  min-width: 28ch;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1568,6 +1579,10 @@ watch(
 }
 
 @media (max-width: 980px) {
+  .outline-page-header {
+    grid-template-columns: 1fr;
+  }
+
   .outline-grid {
     grid-template-columns: 1fr;
     padding: 0;
@@ -1576,6 +1591,10 @@ watch(
   .outline-card,
   .add-card-dashed {
     min-height: 520px;
+  }
+
+  .outline-header-main {
+    width: 100%;
   }
 
   .header-actions {
@@ -1592,6 +1611,7 @@ watch(
   }
 
   .typing-tip-text {
+    min-width: 0;
     font-size: 14px;
   }
 
