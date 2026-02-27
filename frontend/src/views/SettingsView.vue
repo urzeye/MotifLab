@@ -17,9 +17,8 @@
       v-else
       class="settings-container"
     >
-      <!-- 访问安全配置 -->
       <div class="card">
-        <div class="section-header">
+        <div class="card-header">
           <div>
             <h2 class="section-title">访问安全</h2>
             <p class="section-desc">配置前端访问令牌（仅保存在当前浏览器）</p>
@@ -101,9 +100,8 @@
         </p>
       </div>
 
-      <!-- 文本生成配置 -->
       <div class="card">
-        <div class="section-header">
+        <div class="card-header">
           <div>
             <h2 class="section-title">文本生成配置</h2>
             <p class="section-desc">用于生成小红书图文大纲</p>
@@ -148,9 +146,8 @@
         />
       </div>
 
-      <!-- 图片生成配置 -->
       <div class="card">
-        <div class="section-header">
+        <div class="card-header">
           <div>
             <h2 class="section-title">图片生成配置</h2>
             <p class="section-desc">用于生成小红书配图</p>
@@ -195,9 +192,8 @@
         />
       </div>
 
-      <!-- 搜索服务配置 -->
       <div class="card">
-        <div class="section-header">
+        <div class="card-header">
           <div>
             <h2 class="section-title">搜索服务配置</h2>
             <p class="section-desc">用于抓取网页内容并注入到大纲生成上下文</p>
