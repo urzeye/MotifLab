@@ -318,3 +318,25 @@ Verification:
 1. `python -m py_compile backend/routes/pipeline_routes.py` passed.
 2. `GET /api/pipeline/types` returned `200` with `meta.trace_id`.
 3. `POST /api/pipeline/cancel` (missing `run_id`) returned `400` with `meta.trace_id` and expected error contract.
+
+## Execution Progress (2026-02-27, Iteration 8)
+
+Completed in this iteration:
+
+1. Extended interface-layer response helper usage to concept/config routes:
+   - `backend/routes/concept_routes.py` switched from `jsonify` to `json_response(...)`
+   - `backend/routes/config_routes.py` switched from `jsonify` to `json_response(...)`
+   - all updated endpoints now carry `meta.trace_id` while preserving existing payload fields
+2. Introduced concept-history application service:
+   - added `backend/application/services/concept_history_service.py`
+   - `backend/routes/concept_routes.py` history endpoints now call application service instead of direct infrastructure service lookup
+3. Updated application service export surface:
+   - `backend/application/services/__init__.py` now exports concept-history application service factory
+
+Verification:
+
+1. `python -m py_compile` passed for updated application service and route files.
+2. `GET /api/config` returned `200` with `meta.trace_id`.
+3. `POST /api/config/test` (without API key) returned `400` with `meta.trace_id`.
+4. `GET /api/concept/history` returned `200` with `meta.trace_id`.
+5. `POST /api/concept/analyze` (missing `article`) returned `400` with `meta.trace_id`.

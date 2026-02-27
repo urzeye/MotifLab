@@ -12,9 +12,13 @@
 
 import json
 import logging
-from flask import Blueprint, request, jsonify, Response, stream_with_context
+from flask import Blueprint, request, Response, stream_with_context
 
-from backend.application.services import get_provider_config_service
+from backend.application.services import (
+    get_concept_history_application_service,
+    get_provider_config_service,
+)
+from backend.interfaces.http import json_response
 from backend.skills.concept import (
     ConceptAnalyzeSkill,
     ConceptMapSkill,
@@ -26,10 +30,10 @@ from backend.skills.concept.map_framework import MapInput
 from backend.skills.concept.design import DesignInput
 from backend.skills.concept.generate import GenerateInput
 from backend.pipelines import ConceptPipeline
-from backend.services.concept_history import get_concept_history_service
 
 logger = logging.getLogger(__name__)
 provider_config_service = get_provider_config_service()
+concept_history_app_service = get_concept_history_application_service()
 
 
 def _get_provider_configs():
@@ -65,11 +69,11 @@ def create_concept_blueprint():
         try:
             data = request.get_json()
             if not data:
-                return jsonify({"success": False, "error": "请求体不能为空"}), 400
+                return json_response({"success": False, "error": "请求体不能为空"}, 400)
 
             article = data.get('article', '')
             if not article:
-                return jsonify({"success": False, "error": "缺少文章内容"}), 400
+                return json_response({"success": False, "error": "缺少文章内容"}, 400)
 
             max_concepts = data.get('max_concepts', 8)
 
@@ -77,16 +81,16 @@ def create_concept_blueprint():
             skill = ConceptAnalyzeSkill(config=config)
             result = skill.run(AnalyzeInput(article=article, max_concepts=max_concepts))
 
-            return jsonify({
+            return json_response({
                 "success": result.success,
                 "data": result.data,
                 "message": result.message,
                 "error": result.error
-            })
+            }, 200)
 
         except Exception as e:
             logger.exception(f"分析失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     @bp.route('/map', methods=['POST'])
     def map_framework():
@@ -109,7 +113,7 @@ def create_concept_blueprint():
         try:
             data = request.get_json()
             if not data:
-                return jsonify({"success": False, "error": "请求体不能为空"}), 400
+                return json_response({"success": False, "error": "请求体不能为空"}, 400)
 
             concepts = data.get('concepts', data)
 
@@ -117,16 +121,16 @@ def create_concept_blueprint():
             skill = ConceptMapSkill(config=config)
             result = skill.run(MapInput(concepts=concepts))
 
-            return jsonify({
+            return json_response({
                 "success": result.success,
                 "data": result.data,
                 "message": result.message,
                 "error": result.error
-            })
+            }, 200)
 
         except Exception as e:
             logger.exception(f"映射失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     @bp.route('/design', methods=['POST'])
     def design():
@@ -150,7 +154,7 @@ def create_concept_blueprint():
         try:
             data = request.get_json()
             if not data:
-                return jsonify({"success": False, "error": "请求体不能为空"}), 400
+                return json_response({"success": False, "error": "请求体不能为空"}, 400)
 
             mappings = data.get('mappings', data)
             style = data.get('style', 'blueprint')
@@ -159,16 +163,16 @@ def create_concept_blueprint():
             skill = ConceptDesignSkill(config=config, style=style)
             result = skill.run(DesignInput(mappings=mappings, style=style))
 
-            return jsonify({
+            return json_response({
                 "success": result.success,
                 "data": result.data,
                 "message": result.message,
                 "error": result.error
-            })
+            }, 200)
 
         except Exception as e:
             logger.exception(f"设计失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     @bp.route('/generate', methods=['POST'])
     def generate():
@@ -195,7 +199,7 @@ def create_concept_blueprint():
         try:
             data = request.get_json()
             if not data:
-                return jsonify({"success": False, "error": "请求体不能为空"}), 400
+                return json_response({"success": False, "error": "请求体不能为空"}, 400)
 
             designs = data.get('designs', data)
             style = data.get('style', 'blueprint')
@@ -209,16 +213,16 @@ def create_concept_blueprint():
                 output_dir=output_dir
             ))
 
-            return jsonify({
+            return json_response({
                 "success": result.success,
                 "data": result.data,
                 "message": result.message,
                 "error": result.error
-            })
+            }, 200)
 
         except Exception as e:
             logger.exception(f"生成失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     @bp.route('/generate/stream', methods=['POST'])
     def generate_stream():
@@ -232,7 +236,7 @@ def create_concept_blueprint():
         try:
             data = request.get_json()
             if not data:
-                return jsonify({"success": False, "error": "请求体不能为空"}), 400
+                return json_response({"success": False, "error": "请求体不能为空"}, 400)
 
             designs = data.get('designs', data)
             style = data.get('style', 'blueprint')
@@ -271,7 +275,7 @@ def create_concept_blueprint():
 
         except Exception as e:
             logger.exception(f"初始化失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     @bp.route('/run', methods=['POST'])
     def run_pipeline():
@@ -304,7 +308,7 @@ def create_concept_blueprint():
         try:
             data = request.get_json()
             if not data:
-                return jsonify({"success": False, "error": "请求体不能为空"}), 400
+                return json_response({"success": False, "error": "请求体不能为空"}, 400)
 
             config = _get_provider_configs()
             config['style'] = data.get('style', 'blueprint')
@@ -318,16 +322,16 @@ def create_concept_blueprint():
                 'config': data.get('config', {})
             })
 
-            return jsonify({
+            return json_response({
                 "success": result.success,
                 "data": result.data,
                 "message": result.message,
                 "error": result.error
-            })
+            }, 200)
 
         except Exception as e:
             logger.exception(f"流水线执行失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     @bp.route('/run/stream', methods=['POST'])
     def run_pipeline_stream():
@@ -341,7 +345,7 @@ def create_concept_blueprint():
         try:
             data = request.get_json()
             if not data:
-                return jsonify({"success": False, "error": "请求体不能为空"}), 400
+                return json_response({"success": False, "error": "请求体不能为空"}, 400)
 
             def generate_events():
                 config = _get_provider_configs()
@@ -381,7 +385,7 @@ def create_concept_blueprint():
 
         except Exception as e:
             logger.exception(f"初始化失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     # ===== 历史记录 API =====
 
@@ -412,17 +416,20 @@ def create_concept_blueprint():
             page_size = request.args.get('page_size', 20, type=int)
             status = request.args.get('status', None)
 
-            service = get_concept_history_service()
-            result = service.list_records(page=page, page_size=page_size, status=status)
+            result = concept_history_app_service.list_history(
+                page=page,
+                page_size=page_size,
+                status=status,
+            )
 
-            return jsonify({
+            return json_response({
                 "success": True,
                 "data": result
-            })
+            }, 200)
 
         except Exception as e:
             logger.exception(f"获取历史列表失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     @bp.route('/history/<record_id>', methods=['GET'])
     def get_history_detail(record_id):
@@ -441,20 +448,19 @@ def create_concept_blueprint():
         }
         """
         try:
-            service = get_concept_history_service()
-            record = service.get_record(record_id)
+            record = concept_history_app_service.get_history_detail(record_id)
 
             if not record:
-                return jsonify({"success": False, "error": "记录不存在"}), 404
+                return json_response({"success": False, "error": "记录不存在"}, 404)
 
-            return jsonify({
+            return json_response({
                 "success": True,
                 "data": record
-            })
+            }, 200)
 
         except Exception as e:
             logger.exception(f"获取历史详情失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     @bp.route('/history/<record_id>', methods=['DELETE'])
     def delete_history(record_id):
@@ -467,17 +473,16 @@ def create_concept_blueprint():
         }
         """
         try:
-            service = get_concept_history_service()
-            success = service.delete_record(record_id)
+            success = concept_history_app_service.delete_history(record_id)
 
             if not success:
-                return jsonify({"success": False, "error": "删除失败或记录不存在"}), 404
+                return json_response({"success": False, "error": "删除失败或记录不存在"}, 404)
 
-            return jsonify({"success": True})
+            return json_response({"success": True}, 200)
 
         except Exception as e:
             logger.exception(f"删除历史记录失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     @bp.route('/history/repair', methods=['POST'])
     def repair_history():
@@ -496,11 +501,10 @@ def create_concept_blueprint():
         }
         """
         try:
-            service = get_concept_history_service()
-            result = service.repair_all_records()
-            return jsonify({"success": True, "data": result})
+            result = concept_history_app_service.repair_history()
+            return json_response({"success": True, "data": result}, 200)
         except Exception as e:
             logger.exception(f"修复历史记录失败: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
+            return json_response({"success": False, "error": str(e)}, 500)
 
     return bp
