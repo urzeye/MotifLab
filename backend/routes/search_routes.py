@@ -3,9 +3,10 @@
 import logging
 from typing import Any, Dict, Optional
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, request
 
 from backend.config import get_config_service
+from backend.interfaces.http import json_response
 from backend.services.search_service import get_search_provider, is_valid_http_url
 from .utils import log_error, log_request
 
@@ -23,10 +24,10 @@ def create_search_blueprint():
         try:
             provider = (request.args.get("provider") or "").strip()
             response = _build_provider_status(provider_name=provider or None)
-            return jsonify({"success": True, **response})
+            return json_response({"success": True, **response}, 200)
         except Exception as e:
             log_error("/search/status", e)
-            return jsonify({"success": False, "error": f"读取搜索配置失败: {str(e)}"}), 500
+            return json_response({"success": False, "error": f"读取搜索配置失败: {str(e)}"}, 500)
 
     @bp.route("/search/scrape", methods=["POST"])
     def search_scrape_url():
@@ -65,9 +66,9 @@ def _handle_scrape_request(route: str, provider_override: Optional[str]):
         log_request(route, {"url": url, "provider": provider_name})
 
         if not url:
-            return jsonify({"success": False, "error": "参数错误：url 不能为空"}), 400
+            return json_response({"success": False, "error": "参数错误：url 不能为空"}, 400)
         if not is_valid_http_url(url):
-            return jsonify({"success": False, "error": "参数错误：url 必须是有效的 http/https 地址"}), 400
+            return json_response({"success": False, "error": "参数错误：url 必须是有效的 http/https 地址"}, 400)
 
         try:
             provider_config = config_service.get_search_provider_config(provider_name, require_enabled=True)
@@ -75,20 +76,20 @@ def _handle_scrape_request(route: str, provider_override: Optional[str]):
             error_text = str(config_error)
             if "未启用" in error_text:
                 provider_for_msg = provider_name or config_service.get_active_search_provider()
-                return jsonify({
+                return json_response({
                     "success": False,
                     "error": f"搜索服务商 [{provider_for_msg}] 未启用。请在系统设置中启用并配置。",
-                }), 400
-            return jsonify({"success": False, "error": error_text}), 400
+                }, 400)
+            return json_response({"success": False, "error": error_text}, 400)
 
         provider_type = (provider_config.get("type") or "").strip().lower()
         provider = _resolve_search_provider(provider_type)
         result = provider.scrape(url, provider_config)
-        return jsonify(result), 200 if result.get("success") else 400
+        return json_response(result, 200 if result.get("success") else 400)
 
     except Exception as e:
         log_error(route, e)
-        return jsonify({"success": False, "error": f"抓取网页失败: {str(e)}"}), 500
+        return json_response({"success": False, "error": f"抓取网页失败: {str(e)}"}, 500)
 
 
 def _resolve_search_provider(provider_type: str):
