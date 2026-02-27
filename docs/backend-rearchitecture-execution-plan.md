@@ -504,3 +504,27 @@ Verification:
 3. `POST /api/retry` (missing task/page, with `user_prompt/system_prompt`) returned `400` with `meta.trace_id`.
 4. `POST /api/regenerate` (missing task/page, with `custom_prompt/system_prompt`) returned `400` with `meta.trace_id`.
 5. `GET /api/task/nonexistent` returned `404` with `meta.trace_id`.
+
+## Execution Progress (2026-02-27, Iteration 16)
+
+Completed in this iteration:
+
+1. Added publish application service to isolate async orchestration from routes:
+   - new `backend/application/services/publish_application_service.py`
+   - centralized event-loop execution in application layer (`_run_async`)
+2. Migrated publish routes to application service dependency:
+   - `backend/routes/publish_routes.py` now uses `get_publish_application_service()`
+   - route layer no longer manages event-loop lifecycle directly
+3. Updated application service export surface:
+   - `backend/application/services/__init__.py` now exports publish application service factory
+
+Verification:
+
+1. `python -m py_compile` passed for:
+   - `backend/application/services/publish_application_service.py`
+   - `backend/application/services/__init__.py`
+   - `backend/routes/publish_routes.py`
+2. `GET /api/publish/status` returned `200` with `meta.trace_id`.
+3. `GET /api/publish/search` (missing keyword) returned `400` with `meta.trace_id`.
+4. `POST /api/publish/xiaohongshu` (missing required fields) returned `400` with `meta.trace_id`.
+5. Xiaohongshu real publish end-to-end flow remains intentionally untested in this phase.

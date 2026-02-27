@@ -12,6 +12,10 @@ from .image_generation_application_service import (
     ImageGenerationApplicationService,
     get_image_generation_application_service,
 )
+from .publish_application_service import (
+    PublishApplicationService,
+    get_publish_application_service,
+)
 from .provider_config_service import ProviderConfigService, get_provider_config_service
 
 __all__ = [
@@ -23,4 +27,6 @@ __all__ = [
     "get_history_application_service",
     "ImageGenerationApplicationService",
     "get_image_generation_application_service",
+    "PublishApplicationService",
+    "get_publish_application_service",
 ]

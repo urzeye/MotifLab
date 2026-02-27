@@ -5,24 +5,13 @@
 """
 
 import logging
-import asyncio
 from flask import Blueprint, request
 
+from backend.application.services import get_publish_application_service
 from backend.interfaces.http import json_response
-from backend.services.publish import publish_service
 
 logger = logging.getLogger(__name__)
-
-
-def _run_async(coro):
-    """在独立事件循环中执行协程，避免污染现有循环状态。"""
-    loop = asyncio.new_event_loop()
-    try:
-        asyncio.set_event_loop(loop)
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
-        asyncio.set_event_loop(None)
+publish_application_service = get_publish_application_service()
 
 
 def create_publish_blueprint():
@@ -42,7 +31,7 @@ def create_publish_blueprint():
         - url: MCP 服务地址
         """
         try:
-            status = _run_async(publish_service.get_mcp_status())
+            status = publish_application_service.get_mcp_status()
 
             return json_response({
                 "success": True,
@@ -68,7 +57,7 @@ def create_publish_blueprint():
         - user_info: 用户信息（如果已登录）
         """
         try:
-            result = _run_async(publish_service.check_login())
+            result = publish_application_service.check_login()
 
             return json_response(result, 200)
         except Exception as e:
@@ -87,7 +76,7 @@ def create_publish_blueprint():
         用户需要在弹出的浏览器中手动完成登录。
         """
         try:
-            result = _run_async(publish_service.open_login_page())
+            result = publish_application_service.open_login_page()
 
             return json_response(result, 200)
         except Exception as e:
@@ -145,13 +134,11 @@ def create_publish_blueprint():
                 }, 400)
 
             # 执行发布
-            result = _run_async(
-                publish_service.publish(
-                    title=title,
-                    content=content,
-                    images=images,
-                    tags=tags
-                )
+            result = publish_application_service.publish(
+                title=title,
+                content=content,
+                images=images,
+                tags=tags,
             )
 
             status_code = 200 if result.get('success') else 500
@@ -193,14 +180,12 @@ def create_publish_blueprint():
                     "error": "标题、正文和视频路径为必填项"
                 }, 400)
 
-            result = _run_async(
-                publish_service.publish_with_video(
-                    title=title,
-                    content=content,
-                    video_path=video_path,
-                    cover_image=cover_image,
-                    tags=tags
-                )
+            result = publish_application_service.publish_with_video(
+                title=title,
+                content=content,
+                video_path=video_path,
+                cover_image=cover_image,
+                tags=tags,
             )
 
             status_code = 200 if result.get('success') else 500
@@ -228,9 +213,7 @@ def create_publish_blueprint():
             page = request.args.get('page', 1, type=int)
             limit = request.args.get('limit', 20, type=int)
 
-            result = _run_async(
-                publish_service.list_my_posts(page=page, limit=limit)
-            )
+            result = publish_application_service.list_posts(page=page, limit=limit)
 
             return json_response(result, 200)
         except Exception as e:
@@ -259,9 +242,7 @@ def create_publish_blueprint():
                     "error": "搜索关键词不能为空"
                 }, 400)
 
-            result = _run_async(
-                publish_service.search_posts(keyword=keyword, page=page)
-            )
+            result = publish_application_service.search_posts(keyword=keyword, page=page)
 
             return json_response(result, 200)
         except Exception as e:
