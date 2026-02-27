@@ -542,7 +542,6 @@
                 v-show="!sidebarCollapsed"
               >
                 <div class="brand-name">小爱同学</div>
-                <div class="brand-sub">默认用户</div>
               </div>
             </div>
           </div>

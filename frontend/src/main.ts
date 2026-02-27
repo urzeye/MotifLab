@@ -1,4 +1,5 @@
 import { createApp } from "vue";
+import { h, ref } from "vue";
 import { createPinia } from "pinia";
 import App from "./App.vue";
 import router from "./router";
@@ -9,7 +10,7 @@ import {
   clearAccessToken,
   verifyAccessToken,
 } from "./api";
-import { createDiscreteApi, darkTheme } from "naive-ui";
+import { createDiscreteApi, darkTheme, NInput } from "naive-ui";
 
 // Styles
 import "./assets/css/variables.css";
@@ -18,7 +19,7 @@ import "./assets/css/components.css";
 import "./assets/css/home.css";
 import "./assets/css/history.css";
 
-const { message } = createDiscreteApi(["message"], {
+const { message, dialog } = createDiscreteApi(["message", "dialog"], {
   configProviderProps: {
     theme: darkTheme,
     themeOverrides: {
@@ -32,6 +33,73 @@ const { message } = createDiscreteApi(["message"], {
   },
 });
 
+function requestAccessToken(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const tokenValue = ref("");
+    let settled = false;
+
+    const finish = (value: string | null) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+      modal.destroy();
+    };
+
+    const modal = dialog.create({
+      title: "访问令牌认证",
+      content: () =>
+        h("div", { style: "display:flex;flex-direction:column;gap:12px;" }, [
+          h(
+            "div",
+            { style: "font-size:14px;color:var(--text-sub,#a1a1aa);" },
+            "请输入访问令牌以继续使用系统"
+          ),
+          h(NInput, {
+            type: "password",
+            value: tokenValue.value,
+            placeholder: "输入 MOTIFLAB_AUTH_TOKEN",
+            showPasswordOn: "mousedown",
+            autofocus: true,
+            onUpdateValue: (value: string) => {
+              tokenValue.value = value;
+            },
+            onKeydown: (event: KeyboardEvent) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              const nextToken = tokenValue.value.trim();
+              if (!nextToken) {
+                message.warning("请输入访问令牌。");
+                return;
+              }
+              finish(nextToken);
+            },
+          }),
+        ]),
+      positiveText: "确认",
+      negativeText: "取消",
+      closable: false,
+      closeOnEsc: false,
+      maskClosable: false,
+      onPositiveClick: () => {
+        const nextToken = tokenValue.value.trim();
+        if (!nextToken) {
+          message.warning("请输入访问令牌。");
+          return false;
+        }
+        finish(nextToken);
+        return true;
+      },
+      onNegativeClick: () => {
+        finish(null);
+        return true;
+      },
+      onClose: () => {
+        finish(null);
+      },
+    });
+  });
+}
+
 async function ensureApiAccess(): Promise<boolean> {
   const health = await getHealth();
   if (!health.success || !health.auth_required) {
@@ -42,7 +110,7 @@ async function ensureApiAccess(): Promise<boolean> {
 
   for (let i = 0; i < 3; i++) {
     if (!token) {
-      token = (window.prompt("请输入访问令牌:") || "").trim();
+      token = ((await requestAccessToken()) || "").trim();
     }
 
     if (!token) {
