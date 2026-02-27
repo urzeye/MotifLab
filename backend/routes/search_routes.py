@@ -1,17 +1,17 @@
 """搜索抓取相关 API。"""
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from flask import Blueprint, current_app, request
 
-from backend.config import get_config_service
+from backend.application.services import get_search_application_service
 from backend.interfaces.http import json_response
-from backend.infrastructure.services.search_service import get_search_provider, is_valid_http_url
+
 from .utils import log_error, log_request
 
 logger = logging.getLogger(__name__)
-config_service = get_config_service()
+search_application_service = get_search_application_service()
 
 
 def create_search_blueprint():
@@ -37,20 +37,8 @@ def create_search_blueprint():
     return bp
 
 
-def _build_provider_status(provider_name: Optional[str] = None) -> Dict[str, Any]:
-    provider_name = provider_name or config_service.get_active_search_provider()
-    search_config = config_service.load_search_providers_config()
-    providers = search_config.get("providers") or {}
-    provider_config = providers.get(provider_name) or {}
-
-    has_api_key = bool((provider_config.get("api_key") or "").strip())
-    has_base_url = bool((provider_config.get("base_url") or "").strip())
-    return {
-        "active_provider": search_config.get("active_provider"),
-        "provider": provider_name,
-        "enabled": bool(provider_config.get("enabled", False)),
-        "configured": has_api_key or has_base_url,
-    }
+def _build_provider_status(provider_name: Optional[str] = None) -> dict[str, Any]:
+    return search_application_service.build_provider_status(provider_name)
 
 
 def _handle_scrape_request(route: str, provider_override: Optional[str]):
@@ -67,24 +55,23 @@ def _handle_scrape_request(route: str, provider_override: Optional[str]):
 
         if not url:
             return json_response({"success": False, "error": "参数错误：url 不能为空"}, 400)
-        if not is_valid_http_url(url):
+        if not search_application_service.is_valid_http_url(url):
             return json_response({"success": False, "error": "参数错误：url 必须是有效的 http/https 地址"}, 400)
 
         try:
-            provider_config = config_service.get_search_provider_config(provider_name, require_enabled=True)
+            search_application_service.get_search_provider_config(provider_name, require_enabled=True)
         except ValueError as config_error:
             error_text = str(config_error)
             if "未启用" in error_text:
-                provider_for_msg = provider_name or config_service.get_active_search_provider()
+                provider_for_msg = provider_name or search_application_service.build_provider_status().get("provider")
                 return json_response({
                     "success": False,
                     "error": f"搜索服务商 [{provider_for_msg}] 未启用。请在系统设置中启用并配置。",
                 }, 400)
             return json_response({"success": False, "error": error_text}, 400)
 
-        provider_type = (provider_config.get("type") or "").strip().lower()
-        provider = _resolve_search_provider(provider_type)
-        result = provider.scrape(url, provider_config)
+        registry = _resolve_search_provider_registry()
+        result = search_application_service.scrape_url(url, provider_name=provider_name, registry=registry)
         return json_response(result, 200 if result.get("success") else 400)
 
     except Exception as e:
@@ -92,15 +79,12 @@ def _handle_scrape_request(route: str, provider_override: Optional[str]):
         return json_response({"success": False, "error": f"抓取网页失败: {str(e)}"}, 500)
 
 
-def _resolve_search_provider(provider_type: str):
-    """优先使用容器中的注册表，未提供时回退到默认实现。"""
+def _resolve_search_provider_registry():
+    """解析搜索服务商注册表。"""
     try:
         container = current_app.extensions.get("backend_container")
         if container:
-            registry = container.get_adapter("search_provider_registry")
-            if registry:
-                return registry.create(provider_type)
+            return container.get_adapter("search_provider_registry")
     except Exception:
         logger.debug("容器搜索注册表不可用，回退默认搜索服务商实现")
-
-    return get_search_provider(provider_type)
+    return None

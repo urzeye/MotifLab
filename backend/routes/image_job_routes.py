@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+
 from flask import Blueprint, request
 
 from backend.application.services import get_image_job_application_service
