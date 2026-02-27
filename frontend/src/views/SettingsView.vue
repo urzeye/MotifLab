@@ -17,39 +17,6 @@
       v-else
       class="settings-container"
     >
-      <!-- 外观设置 -->
-      <div class="card">
-        <div class="section-header">
-          <div>
-            <h2 class="section-title">外观设置</h2>
-            <p class="section-desc">配置系统主题颜色</p>
-          </div>
-        </div>
-        <div class="theme-actions">
-          <button
-            class="btn"
-            :class="{ 'btn-primary': theme === 'system' }"
-            @click="setTheme('system')"
-          >
-            跟随系统
-          </button>
-          <button
-            class="btn"
-            :class="{ 'btn-primary': theme === 'light' }"
-            @click="setTheme('light')"
-          >
-            浅色模式
-          </button>
-          <button
-            class="btn"
-            :class="{ 'btn-primary': theme === 'dark' }"
-            @click="setTheme('dark')"
-          >
-            深色模式
-          </button>
-        </div>
-      </div>
-
       <!-- 访问安全配置 -->
       <div class="card">
         <div class="section-header">
@@ -334,11 +301,8 @@ import {
   useProviderForm,
   textTypeOptions,
   imageTypeOptions,
-  searchTypeOptions
+  searchTypeOptions,
 } from "../composables/useProviderForm";
-import { useTheme } from "../composables/useTheme";
-
-const { theme, setTheme } = useTheme();
 
 const accessTokenInput = ref(getAccessToken());
 const showToken = ref(false);
@@ -480,7 +444,7 @@ const {
   deleteSearchProvider,
   testSearchConnection,
   testSearchProviderInList,
-  updateSearchForm
+  updateSearchForm,
 } = useProviderForm();
 
 onMounted(async () => {
@@ -490,6 +454,17 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.page-header {
+  margin-bottom: 24px;
+}
+.page-title {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+.page-subtitle {
+  font-size: 14px;
+}
+
 .settings-container {
   max-width: 900px;
   margin: 0 auto;
@@ -625,11 +600,5 @@ onMounted(async () => {
   justify-content: center;
   padding: 80px 20px;
   color: var(--text-sub);
-}
-
-.theme-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 16px;
 }
 </style>

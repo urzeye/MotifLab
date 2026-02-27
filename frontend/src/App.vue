@@ -228,13 +228,275 @@
                   cy="12"
                   r="3"
                 ></circle>
-                <path
-                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
-                ></path>
               </svg>
               <span class="nav-text">系统设置</span>
             </RouterLink>
           </nav>
+
+          <!-- 主题切换 -->
+          <div
+            class="theme-switcher-container"
+            :class="{ 'is-collapsed': sidebarCollapsed }"
+          >
+            <template v-if="!sidebarCollapsed">
+              <button
+                class="theme-btn"
+                :class="{ active: theme === 'system' }"
+                @click="setTheme('system')"
+                title="跟随系统设置"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect
+                    x="2"
+                    y="3"
+                    width="20"
+                    height="14"
+                    rx="2"
+                    ry="2"
+                  ></rect>
+                  <line
+                    x1="8"
+                    y1="21"
+                    x2="16"
+                    y2="21"
+                  ></line>
+                  <line
+                    x1="12"
+                    y1="17"
+                    x2="12"
+                    y2="21"
+                  ></line>
+                </svg>
+              </button>
+              <button
+                class="theme-btn"
+                :class="{ active: theme === 'light' }"
+                @click="setTheme('light')"
+                title="浅色模式"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="5"
+                  ></circle>
+                  <line
+                    x1="12"
+                    y1="1"
+                    x2="12"
+                    y2="3"
+                  ></line>
+                  <line
+                    x1="12"
+                    y1="21"
+                    x2="12"
+                    y2="23"
+                  ></line>
+                  <line
+                    x1="4.22"
+                    y1="4.22"
+                    x2="5.64"
+                    y2="5.64"
+                  ></line>
+                  <line
+                    x1="18.36"
+                    y1="18.36"
+                    x2="19.78"
+                    y2="19.78"
+                  ></line>
+                  <line
+                    x1="1"
+                    y1="12"
+                    x2="3"
+                    y2="12"
+                  ></line>
+                  <line
+                    x1="21"
+                    y1="12"
+                    x2="23"
+                    y2="12"
+                  ></line>
+                  <line
+                    x1="4.22"
+                    y1="19.78"
+                    x2="5.64"
+                    y2="18.36"
+                  ></line>
+                  <line
+                    x1="18.36"
+                    y1="5.64"
+                    x2="19.78"
+                    y2="4.22"
+                  ></line>
+                </svg>
+              </button>
+              <button
+                class="theme-btn"
+                :class="{ active: theme === 'dark' }"
+                @click="setTheme('dark')"
+                title="深色模式"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+                  ></path>
+                </svg>
+              </button>
+            </template>
+            <template v-else>
+              <button
+                class="theme-btn active current-theme"
+                @click="toggleTheme"
+                :title="
+                  theme === 'dark'
+                    ? '深色模式'
+                    : theme === 'light'
+                      ? '浅色模式'
+                      : '跟随系统'
+                "
+              >
+                <svg
+                  v-if="theme === 'dark'"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+                  ></path>
+                </svg>
+                <svg
+                  v-else-if="theme === 'light'"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="5"
+                  ></circle>
+                  <line
+                    x1="12"
+                    y1="1"
+                    x2="12"
+                    y2="3"
+                  ></line>
+                  <line
+                    x1="12"
+                    y1="21"
+                    x2="12"
+                    y2="23"
+                  ></line>
+                  <line
+                    x1="4.22"
+                    y1="4.22"
+                    x2="5.64"
+                    y2="5.64"
+                  ></line>
+                  <line
+                    x1="18.36"
+                    y1="18.36"
+                    x2="19.78"
+                    y2="19.78"
+                  ></line>
+                  <line
+                    x1="1"
+                    y1="12"
+                    x2="3"
+                    y2="12"
+                  ></line>
+                  <line
+                    x1="21"
+                    y1="12"
+                    x2="23"
+                    y2="12"
+                  ></line>
+                  <line
+                    x1="4.22"
+                    y1="19.78"
+                    x2="5.64"
+                    y2="18.36"
+                  ></line>
+                  <line
+                    x1="18.36"
+                    y1="5.64"
+                    x2="19.78"
+                    y2="4.22"
+                  ></line>
+                </svg>
+                <svg
+                  v-else
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect
+                    x="2"
+                    y="3"
+                    width="20"
+                    height="14"
+                    rx="2"
+                    ry="2"
+                  ></rect>
+                  <line
+                    x1="8"
+                    y1="21"
+                    x2="16"
+                    y2="21"
+                  ></line>
+                  <line
+                    x1="12"
+                    y1="17"
+                    x2="12"
+                    y2="21"
+                  ></line>
+                </svg>
+              </button>
+            </template>
+          </div>
 
           <!-- 折叠按钮 -->
           <button
@@ -329,7 +591,17 @@ const themeOverrides: GlobalThemeOverrides = {
   },
 };
 
-const { isDark } = useTheme();
+const { isDark, theme, setTheme } = useTheme();
+
+const toggleTheme = () => {
+  if (theme.value === "system") {
+    setTheme("light");
+  } else if (theme.value === "light") {
+    setTheme("dark");
+  } else {
+    setTheme("system");
+  }
+};
 
 // 侧边栏折叠状态
 const sidebarCollapsed = ref(false);
@@ -352,3 +624,67 @@ onMounted(() => {
   }
 });
 </script>
+
+<style scoped>
+.theme-switcher-container {
+  margin-top: auto;
+  margin-bottom: 24px;
+  display: flex;
+  gap: 8px;
+  padding: 4px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 99px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.theme-switcher-container.is-collapsed {
+  background: transparent;
+  border-color: transparent;
+  padding: 0;
+  justify-content: center;
+}
+
+.theme-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-sub);
+  border-radius: 99px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.theme-btn:hover {
+  color: var(--text-main);
+  background: var(--bg-hover);
+}
+
+.theme-btn.active {
+  background: var(--bg-card);
+  color: var(--primary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.theme-switcher-container.is-collapsed .theme-btn.active {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+}
+
+/* 覆盖全局样式解决部分布局问题 */
+.layout-sidebar {
+  padding-bottom: 24px;
+}
+.sidebar-footer {
+  margin-top: 0; /* 之前是 auto，现在交给 theme-switcher 推下去了 */
+  padding-top: 16px;
+}
+</style>
