@@ -473,3 +473,34 @@ Verification:
 2. `POST /api/retry` (missing task/page, with custom_prompt) returned `400` with `meta.trace_id`.
 3. `POST /api/regenerate` (missing task/page, with custom_prompt) returned `400` with `meta.trace_id`.
 4. `POST /api/generate` (missing pages, with custom_prompt) returned `400` with `meta.trace_id`.
+
+## Execution Progress (2026-02-27, Iteration 15)
+
+Completed in this iteration:
+
+1. Added image generation application service:
+   - new `backend/application/services/image_generation_application_service.py`
+   - `backend/application/services/__init__.py` exports image generation application service factory
+   - `backend/routes/image_routes.py` now depends on application service instead of direct image service factory
+2. Upgraded prompt extension to dual-channel format:
+   - image route now supports `user_prompt/custom_prompt` and `system_prompt` (backward compatible)
+   - image service now propagates both prompt channels through generate/retry/regenerate paths
+3. Persisted prompt context for retry consistency:
+   - image task state now stores both `custom_prompt` and `system_prompt`
+   - retry and retry-failed flows can reuse prompt context without forcing client resend
+4. Fixed circular dependency during app initialization:
+   - `backend/services/image.py` switched to direct module import
+     `backend.application.services.provider_config_service`
+   - removed runtime import loop between application-service package and image service module
+
+Verification:
+
+1. `python -m py_compile` passed for:
+   - `backend/application/services/image_generation_application_service.py`
+   - `backend/application/services/__init__.py`
+   - `backend/services/image.py`
+   - `backend/routes/image_routes.py`
+2. `POST /api/generate` (missing pages, with `user_prompt/system_prompt`) returned `400` with `meta.trace_id`.
+3. `POST /api/retry` (missing task/page, with `user_prompt/system_prompt`) returned `400` with `meta.trace_id`.
+4. `POST /api/regenerate` (missing task/page, with `custom_prompt/system_prompt`) returned `400` with `meta.trace_id`.
+5. `GET /api/task/nonexistent` returned `404` with `meta.trace_id`.

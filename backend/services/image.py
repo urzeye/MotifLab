@@ -8,7 +8,7 @@ import threading
 import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 from typing import Dict, Any, Generator, List, Optional, Tuple
-from backend.application.services import get_provider_config_service
+from backend.application.services.provider_config_service import get_provider_config_service
 from backend.generators.factory import ImageGeneratorFactory
 from backend.utils.image_compressor import compress_image
 
@@ -170,6 +170,7 @@ class ImageService:
         user_images: Optional[List[bytes]] = None,
         user_topic: str = "",
         custom_prompt: str = "",
+        system_prompt: str = "",
     ) -> Tuple[int, bool, Optional[str], Optional[str], Optional[bytes]]:
         """
         生成单张图片（带自动重试）
@@ -183,6 +184,7 @@ class ImageService:
             user_images: 用户上传的参考图片列表
             user_topic: 用户原始输入
             custom_prompt: 用户自定义提示词（可选）
+            system_prompt: 用户自定义系统提示词（可选）
 
         Returns:
             (index, success, filename, error_message, image_bytes)
@@ -233,6 +235,15 @@ class ImageService:
                     "\n\n【本页配图建议（高优先级）】\n"
                     f"{image_suggestion}\n"
                     "请严格参考以上建议生成本页图片，同时保持与整组图片的风格一致。"
+                )
+
+            normalized_system_prompt = (system_prompt or "").strip()
+            if normalized_system_prompt:
+                # 限制长度，防止超长输入导致模型上下文污染。
+                prompt += (
+                    "\n\n【系统提示词（高优先级）】\n"
+                    f"{normalized_system_prompt[:2000]}\n"
+                    "请在不违背安全与合规约束前提下，优先遵守以上系统要求。"
                 )
 
             normalized_custom_prompt = (custom_prompt or "").strip()
@@ -409,6 +420,7 @@ class ImageService:
         user_images: Optional[List[bytes]] = None,
         user_topic: str = "",
         custom_prompt: str = "",
+        system_prompt: str = "",
     ) -> Generator[Dict[str, Any], None, None]:
         """
         生成图片（生成器，支持 SSE 流式返回）
@@ -421,6 +433,7 @@ class ImageService:
             user_images: 用户上传的参考图片列表（可选）
             user_topic: 用户原始输入（用于保持意图一致）
             custom_prompt: 用户自定义提示词（可选）
+            system_prompt: 用户自定义系统提示词（可选）
 
         Yields:
             进度事件字典
@@ -462,6 +475,7 @@ class ImageService:
             "user_images": compressed_user_images,
             "user_topic": user_topic,
             "custom_prompt": custom_prompt,
+            "system_prompt": system_prompt,
         }
 
         # ==================== 第一阶段：生成封面 ====================
@@ -496,7 +510,10 @@ class ImageService:
             # 生成封面（使用用户上传的图片作为参考）
             index, success, filename, error, cover_image_bytes = yield from self._generate_with_heartbeat(
                 cover_page, task_id, reference_image=None, full_outline=full_outline,
-                user_images=compressed_user_images, user_topic=user_topic, custom_prompt=custom_prompt
+                user_images=compressed_user_images,
+                user_topic=user_topic,
+                custom_prompt=custom_prompt,
+                system_prompt=system_prompt,
             )
 
             if success:
@@ -590,6 +607,7 @@ class ImageService:
                             compressed_user_images,  # 用户上传的参考图片（已压缩）
                             user_topic,  # 用户原始输入
                             custom_prompt,  # 用户自定义提示词
+                            system_prompt,  # 用户自定义系统提示词
                         ): page
                         for page in other_pages
                     }
@@ -708,6 +726,7 @@ class ImageService:
                         compressed_user_images,
                         user_topic,
                         custom_prompt,
+                        system_prompt,
                     )
 
                     if success:
@@ -760,6 +779,7 @@ class ImageService:
         full_outline: str = "",
         user_topic: str = "",
         custom_prompt: str = "",
+        system_prompt: str = "",
     ) -> Dict[str, Any]:
         """
         重试生成单张图片
@@ -771,6 +791,7 @@ class ImageService:
             full_outline: 完整大纲文本（从前端传入）
             user_topic: 用户原始输入（从前端传入）
             custom_prompt: 用户自定义提示词（从前端传入）
+            system_prompt: 用户自定义系统提示词（从前端传入）
 
         Returns:
             生成结果
@@ -798,6 +819,8 @@ class ImageService:
                 user_topic = task_state.get("user_topic", "")
             if not custom_prompt:
                 custom_prompt = task_state.get("custom_prompt", "")
+            if not system_prompt:
+                system_prompt = task_state.get("system_prompt", "")
             user_images = task_state.get("user_images")
 
         # 如果任务状态中没有封面图，尝试从文件系统加载
@@ -817,7 +840,8 @@ class ImageService:
             full_outline,
             user_images,
             user_topic,
-            custom_prompt
+            custom_prompt,
+            system_prompt,
         )
 
         if success:
@@ -876,11 +900,13 @@ class ImageService:
         full_outline = ""
         user_topic = ""
         custom_prompt = ""
+        system_prompt = ""
         user_images = None
         if task_id in self._task_states:
             full_outline = self._task_states[task_id].get("full_outline", "")
             user_topic = self._task_states[task_id].get("user_topic", "")
             custom_prompt = self._task_states[task_id].get("custom_prompt", "")
+            system_prompt = self._task_states[task_id].get("system_prompt", "")
             user_images = self._task_states[task_id].get("user_images")
 
         with ThreadPoolExecutor(max_workers=self.MAX_CONCURRENT) as executor:
@@ -895,6 +921,7 @@ class ImageService:
                     user_images,
                     user_topic,
                     custom_prompt,
+                    system_prompt,
                 ): page
                 for page in pages
             }
@@ -961,6 +988,7 @@ class ImageService:
         full_outline: str = "",
         user_topic: str = "",
         custom_prompt: str = "",
+        system_prompt: str = "",
     ) -> Dict[str, Any]:
         """
         重新生成图片（用户手动触发，即使成功的也可以重新生成）
@@ -972,6 +1000,7 @@ class ImageService:
             full_outline: 完整大纲文本
             user_topic: 用户原始输入
             custom_prompt: 用户自定义提示词
+            system_prompt: 用户自定义系统提示词
 
         Returns:
             生成结果
@@ -981,6 +1010,7 @@ class ImageService:
             full_outline=full_outline,
             user_topic=user_topic,
             custom_prompt=custom_prompt,
+            system_prompt=system_prompt,
         )
 
     def get_image_path(self, task_id: str, filename: str) -> str:
