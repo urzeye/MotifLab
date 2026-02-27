@@ -8,13 +8,12 @@
 import time
 import logging
 from flask import Blueprint, request
-from backend.application.services import get_history_application_service
+from backend.application.services import get_content_application_service
 from backend.interfaces.http import json_response
-from backend.services.content import get_content_service
 from .utils import log_request, log_error
 
 logger = logging.getLogger(__name__)
-history_application_service = get_history_application_service()
+content_application_service = get_content_application_service()
 
 
 def create_content_blueprint():
@@ -70,26 +69,15 @@ def create_content_blueprint():
 
             # 调用内容生成服务
             logger.info(f"🔄 开始生成内容，主题: {topic[:50]}...")
-            content_service = get_content_service()
-            result = content_service.generate_content(topic, outline)
+            result = content_application_service.generate_content(
+                topic=topic,
+                outline=outline,
+                record_id=record_id,
+            )
 
             # 记录结果
             elapsed = time.time() - start_time
             if result["success"]:
-                # 可选：生成成功后回写到历史记录（只后端落库，不依赖前端展示）
-                if record_id:
-                    try:
-                        content_payload = {
-                            "titles": result.get("titles", []),
-                            "copywriting": result.get("copywriting", ""),
-                            "tags": result.get("tags", [])
-                        }
-                        updated = history_application_service.update_record(record_id, content=content_payload)
-                        if not updated:
-                            logger.warning(f"内容回写历史记录失败: record_id={record_id}")
-                    except Exception as history_error:
-                        logger.warning(f"内容回写历史记录异常（已忽略）: record_id={record_id}, error={history_error}")
-
                 logger.info(f"✅ 内容生成成功，耗时 {elapsed:.2f}s")
                 return json_response(result, 200)
             else:
