@@ -58,7 +58,7 @@ def create_image_job_blueprint():
                 full_outline=str(data.get("full_outline") or ""),
                 user_images_base64=data.get("user_images") if isinstance(data.get("user_images"), list) else [],
                 user_topic=str(data.get("user_topic") or ""),
-                user_prompt=str(data.get("user_prompt", data.get("custom_prompt", "")) or "").strip(),
+                user_prompt=str(data.get("user_prompt") or "").strip(),
                 system_prompt=str(data.get("system_prompt") or "").strip(),
             )
             return json_response({"success": True, "job_id": job_id, "status": "queued"}, 200)

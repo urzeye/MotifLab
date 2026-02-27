@@ -19,17 +19,17 @@ from backend.application.services import (
     get_provider_config_service,
 )
 from backend.interfaces.http import json_response
-from backend.skills.concept import (
+from backend.application.skills.concept import (
     ConceptAnalyzeSkill,
     ConceptMapSkill,
     ConceptDesignSkill,
     ConceptGenerateSkill
 )
-from backend.skills.concept.analyze import AnalyzeInput
-from backend.skills.concept.map_framework import MapInput
-from backend.skills.concept.design import DesignInput
-from backend.skills.concept.generate import GenerateInput
-from backend.pipelines import ConceptPipeline
+from backend.application.skills.concept.analyze import AnalyzeInput
+from backend.application.skills.concept.map_framework import MapInput
+from backend.application.skills.concept.design import DesignInput
+from backend.application.skills.concept.generate import GenerateInput
+from backend.application.pipelines import ConceptPipeline
 
 logger = logging.getLogger(__name__)
 provider_config_service = get_provider_config_service()
@@ -508,3 +508,5 @@ def create_concept_blueprint():
             return json_response({"success": False, "error": str(e)}, 500)
 
     return bp
+
+

@@ -120,7 +120,7 @@ def _register_root_routes(app: Flask, settings: AppSettings) -> None:
             "endpoints": {
                 "health": "/api/health",
                 "outline": "POST /api/outline",
-                "generate": "POST /api/generate",
+                "image_jobs": "POST /api/image-jobs",
                 "images": "GET /api/images/<filename>",
             },
         }

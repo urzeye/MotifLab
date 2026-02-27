@@ -51,19 +51,20 @@ line-length = 120
 src = ["backend", "tests"]
 extend-exclude = [
     "backend/app.py",
+    "backend/application/core",
+    "backend/application/pipelines",
+    "backend/application/skills",
     "backend/bootstrap/__init__.py",
-    "backend/clients",
     "backend/config",
-    "backend/core",
-    "backend/generators",
+    "backend/infrastructure/clients",
     "backend/infrastructure/concept_history",
+    "backend/infrastructure/generators",
     "backend/infrastructure/gateways",
     "backend/infrastructure/history",
     "backend/infrastructure/services",
     "backend/knowledge",
     "backend/middleware.py",
     "backend/migrations",
-    "backend/pipelines",
     "backend/routes/concept_routes.py",
     "backend/routes/content_routes.py",
     "backend/routes/history_routes.py",
@@ -73,7 +74,6 @@ extend-exclude = [
     "backend/routes/pipeline_routes.py",
     "backend/routes/publish_routes.py",
     "backend/routes/template_routes.py",
-    "backend/skills",
     "backend/utils",
 ]
 

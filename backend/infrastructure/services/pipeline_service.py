@@ -8,8 +8,8 @@ import logging
 from typing import Any, Dict, Generator, Optional
 
 from backend.application.services.provider_config_service import get_provider_config_service
-from backend.pipelines import RedBookPipeline, ConceptPipeline
-from backend.core.base_pipeline import BasePipeline, PipelineEvent
+from backend.application.pipelines import RedBookPipeline, ConceptPipeline
+from backend.application.core.base_pipeline import BasePipeline, PipelineEvent
 
 logger = logging.getLogger(__name__)
 
@@ -146,3 +146,5 @@ def get_pipeline_service() -> PipelineService:
     if _service_instance is None:
         _service_instance = PipelineService()
     return _service_instance
+
+

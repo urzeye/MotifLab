@@ -13,14 +13,14 @@ class ImageGeneratorFactory:
 
     # 生成器注册表：provider -> (模块路径, 类名)
     GENERATORS: Dict[str, Tuple[str, str]] = {
-        "openai_compatible": ("backend.generators.openai_compatible", "OpenAICompatibleGenerator"),
-        "openai": ("backend.generators.openai_compatible", "OpenAICompatibleGenerator"),
-        "google_genai": ("backend.generators.google_genai", "GoogleGenAIGenerator"),
-        "image_api": ("backend.generators.image_api", "ImageApiGenerator"),
-        "dashscope": ("backend.generators.dashscope_sdk", "DashScopeSdkGenerator"),
-        "dashscope_edit": ("backend.generators.dashscope_edit", "DashScopeImageEditGenerator"),
-        "modelscope": ("backend.generators.modelscope", "ModelScopeGenerator"),
-        "replicate": ("backend.generators.replicate_gen", "ReplicateGenerator"),
+        "openai_compatible": ("backend.infrastructure.generators.openai_compatible", "OpenAICompatibleGenerator"),
+        "openai": ("backend.infrastructure.generators.openai_compatible", "OpenAICompatibleGenerator"),
+        "google_genai": ("backend.infrastructure.generators.google_genai", "GoogleGenAIGenerator"),
+        "image_api": ("backend.infrastructure.generators.image_api", "ImageApiGenerator"),
+        "dashscope": ("backend.infrastructure.generators.dashscope_sdk", "DashScopeSdkGenerator"),
+        "dashscope_edit": ("backend.infrastructure.generators.dashscope_edit", "DashScopeImageEditGenerator"),
+        "modelscope": ("backend.infrastructure.generators.modelscope", "ModelScopeGenerator"),
+        "replicate": ("backend.infrastructure.generators.replicate_gen", "ReplicateGenerator"),
     }
 
     # 已加载的生成器类缓存，避免重复 import
@@ -95,3 +95,4 @@ class ImageGeneratorFactory:
 
         cls.GENERATORS[name] = (generator_class.__module__, generator_class.__name__)
         cls._GENERATOR_CLASS_CACHE[name] = generator_class
+

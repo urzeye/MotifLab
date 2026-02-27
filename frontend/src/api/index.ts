@@ -675,37 +675,6 @@ export async function retryFailedImages(
   )
 }
 
-export async function generateImagesPost(
-  pages: Page[],
-  taskId: string | null,
-  fullOutline: string,
-  onProgress: (event: ProgressEvent) => void,
-  onComplete: (event: ProgressEvent) => void,
-  onError: (event: ProgressEvent) => void,
-  onFinish: (event: FinishEvent) => void,
-  onStreamError: (error: Error) => void,
-  userImages?: File[],
-  userTopic?: string,
-  promptContext?: ImagePromptContext
-) {
-  const userImagesBase64 = await toBase64Images(userImages)
-
-  await handleSSEStream(
-    `${API_BASE_URL}/generate`,
-    {
-      pages,
-      task_id: taskId,
-      full_outline: fullOutline,
-      user_images: userImagesBase64.length > 0 ? userImagesBase64 : undefined,
-      user_topic: userTopic || '',
-      user_prompt: promptContext?.userPrompt,
-      system_prompt: promptContext?.systemPrompt
-    },
-    { progress: onProgress, complete: onComplete, error: onError, finish: onFinish },
-    onStreamError
-  )
-}
-
 // ==================== 历史记录 API ====================
 
 export async function createHistory(

@@ -10,18 +10,18 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional
 
-from backend.core.base_pipeline import BasePipeline, PipelineEvent, PipelineContext, PipelineStatus
-from backend.core.base_skill import BaseSkill, SkillResult
-from backend.skills.concept import (
+from backend.application.core.base_pipeline import BasePipeline, PipelineEvent, PipelineContext, PipelineStatus
+from backend.application.core.base_skill import BaseSkill, SkillResult
+from backend.application.skills.concept import (
     ConceptAnalyzeSkill,
     ConceptMapSkill,
     ConceptDesignSkill,
     ConceptGenerateSkill
 )
-from backend.skills.concept.analyze import AnalyzeInput
-from backend.skills.concept.map_framework import MapInput
-from backend.skills.concept.design import DesignInput
-from backend.skills.concept.generate import GenerateInput
+from backend.application.skills.concept.analyze import AnalyzeInput
+from backend.application.skills.concept.map_framework import MapInput
+from backend.application.skills.concept.design import DesignInput
+from backend.application.skills.concept.generate import GenerateInput
 from backend.infrastructure.services.concept_history import get_concept_history_service, ConceptRecordStatus
 
 logger = logging.getLogger(__name__)
@@ -400,3 +400,4 @@ class ConceptPipeline(BasePipeline):
             success=False,
             error="流水线执行异常"
         )
+

@@ -9,8 +9,8 @@ from dataclasses import dataclass
 from typing import Union, List, Dict, Optional
 
 from backend.application.services import get_provider_config_service
-from backend.core.base_skill import BaseSkill, SkillResult
-from backend.clients.factory import ClientFactory
+from backend.application.core.base_skill import BaseSkill, SkillResult
+from backend.infrastructure.clients.factory import ClientFactory
 from backend.knowledge import registry
 
 provider_config_service = get_provider_config_service()
@@ -220,3 +220,4 @@ class ConceptMapSkill(BaseSkill):
             ])
 
         return "\n".join(lines)
+
