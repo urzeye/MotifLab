@@ -7,24 +7,27 @@
           恭喜！你的小红书图文已生成完毕，共 {{ store.images.length }} 张
         </p>
       </div>
-      <div style="display: flex; gap: 12px">
+      <div
+        class="header-actions"
+        style="display: flex; gap: 12px"
+      >
         <button
-          class="btn btn-secondary"
+          class="btn"
           @click="startOver"
         >
           再来一篇
         </button>
         <button
-          class="btn btn-secondary"
+          class="btn"
           @click="downloadAll"
         >
           <svg
-            width="18"
-            height="18"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            stroke-width="2"
+            stroke-width="2.5"
             stroke-linecap="round"
             stroke-linejoin="round"
           >
@@ -44,12 +47,12 @@
           @click="goToPublish"
         >
           <svg
-            width="18"
-            height="18"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            stroke-width="2"
+            stroke-width="2.5"
             stroke-linecap="round"
             stroke-linejoin="round"
           >
@@ -61,7 +64,10 @@
       </div>
     </div>
 
-    <div class="card">
+    <div
+      class="card"
+      style="padding: 32px"
+    >
       <div class="grid-cols-4">
         <div
           v-for="image in store.images"
@@ -165,6 +171,30 @@
 </template>
 
 <style scoped>
+.header-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+}
+
+.image-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+  transition: all var(--transition-base);
+}
+
+.image-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-color: var(--border-hover);
+}
+
 /* 确保图片预览区域正确填充 */
 .image-card > div:first-child {
   flex: 1;
@@ -185,7 +215,6 @@
   width: 100%;
   height: 100%;
   display: block;
-  vertical-align: top;
   object-fit: cover;
   transition: transform 0.3s;
 }

@@ -22,18 +22,38 @@
     <!-- 内容区 -->
     <div class="tab-content">
       <!-- 理论框架 -->
-      <div v-if="activeTab === 'frameworks'" class="content-section">
+      <div
+        v-if="activeTab === 'frameworks'"
+        class="content-section"
+      >
         <div class="section-header">
           <h2>理论框架</h2>
           <p>用于概念分析和映射的理论框架库</p>
         </div>
-        <div v-if="loading" class="loading">加载中...</div>
-        <div v-else class="card-grid">
-          <div v-for="framework in frameworks" :key="framework.id" class="knowledge-card">
+        <div
+          v-if="loading"
+          class="loading"
+        >
+          加载中...
+        </div>
+        <div
+          v-else
+          class="card-grid"
+        >
+          <div
+            v-for="framework in frameworks"
+            :key="framework.id"
+            class="knowledge-card"
+          >
             <h3>{{ framework.name }}</h3>
             <p class="card-desc">{{ framework.description }}</p>
             <div class="card-tags">
-              <span v-for="domain in framework.domains" :key="domain" class="tag">{{ domain }}</span>
+              <span
+                v-for="domain in framework.domains"
+                :key="domain"
+                class="tag"
+                >{{ domain }}</span
+              >
             </div>
             <div class="card-meta">
               <span>{{ framework.components?.length || 0 }} 个组件</span>
@@ -43,33 +63,71 @@
       </div>
 
       <!-- 图表类型 -->
-      <div v-if="activeTab === 'charts'" class="content-section">
+      <div
+        v-if="activeTab === 'charts'"
+        class="content-section"
+      >
         <div class="section-header">
           <h2>图表类型</h2>
           <p>可视化输出的图表类型库</p>
         </div>
-        <div v-if="loading" class="loading">加载中...</div>
-        <div v-else class="card-grid">
-          <div v-for="chart in chartTypes" :key="chart.id" class="knowledge-card">
+        <div
+          v-if="loading"
+          class="loading"
+        >
+          加载中...
+        </div>
+        <div
+          v-else
+          class="card-grid"
+        >
+          <div
+            v-for="chart in chartTypes"
+            :key="chart.id"
+            class="knowledge-card"
+          >
             <h3>{{ chart.name }}</h3>
             <p class="card-desc">{{ chart.description }}</p>
             <div class="card-tags">
-              <span v-for="use in chart.best_for" :key="use" class="tag">{{ use }}</span>
+              <span
+                v-for="use in chart.best_for"
+                :key="use"
+                class="tag"
+                >{{ use }}</span
+              >
             </div>
           </div>
         </div>
       </div>
 
       <!-- 视觉风格 -->
-      <div v-if="activeTab === 'styles'" class="content-section">
+      <div
+        v-if="activeTab === 'styles'"
+        class="content-section"
+      >
         <div class="section-header">
           <h2>视觉风格</h2>
           <p>概念图的视觉风格预设</p>
         </div>
-        <div v-if="loading" class="loading">加载中...</div>
-        <div v-else class="style-grid">
-          <div v-for="style in visualStyles" :key="style.id" class="style-card">
-            <div class="style-preview" :style="getStylePreview(style)">
+        <div
+          v-if="loading"
+          class="loading"
+        >
+          加载中...
+        </div>
+        <div
+          v-else
+          class="style-grid"
+        >
+          <div
+            v-for="style in visualStyles"
+            :key="style.id"
+            class="style-card"
+          >
+            <div
+              class="style-preview"
+              :style="getStylePreview(style)"
+            >
               <div class="preview-dot primary"></div>
               <div class="preview-dot secondary"></div>
               <div class="preview-line"></div>
@@ -95,104 +153,87 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted } from "vue";
 
 interface Framework {
-  id: string
-  name: string
-  description: string
-  domains: string[]
-  components?: string[]
+  id: string;
+  name: string;
+  description: string;
+  domains: string[];
+  components?: string[];
 }
 
 interface ChartType {
-  id: string
-  name: string
-  description: string
-  best_for: string[]
+  id: string;
+  name: string;
+  description: string;
+  best_for: string[];
 }
 
 interface VisualStyle {
-  id: string
-  name: string
-  description: string
+  id: string;
+  name: string;
+  description: string;
   colors: {
-    primary: string
-    secondary: string
-    background: string
-  }
+    primary: string;
+    secondary: string;
+    background: string;
+  };
 }
 
 const tabs = [
-  { id: 'frameworks', label: '理论框架', icon: 'span' },
-  { id: 'charts', label: '图表类型', icon: 'span' },
-  { id: 'styles', label: '视觉风格', icon: 'span' },
-]
+  { id: "frameworks", label: "理论框架", icon: "span" },
+  { id: "charts", label: "图表类型", icon: "span" },
+  { id: "styles", label: "视觉风格", icon: "span" },
+];
 
-const activeTab = ref('frameworks')
-const loading = ref(true)
-const frameworks = ref<Framework[]>([])
-const chartTypes = ref<ChartType[]>([])
-const visualStyles = ref<VisualStyle[]>([])
+const activeTab = ref("frameworks");
+const loading = ref(true);
+const frameworks = ref<Framework[]>([]);
+const chartTypes = ref<ChartType[]>([]);
+const visualStyles = ref<VisualStyle[]>([]);
 
 async function fetchKnowledge() {
-  loading.value = true
+  loading.value = true;
   try {
     const [frameworksRes, chartsRes, stylesRes] = await Promise.all([
-      fetch('/api/knowledge/frameworks').then(r => r.json()),
-      fetch('/api/knowledge/chart-types').then(r => r.json()),
-      fetch('/api/knowledge/visual-styles').then(r => r.json()),
-    ])
+      fetch("/api/knowledge/frameworks").then((r) => r.json()),
+      fetch("/api/knowledge/chart-types").then((r) => r.json()),
+      fetch("/api/knowledge/visual-styles").then((r) => r.json()),
+    ]);
 
     if (frameworksRes.success) {
-      frameworks.value = frameworksRes.frameworks
+      frameworks.value = frameworksRes.frameworks;
     }
     if (chartsRes.success) {
-      chartTypes.value = chartsRes.chart_types
+      chartTypes.value = chartsRes.chart_types;
     }
     if (stylesRes.success) {
-      visualStyles.value = stylesRes.visual_styles
+      visualStyles.value = stylesRes.visual_styles;
     }
   } catch (err) {
-    console.error('Failed to fetch knowledge:', err)
+    console.error("Failed to fetch knowledge:", err);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 function getStylePreview(style: VisualStyle) {
   return {
     background: style.colors.background,
-    '--primary': style.colors.primary,
-    '--secondary': style.colors.secondary,
-  }
+    "--primary": style.colors.primary,
+    "--secondary": style.colors.secondary,
+  };
 }
 
 onMounted(() => {
-  fetchKnowledge()
-})
+  fetchKnowledge();
+});
 </script>
 
 <style scoped>
 .knowledge-container {
-  max-width: 1000px;
-  padding-top: 24px;
-}
-
-.page-header {
-  margin-bottom: 32px;
-}
-
-.page-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 8px;
-}
-
-.page-subtitle {
-  font-size: 15px;
-  color: var(--text-sub);
+  padding-top: 0;
 }
 
 /* Tabs */
@@ -256,20 +297,34 @@ onMounted(() => {
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  gap: 20px;
 }
 
 .knowledge-card {
-  padding: 20px;
+  padding: 24px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  transition: all 0.2s;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  transition:
+    box-shadow var(--transition-base),
+    transform var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+[data-theme="dark"] .knowledge-card {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 .knowledge-card:hover {
   border-color: var(--primary-light);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+}
+
+[data-theme="dark"] .knowledge-card:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .knowledge-card h3 {
@@ -310,20 +365,34 @@ onMounted(() => {
 .style-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
+  gap: 20px;
 }
 
 .style-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  transition: all 0.2s;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  transition:
+    box-shadow var(--transition-base),
+    transform var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+[data-theme="dark"] .style-card {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 .style-card:hover {
   border-color: var(--primary-light);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+}
+
+[data-theme="dark"] .style-card:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .style-preview {

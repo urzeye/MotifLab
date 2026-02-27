@@ -454,22 +454,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page-header {
-  margin-bottom: 24px;
-}
-.page-title {
-  font-size: 28px;
-  margin-bottom: 8px;
-}
-.page-subtitle {
-  font-size: 14px;
-}
-
-.settings-container {
-  max-width: 900px;
-  margin: 0 auto;
-}
-
+/* 覆盖掉冲突的局部样式 */
 .security-status {
   display: flex;
   flex-wrap: wrap;
@@ -501,41 +486,45 @@ onMounted(async () => {
 .token-label {
   display: block;
   margin-bottom: 8px;
-  font-size: var(--small-size);
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text-sub);
 }
 
 .token-row {
   display: flex;
-  gap: 10px;
+  gap: 12px;
 }
 
 .token-input {
   flex: 1;
-  height: 40px;
+  height: 48px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  padding: 0 12px;
-  font-size: 14px;
-  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  padding: 0 16px;
+  font-size: 15px;
+  background: var(--bg-body);
   color: var(--text-main);
+  transition: all var(--transition-fast);
 }
 
 .token-input:focus {
   outline: none;
   border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+  background: var(--bg-elevated);
 }
 
 .security-hint {
   margin: 10px 0 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-sub);
 }
 
 .token-actions {
-  margin-top: 14px;
+  margin-top: 16px;
   display: flex;
-  gap: 10px;
+  gap: 12px;
 }
 
 .token-message {
@@ -551,45 +540,29 @@ onMounted(async () => {
   color: var(--color-error);
 }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-}
-
-.section-title {
-  font-size: var(--h4-size);
-  font-weight: var(--h4-weight);
-  margin-bottom: 6px;
-  color: var(--text-main);
-}
-
-.section-desc {
-  font-size: var(--small-size);
-  color: var(--text-sub);
-  margin: 0;
-}
-
-/* 按钮样式 */
+/* 按钮样式 (重新统一) */
 .btn-small {
-  padding: 8px 14px;
-  font-size: var(--caption-size);
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--bg-elevated);
+  background: var(--bg-body);
   border: 1px solid var(--border-color);
   color: var(--text-main);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .btn-small:hover {
-  background: var(--bg-card);
-  border-color: var(--primary);
-  color: var(--primary);
+  background: var(--bg-hover);
+  border-color: var(--text-sub);
+}
+
+.btn-small svg {
+  stroke-width: 2.5;
 }
 
 /* 加载状态 */

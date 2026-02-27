@@ -3,10 +3,12 @@
    Premium / 高端 / 自信
    ============================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 
 /* Reset */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -186,7 +188,7 @@ body {
 }
 
 .nav-item.active::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   top: 50%;
@@ -207,47 +209,51 @@ body {
 /* ========== 通用容器 ========== */
 .container {
   width: 100%;
-  max-width: var(--content-max-width);
+  max-width: 1080px;
   margin: 0 auto;
   padding: 0 var(--grid-gap);
+  display: flex;
+  flex-direction: column;
 }
 
-/* ========== 排版系统 ========== */
+/* ========== 排版系统 (Page Header 规范化) ========== */
 .page-header {
-  margin-bottom: 40px;
+  margin-bottom: 32px;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
   flex-wrap: wrap;
   gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
 }
 
-/* H1 - 最大最醒目 */
+/* 统一 H1 及页面标题字号 */
 .page-title,
 h1 {
-  font-size: var(--h1-size);
-  font-weight: var(--h1-weight);
-  line-height: var(--h1-line-height);
-  letter-spacing: var(--h1-letter-spacing);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
   color: var(--text-main);
-  margin-bottom: 16px;
+  margin: 0;
 }
 
 /* H2 */
 h2,
 .section-title {
-  font-size: var(--h2-size);
-  font-weight: var(--h2-weight);
-  line-height: var(--h2-line-height);
-  letter-spacing: var(--h2-letter-spacing);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
   color: var(--text-main);
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 /* H3 */
 h3 {
-  font-size: var(--h3-size);
-  font-weight: var(--h3-weight);
+  font-size: 16px;
+  font-weight: 600;
   line-height: var(--h3-line-height);
   color: var(--text-main);
   margin-bottom: 12px;
@@ -256,20 +262,27 @@ h3 {
 /* H4 */
 h4,
 .section-title-sm {
-  font-size: var(--h4-size);
-  font-weight: var(--h4-weight);
+  font-size: 14px;
+  font-weight: 600;
   line-height: var(--h4-line-height);
   color: var(--text-main);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
-/* 副标题 */
+/* 页面顶部或栏目副标题规范：文字变小并置灰，收敛间距 */
 .page-subtitle {
-  font-size: var(--body-size);
+  font-size: 14px;
   color: var(--text-sub);
-  max-width: 600px;
-  margin: 0 auto;
-  line-height: var(--body-line-height);
+  margin: 8px 0 0 0;
+  line-height: 1.5;
+}
+
+/* 卡片等内部的小节副标题 */
+.section-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
 }
 
 /* 小号文本 */
@@ -295,6 +308,54 @@ a {
 
 a:hover {
   color: var(--primary-hover);
+}
+
+/* ========== 全局现代卡片系统 (Glass/Soft Shadow) ========== */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  transition:
+    box-shadow var(--transition-base),
+    transform var(--transition-fast);
+}
+
+.card:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .card {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .card:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+/* 卡片里的内部小块，例如某一项设置 */
+.list-item-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: all var(--transition-fast);
+}
+
+.list-item-card:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-hover);
 }
 
 /* ========== 全局页脚 ========== */
@@ -351,18 +412,42 @@ a:hover {
   grid-template-columns: repeat(12, 1fr);
 }
 
-.col-span-1 { grid-column: span 1; }
-.col-span-2 { grid-column: span 2; }
-.col-span-3 { grid-column: span 3; }
-.col-span-4 { grid-column: span 4; }
-.col-span-5 { grid-column: span 5; }
-.col-span-6 { grid-column: span 6; }
-.col-span-7 { grid-column: span 7; }
-.col-span-8 { grid-column: span 8; }
-.col-span-9 { grid-column: span 9; }
-.col-span-10 { grid-column: span 10; }
-.col-span-11 { grid-column: span 11; }
-.col-span-12 { grid-column: span 12; }
+.col-span-1 {
+  grid-column: span 1;
+}
+.col-span-2 {
+  grid-column: span 2;
+}
+.col-span-3 {
+  grid-column: span 3;
+}
+.col-span-4 {
+  grid-column: span 4;
+}
+.col-span-5 {
+  grid-column: span 5;
+}
+.col-span-6 {
+  grid-column: span 6;
+}
+.col-span-7 {
+  grid-column: span 7;
+}
+.col-span-8 {
+  grid-column: span 8;
+}
+.col-span-9 {
+  grid-column: span 9;
+}
+.col-span-10 {
+  grid-column: span 10;
+}
+.col-span-11 {
+  grid-column: span 11;
+}
+.col-span-12 {
+  grid-column: span 12;
+}
 
 /* ========== 响应式断点 ========== */
 @media (max-width: 1200px) {
@@ -391,7 +476,8 @@ a:hover {
     padding: 24px 20px;
   }
 
-  .page-title, h1 {
+  .page-title,
+  h1 {
     font-size: 36px;
   }
 }

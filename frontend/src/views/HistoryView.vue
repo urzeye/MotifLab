@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="container"
-    style="max-width: 1200px"
-  >
+  <div class="container">
     <!-- Header Area -->
     <div class="page-header">
       <div>
@@ -13,7 +10,6 @@
           class="btn"
           @click="handleScanAll"
           :disabled="isScanning"
-          style="border: 1px solid var(--border-color)"
         >
           <svg
             v-if="!isScanning"
@@ -77,10 +73,13 @@
     />
 
     <!-- Toolbar: Tabs & Search -->
-    <div class="toolbar-wrapper">
+    <div
+      class="toolbar-wrapper card"
+      style="padding: 16px 24px; margin-bottom: 24px"
+    >
       <div
         class="tabs-container"
-        style="margin-bottom: 0; border-bottom: none"
+        style="border-bottom: none"
       >
         <div
           class="tab-item"
@@ -182,7 +181,7 @@
       <GalleryCard
         v-for="record in records"
         :key="record.id"
-        :record="record"
+        :record="record as any"
         @preview="viewImages"
         @edit="loadRecord"
         @result="openResultPage"
@@ -407,7 +406,7 @@ interface UnifiedRecord {
   created_at: string;
   updated_at: string;
   status: "draft" | "in_progress" | "generating" | "completed" | "error";
-  thumbnail: string | null;
+  thumbnail: string | null | undefined;
   page_count: number;
   task_id: string | null;
   recordType: "xiaohongshu" | "concept";
@@ -439,7 +438,7 @@ function convertXiaohongshuRecord(record: HistoryRecord): UnifiedRecord {
     created_at: record.created_at,
     updated_at: record.updated_at,
     status: record.status as UnifiedRecord["status"],
-    thumbnail: record.thumbnail,
+    thumbnail: record.thumbnail || undefined,
     page_count: record.page_count,
     task_id: record.task_id,
     recordType: "xiaohongshu",
@@ -456,7 +455,7 @@ function convertConceptRecord(record: ConceptHistoryRecord): UnifiedRecord {
     created_at: record.created_at,
     updated_at: record.updated_at,
     status: record.status as UnifiedRecord["status"],
-    thumbnail: record.thumbnail,
+    thumbnail: record.thumbnail || undefined,
     page_count: record.image_count || 0,
     task_id: record.task_id,
     recordType: "concept",
