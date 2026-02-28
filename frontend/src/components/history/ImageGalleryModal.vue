@@ -482,7 +482,6 @@ const formattedDate = computed(() => {
 
 .modal-img-preview:hover .modal-img-overlay {
   opacity: 1;
-  pointer-events: auto;
 }
 
 /* 重绘中状态 */
@@ -513,6 +512,7 @@ const formattedDate = computed(() => {
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 24px;
   cursor: pointer;
+  pointer-events: auto;
   font-size: 13px;
   font-weight: 500;
   color: white;
