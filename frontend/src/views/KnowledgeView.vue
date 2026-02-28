@@ -154,6 +154,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+import {
+  getKnowledgeFrameworks,
+  getKnowledgeChartTypes,
+  getKnowledgeVisualStyles,
+} from "../api";
 
 interface Framework {
   id: string;
@@ -197,18 +202,18 @@ async function fetchKnowledge() {
   loading.value = true;
   try {
     const [frameworksRes, chartsRes, stylesRes] = await Promise.all([
-      fetch("/api/knowledge/frameworks").then((r) => r.json()),
-      fetch("/api/knowledge/chart-types").then((r) => r.json()),
-      fetch("/api/knowledge/visual-styles").then((r) => r.json()),
+      getKnowledgeFrameworks(),
+      getKnowledgeChartTypes(),
+      getKnowledgeVisualStyles(),
     ]);
 
-    if (frameworksRes.success) {
+    if (frameworksRes.success && Array.isArray(frameworksRes.frameworks)) {
       frameworks.value = frameworksRes.frameworks;
     }
-    if (chartsRes.success) {
+    if (chartsRes.success && Array.isArray(chartsRes.chart_types)) {
       chartTypes.value = chartsRes.chart_types;
     }
-    if (stylesRes.success) {
+    if (stylesRes.success && Array.isArray(stylesRes.visual_styles)) {
       visualStyles.value = stylesRes.visual_styles;
     }
   } catch (err) {

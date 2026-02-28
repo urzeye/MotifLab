@@ -1009,6 +1009,50 @@ export async function generateContent(
   return response.data
 }
 
+// ==================== 知识库 API ====================
+
+export async function getKnowledgeFrameworks(): Promise<{
+  success: boolean
+  frameworks?: any[]
+  total?: number
+  error?: string
+}> {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/knowledge/frameworks`, { timeout: 10000 })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '获取理论框架失败', { frameworks: [] })
+  }
+}
+
+export async function getKnowledgeChartTypes(): Promise<{
+  success: boolean
+  chart_types?: any[]
+  total?: number
+  error?: string
+}> {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/knowledge/chart-types`, { timeout: 10000 })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '获取图表类型失败', { chart_types: [] })
+  }
+}
+
+export async function getKnowledgeVisualStyles(): Promise<{
+  success: boolean
+  visual_styles?: any[]
+  total?: number
+  error?: string
+}> {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/knowledge/visual-styles`, { timeout: 10000 })
+    return response.data
+  } catch (error) {
+    return handleAxiosError(error, '获取视觉风格失败', { visual_styles: [] })
+  }
+}
+
 // ==================== 发布 API (VibeSurf) ====================
 
 export async function checkVibeSurfStatus(): Promise<{ success: boolean; status?: VibeSurfStatus; error?: string }> {

@@ -498,6 +498,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { getKnowledgeVisualStyles, getAccessToken } from "../api";
 
 // State
 const articleText = ref("");
@@ -544,9 +545,8 @@ const progressPercent = computed(() => {
 // Methods
 const fetchVisualStyles = async () => {
   try {
-    const res = await fetch("/api/knowledge/visual-styles");
-    const data = await res.json();
-    if (data.success) {
+    const data = await getKnowledgeVisualStyles();
+    if (data.success && Array.isArray(data.visual_styles)) {
       visualStyles.value = data.visual_styles;
     }
   } catch (e) {
@@ -581,15 +581,34 @@ const startPipeline = async () => {
   generateProgress.value = { current: 0, total: 0, success: 0 };
 
   try {
+    const token = getAccessToken();
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
     const response = await fetch("/api/concept/run/stream", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         article: articleText.value,
         style: selectedStyle.value,
         config: { max_concepts: 8 },
       }),
     });
+
+    if (!response.ok) {
+      let errorMessage = `请求失败 (${response.status})`;
+      try {
+        const payload = await response.json();
+        errorMessage = payload?.error || errorMessage;
+      } catch {
+        // ignore non-json error body
+      }
+      throw new Error(errorMessage);
+    }
 
     const reader = response.body?.getReader();
     const decoder = new TextDecoder();

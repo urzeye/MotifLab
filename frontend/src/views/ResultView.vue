@@ -547,7 +547,10 @@ const downloadAll = async () => {
     await syncContentToHistory();
 
     const fallbackLink = document.createElement("a");
-    fallbackLink.href = `/api/history/${store.recordId}/download?_=${Date.now()}`;
+    fallbackLink.href = appendUrlParams(
+      withAccessToken(`/api/history/${store.recordId}/download`),
+      { _: Date.now() },
+    );
 
     try {
       const contentPayload = hasPersistableContent()
@@ -580,7 +583,7 @@ const downloadAll = async () => {
     setTimeout(() => {
       const link = document.createElement("a");
       const baseUrl = image.url.split("?")[0];
-      link.href = baseUrl + "?thumbnail=false";
+      link.href = appendUrlParams(withAccessToken(baseUrl), { thumbnail: false });
       link.download = `rednote_page_${image.index + 1}.png`;
       link.click();
     }, index * 300);
