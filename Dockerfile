@@ -48,6 +48,9 @@ COPY backend/ ./backend/
 COPY text_providers.yaml.example ./text_providers.yaml
 COPY image_providers.yaml.example ./image_providers.yaml
 
+# 复制默认模板等数据文件
+COPY data/ ./data/
+
 # 从构建阶段复制前端产物
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
