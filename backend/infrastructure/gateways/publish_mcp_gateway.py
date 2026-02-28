@@ -41,6 +41,9 @@ class McpPublishGateway(PublishGatewayPort):
     def get_status(self) -> Dict[str, Any]:
         return mcp_manager.get_status()
 
+    def install_binary(self) -> Dict[str, Any]:
+        return mcp_manager.install_binary()
+
     async def list_posts(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         return await mcp_manager.call_tool("list_feeds", payload)
 

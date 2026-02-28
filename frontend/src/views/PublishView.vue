@@ -45,10 +45,10 @@
           v-if="!vibeSurfStatus?.running"
           class="btn"
           style="margin-left: auto; padding: 8px 16px; font-size: 14px"
-          :disabled="startingVibeSurf"
+          :disabled="vibeSurfActionDisabled"
           @click="handleVibeSurfAction"
         >
-          重新检测
+          {{ vibeSurfActionLabel }}
         </button>
       </div>
     </div>
@@ -302,13 +302,26 @@
             v-if="publishResult.post_url"
             style="font-size: 14px"
           >
+            <div style="margin-bottom: 6px">文章链接：</div>
             <a
               :href="publishResult.post_url"
               target="_blank"
-              style="color: var(--primary)"
+              rel="noopener noreferrer"
+              style="
+                color: var(--primary);
+                word-break: break-all;
+                line-height: 1.5;
+              "
             >
-              查看已发布的笔记
+              {{ publishResult.post_url }}
             </a>
+            <button
+              class="btn"
+              style="margin-top: 10px; padding: 6px 12px; font-size: 13px"
+              @click="copyPostUrl"
+            >
+              复制链接
+            </button>
           </div>
           <div
             v-if="publishResult.error"
@@ -370,6 +383,7 @@ import { useRouter } from "vue-router";
 import { useGeneratorStore } from "../stores/generator";
 import {
   checkVibeSurfStatus,
+  installXiaohongshuMcp,
   checkXiaohongshuLogin,
   openXiaohongshuLogin,
   publishToXiaohongshu,
@@ -388,6 +402,7 @@ const vibeSurfStatus = ref<VibeSurfStatus | null>(null);
 const loginStatus = ref<LoginStatus | null>(null);
 const openingLogin = ref(false);
 const startingVibeSurf = ref(false);
+const installingMcp = ref(false);
 const isPublishing = ref(false);
 const publishProgress = ref<PublishProgressEvent[]>([]);
 const publishResult = ref<{
@@ -415,6 +430,25 @@ const canStartService = computed(() => {
   const status = vibeSurfStatus.value;
   return Boolean(status && !status.running && status.binary_installed !== false);
 });
+
+const needInstallMcp = computed(() => {
+  const status = vibeSurfStatus.value;
+  return Boolean(status && !status.running && status.binary_installed === false);
+});
+
+const vibeSurfActionLabel = computed(() => {
+  if (needInstallMcp.value) {
+    return installingMcp.value ? "安装中..." : "安装并检测";
+  }
+  if (canStartService.value) {
+    return startingVibeSurf.value ? "启动中..." : "启动服务";
+  }
+  return "重新检测";
+});
+
+const vibeSurfActionDisabled = computed(
+  () => startingVibeSurf.value || installingMcp.value,
+);
 
 // 方法
 const goBack = () => {
@@ -466,7 +500,41 @@ const startVibeSurf = async () => {
   }
 };
 
+const installMcp = async () => {
+  if (installingMcp.value) return;
+  installingMcp.value = true;
+  try {
+    vibeSurfStatus.value = {
+      running: false,
+      binary_installed: false,
+      message: "正在安装 xiaohongshu-mcp...",
+    };
+
+    const result = await installXiaohongshuMcp();
+    if (!result.success) {
+      message.error("安装失败: " + (result.error || "未知错误"));
+      await checkVibeSurf();
+      return;
+    }
+
+    message.success(result.message || "安装完成");
+    await checkVibeSurf();
+    if (canStartService.value) {
+      await startVibeSurf();
+    }
+  } catch (e: any) {
+    message.error("安装失败: " + (e?.message || "未知错误"));
+    await checkVibeSurf();
+  } finally {
+    installingMcp.value = false;
+  }
+};
+
 const handleVibeSurfAction = async () => {
+  if (needInstallMcp.value) {
+    await installMcp();
+    return;
+  }
   if (canStartService.value) {
     await startVibeSurf();
     return;
@@ -501,6 +569,17 @@ const openLogin = async () => {
     message.error("打开登录页面失败: " + e.message);
   } finally {
     openingLogin.value = false;
+  }
+};
+
+const copyPostUrl = async () => {
+  const url = publishResult.value?.post_url;
+  if (!url) return;
+  try {
+    await navigator.clipboard.writeText(url);
+    message.success("链接已复制");
+  } catch (e: any) {
+    message.error("复制失败: " + (e?.message || "未知错误"));
   }
 };
 

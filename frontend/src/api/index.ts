@@ -1043,6 +1043,21 @@ export async function checkVibeSurfStatus(): Promise<{ success: boolean; status?
   }
 }
 
+export async function installXiaohongshuMcp(): Promise<{
+  success: boolean
+  message?: string
+  error?: string
+  output?: string
+  status?: VibeSurfStatus
+}> {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/publish/install-tools`, {}, { timeout: 360000 })
+    return response.data || { success: false, error: '安装失败' }
+  } catch (error) {
+    return handleAxiosError(error, '安装 xiaohongshu-mcp 失败')
+  }
+}
+
 export async function checkXiaohongshuLogin(): Promise<{ success: boolean; status?: LoginStatus; error?: string }> {
   try {
     const response = await axios.get(`${API_BASE_URL}/publish/login-check`, { timeout: 90000 })
@@ -1088,7 +1103,7 @@ export async function publishToXiaohongshu(
       progress: 30
     })
 
-    const response = await axios.post(`${API_BASE_URL}/publish/xiaohongshu`, data, { timeout: 180000 })
+    const response = await axios.post(`${API_BASE_URL}/publish/xiaohongshu`, data, { timeout: 300000 })
     const result = response.data || {}
 
     if (result.success) {
