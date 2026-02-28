@@ -5,7 +5,8 @@
         <h1 class="page-title">{{ isGenerating ? "正在生成" : "创作完成" }}</h1>
         <p class="page-subtitle">
           <span v-if="isGenerating">
-            图片生成中：{{ store.progress.current }} / {{ store.progress.total }}，文案并行生成中
+            图片生成中：{{ store.progress.current }} /
+            {{ store.progress.total }}，文案并行生成中
           </span>
           <span v-else-if="failedCount > 0">
             已完成 {{ doneCount }} 张，失败 {{ failedCount }} 张，可单张重试
@@ -15,9 +16,21 @@
           </span>
         </p>
       </div>
-      <div class="header-actions" style="display: flex; gap: 12px">
-        <button class="btn" @click="startOver">再来一篇</button>
-        <button class="btn" @click="downloadAll" :disabled="isGenerating">
+      <div
+        class="header-actions"
+        style="display: flex; gap: 12px"
+      >
+        <button
+          class="btn"
+          @click="startOver"
+        >
+          再来一篇
+        </button>
+        <button
+          class="btn"
+          @click="downloadAll"
+          :disabled="isGenerating"
+        >
           <svg
             width="16"
             height="16"
@@ -30,11 +43,20 @@
           >
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
+            <line
+              x1="12"
+              y1="15"
+              x2="12"
+              y2="3"
+            ></line>
           </svg>
           一键下载
         </button>
-        <button class="btn btn-primary" @click="goToPublish" :disabled="!canPublish">
+        <button
+          class="btn btn-primary"
+          @click="goToPublish"
+          :disabled="!canPublish"
+        >
           <svg
             width="16"
             height="16"
@@ -53,20 +75,39 @@
       </div>
     </div>
 
-    <div class="card" style="padding: 20px 32px" v-if="store.progress.total > 0">
+    <div
+      class="card"
+      style="padding: 20px 32px"
+      v-if="store.progress.total > 0"
+    >
       <div class="progress-row">
         <span class="progress-label">图片进度</span>
         <span class="progress-value">{{ Math.round(progressPercent) }}%</span>
       </div>
       <div class="progress-track">
-        <div class="progress-bar" :style="{ width: `${progressPercent}%` }"></div>
+        <div
+          class="progress-bar"
+          :style="{ width: `${progressPercent}%` }"
+        ></div>
       </div>
-      <p v-if="errorText" class="error-text">{{ errorText }}</p>
+      <p
+        v-if="errorText"
+        class="error-text"
+      >
+        {{ errorText }}
+      </p>
     </div>
 
-    <div class="card" style="padding: 32px">
+    <div
+      class="card"
+      style="padding: 32px"
+    >
       <div class="grid-cols-4">
-        <div v-for="image in store.images" :key="image.index" class="image-card group">
+        <div
+          v-for="image in store.images"
+          :key="image.index"
+          class="image-card group"
+        >
           <div
             v-if="image.url"
             class="result-image-wrap"
@@ -84,7 +125,10 @@
               <div class="spinner"></div>
               <span class="overlay-text">重绘中...</span>
             </div>
-            <div v-else class="result-image-overlay hover-overlay">
+            <div
+              v-else
+              class="result-image-overlay hover-overlay"
+            >
               <button
                 class="overlay-regenerate-btn"
                 @click.stop="handleRegenerate(image)"
@@ -106,30 +150,47 @@
                     d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
                   ></path>
                 </svg>
-                <span>{{ regeneratingIndex === image.index ? "重绘中..." : "重绘此页" }}</span>
+                <span>{{
+                  regeneratingIndex === image.index ? "重绘中..." : "重绘此页"
+                }}</span>
               </button>
               <span class="overlay-tip">点击图片预览大图</span>
             </div>
           </div>
 
-          <div v-else class="result-image-wrap placeholder-wrap">
+          <div
+            v-else
+            class="result-image-wrap placeholder-wrap"
+          >
             <div
-              v-if="image.status === 'generating' || image.status === 'retrying'"
+              v-if="
+                image.status === 'generating' || image.status === 'retrying'
+              "
               class="placeholder-state"
             >
               <div class="spinner"></div>
-              <span>{{ image.status === "retrying" ? "重试中..." : "生成中..." }}</span>
+              <span>{{
+                image.status === "retrying" ? "重试中..." : "生成中..."
+              }}</span>
             </div>
-            <div v-else-if="image.status === 'error'" class="placeholder-state error-state">
+            <div
+              v-else-if="image.status === 'error'"
+              class="placeholder-state error-state"
+            >
               <span>生成失败</span>
             </div>
-            <div v-else class="placeholder-state">
+            <div
+              v-else
+              class="placeholder-state"
+            >
               <span>等待中</span>
             </div>
           </div>
 
           <div class="result-image-footer">
-            <span style="font-size: 12px; color: var(--text-sub)">Page {{ image.index + 1 }}</span>
+            <span style="font-size: 12px; color: var(--text-sub)"
+              >Page {{ image.index + 1 }}</span
+            >
             <button
               class="image-action-btn download-btn"
               @click="downloadOne(image)"
@@ -142,8 +203,16 @@
       </div>
     </div>
 
-    <div v-if="previewVisible" class="preview-modal" @click="closePreview">
-      <button class="preview-close" type="button" @click.stop="closePreview">
+    <div
+      v-if="previewVisible"
+      class="preview-modal"
+      @click="closePreview"
+    >
+      <button
+        class="preview-close"
+        type="button"
+        @click.stop="closePreview"
+      >
         x
       </button>
       <img
@@ -183,7 +252,7 @@
 .progress-value {
   font-size: 13px;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--color-info);
 }
 
 .progress-track {
@@ -195,7 +264,7 @@
 
 .progress-bar {
   height: 100%;
-  background: var(--primary);
+  background: var(--color-info);
   transition: width 0.25s ease;
 }
 
@@ -515,7 +584,9 @@ function hasPersistableContent() {
   const hasTitles =
     Array.isArray(store.content.titles) &&
     store.content.titles.some((t) => String(t || "").trim());
-  const hasCopywriting = Boolean(String(store.content.copywriting || "").trim());
+  const hasCopywriting = Boolean(
+    String(store.content.copywriting || "").trim(),
+  );
   const hasTags =
     Array.isArray(store.content.tags) &&
     store.content.tags.some((t) => String(t || "").trim());
@@ -583,7 +654,9 @@ const downloadAll = async () => {
     setTimeout(() => {
       const link = document.createElement("a");
       const baseUrl = image.url.split("?")[0];
-      link.href = appendUrlParams(withAccessToken(baseUrl), { thumbnail: false });
+      link.href = appendUrlParams(withAccessToken(baseUrl), {
+        thumbnail: false,
+      });
       link.download = `rednote_page_${image.index + 1}.png`;
       link.click();
     }, index * 300);
@@ -627,11 +700,14 @@ async function syncImageStateToHistory(taskId: string) {
 }
 
 const handleRegenerate = async (image: any) => {
-  if (!store.taskId || regeneratingIndex.value !== null || isGenerating.value) return;
+  if (!store.taskId || regeneratingIndex.value !== null || isGenerating.value)
+    return;
 
   regeneratingIndex.value = image.index;
   try {
-    const pageContent = store.outline.pages.find((p) => p.index === image.index);
+    const pageContent = store.outline.pages.find(
+      (p) => p.index === image.index,
+    );
     if (!pageContent) {
       message.warning("无法找到对应页面内容");
       return;
@@ -644,7 +720,12 @@ const handleRegenerate = async (image: any) => {
       systemPrompt: store.imagePrompt.systemPrompt || "",
     };
 
-    const result = await regenerateImage(store.taskId, pageContent, true, context);
+    const result = await regenerateImage(
+      store.taskId,
+      pageContent,
+      true,
+      context,
+    );
     if (result.success && result.image_url) {
       store.updateImage(image.index, result.image_url);
       await syncImageStateToHistory(store.taskId);
@@ -747,7 +828,11 @@ async function pollImageJobUntilFinished(jobId: string): Promise<{
       const index = Number(item.page_index);
       if (!Number.isFinite(index) || index < 0) continue;
 
-      if (item.status === "success" && !seenSuccess.has(index) && item.image_url) {
+      if (
+        item.status === "success" &&
+        !seenSuccess.has(index) &&
+        item.image_url
+      ) {
         seenSuccess.add(index);
         seenFailed.delete(index);
         store.updateProgress(index, "done", item.image_url);
@@ -757,7 +842,12 @@ async function pollImageJobUntilFinished(jobId: string): Promise<{
         !seenSuccess.has(index)
       ) {
         seenFailed.add(index);
-        store.updateProgress(index, "error", undefined, item.error || "生成失败");
+        store.updateProgress(
+          index,
+          "error",
+          undefined,
+          item.error || "生成失败",
+        );
       }
     }
 
