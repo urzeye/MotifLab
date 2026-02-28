@@ -21,7 +21,22 @@ class McpPublishGateway(PublishGatewayPort):
         return await mcp_manager.call_tool("publish_with_video", payload)
 
     async def open_login_page(self) -> Dict[str, Any]:
-        return await mcp_manager.call_tool("open_login_page")
+        # Older MCP versions expose `open_login_page`, while newer versions
+        # provide `get_login_qrcode`.
+        result = await mcp_manager.call_tool("open_login_page")
+        if result.get("success", True):
+            return result
+
+        error_text = str(result.get("error") or "")
+        if "unknown tool" in error_text and "open_login_page" in error_text:
+            qr_result = await mcp_manager.call_tool("get_login_qrcode")
+            if qr_result.get("success", False):
+                if "message" not in qr_result:
+                    qr_result["message"] = "请使用小红书扫码登录"
+                qr_result["login_mode"] = "qrcode"
+            return qr_result
+
+        return result
 
     def get_status(self) -> Dict[str, Any]:
         return mcp_manager.get_status()

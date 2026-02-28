@@ -45,7 +45,8 @@
           v-if="!vibeSurfStatus?.running"
           class="btn"
           style="margin-left: auto; padding: 8px 16px; font-size: 14px"
-          @click="checkVibeSurf"
+          :disabled="startingVibeSurf"
+          @click="handleVibeSurfAction"
         >
           重新检测
         </button>
@@ -386,6 +387,7 @@ const message = useMessage();
 const vibeSurfStatus = ref<VibeSurfStatus | null>(null);
 const loginStatus = ref<LoginStatus | null>(null);
 const openingLogin = ref(false);
+const startingVibeSurf = ref(false);
 const isPublishing = ref(false);
 const publishProgress = ref<PublishProgressEvent[]>([]);
 const publishResult = ref<{
@@ -407,6 +409,11 @@ const canPublish = computed(() => {
     selectedTitle.value &&
     copywriting.value
   );
+});
+
+const canStartService = computed(() => {
+  const status = vibeSurfStatus.value;
+  return Boolean(status && !status.running && status.binary_installed !== false);
 });
 
 // 方法
@@ -435,6 +442,36 @@ const checkVibeSurf = async () => {
   } catch (e: any) {
     vibeSurfStatus.value = { running: false, message: e.message };
   }
+};
+
+const startVibeSurf = async () => {
+  if (startingVibeSurf.value) return;
+  startingVibeSurf.value = true;
+  try {
+    vibeSurfStatus.value = {
+      running: false,
+      message: "正在启动服务...",
+    };
+    // login-check 会通过后端 mcp_manager.ensure_running() 拉起 MCP 服务
+    const loginResult = await checkXiaohongshuLogin();
+    if (loginResult.success && loginResult.status) {
+      loginStatus.value = loginResult.status;
+    }
+    await checkVibeSurf();
+  } catch (e: any) {
+    vibeSurfStatus.value = { running: false, message: e.message || "启动失败" };
+    message.error("启动服务失败: " + (e?.message || "未知错误"));
+  } finally {
+    startingVibeSurf.value = false;
+  }
+};
+
+const handleVibeSurfAction = async () => {
+  if (canStartService.value) {
+    await startVibeSurf();
+    return;
+  }
+  await checkVibeSurf();
 };
 
 const checkLogin = async () => {
@@ -516,7 +553,7 @@ const startPublish = async () => {
 };
 
 // 初始化
-onMounted(() => {
+onMounted(async () => {
   // 初始化表单数据
   if (store.content.titles.length > 0) {
     selectedTitle.value = store.content.titles[0];
@@ -524,7 +561,10 @@ onMounted(() => {
   copywriting.value = store.content.copywriting || "";
 
   // 检测 VibeSurf 状态
-  checkVibeSurf();
+  await checkVibeSurf();
+  if (canStartService.value) {
+    await startVibeSurf();
+  }
 });
 </script>
 
