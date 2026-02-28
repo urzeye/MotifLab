@@ -84,9 +84,12 @@ git-changelog.txt
 # xiaohongshu-mcp binaries (downloaded separately)
 tools/xiaohongshu-mcp/xiaohongshu-mcp
 tools/xiaohongshu-mcp/xiaohongshu-login
+tools/xiaohongshu-mcp/*.exe
 tools/xiaohongshu-mcp/config.json
 
 # Data directory (contains login sessions)
+cookies.json
+data/motiflab.db
 data/xiaohongshu/*
 !data/xiaohongshu/.gitkeep
 
