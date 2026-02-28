@@ -592,10 +592,10 @@ import { useTheme } from "./composables/useTheme";
 
 const themeOverrides: GlobalThemeOverrides = {
   common: {
-    primaryColor: "#00ff88",
-    primaryColorHover: "#33ff99",
-    primaryColorPressed: "#00cc6a",
-    primaryColorSuppl: "#00ff88",
+    primaryColor: "#18a058",
+    primaryColorHover: "#36ad6a",
+    primaryColorPressed: "#0c7a43",
+    primaryColorSuppl: "#36ad6a",
   },
 };
 
