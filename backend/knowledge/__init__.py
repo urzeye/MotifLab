@@ -317,7 +317,7 @@ DEFAULT_VISUAL_STYLES = {
         "name": "技术蓝图风格",
         "description": "工程图纸风格，适合技术/学术内容",
         "colors": {
-            "primary": "#2F337",
+            "primary": "#2F3337",
             "secondary": "#8B7355",
             "background": "#F5F0E1"
         },
