@@ -386,6 +386,10 @@ export interface VibeSurfStatus {
   running: boolean
   message: string
   version?: string
+  binary_installed?: boolean
+  binary_path?: string
+  url?: string
+  pid?: number | null
 }
 
 export interface LoginStatus {
@@ -1009,8 +1013,31 @@ export async function generateContent(
 
 export async function checkVibeSurfStatus(): Promise<{ success: boolean; status?: VibeSurfStatus; error?: string }> {
   try {
-    const response = await axios.get(`${API_BASE_URL}/publish/status`, { timeout: 5000 })
-    return response.data
+    const response = await axios.get(`${API_BASE_URL}/publish/status`, { timeout: 20000 })
+    const data = response.data || {}
+    if (data.success === false) {
+      return { success: false, error: data.error || 'check status failed' }
+    }
+
+    const running = Boolean(data.running)
+    const binaryInstalled = data.binary_installed !== false
+    const message = String(
+      data.message ||
+      (running ? '服务运行中' : (binaryInstalled ? '服务未运行' : '未安装 xiaohongshu-mcp'))
+    )
+
+    return {
+      success: true,
+      status: {
+        running,
+        message,
+        version: data.version,
+        binary_installed: data.binary_installed,
+        binary_path: data.binary_path,
+        url: data.url,
+        pid: data.pid
+      }
+    }
   } catch (error) {
     return handleAxiosError(error, '检查状态失败')
   }
@@ -1018,8 +1045,21 @@ export async function checkVibeSurfStatus(): Promise<{ success: boolean; status?
 
 export async function checkXiaohongshuLogin(): Promise<{ success: boolean; status?: LoginStatus; error?: string }> {
   try {
-    const response = await axios.get(`${API_BASE_URL}/publish/login-check`, { timeout: 10000 })
-    return response.data
+    const response = await axios.get(`${API_BASE_URL}/publish/login-check`, { timeout: 90000 })
+    const data = response.data || {}
+    if (data.success === false) {
+      return { success: false, error: data.error || data.message || 'check login failed' }
+    }
+
+    const loggedIn = Boolean(data.logged_in)
+    return {
+      success: true,
+      status: {
+        logged_in: loggedIn,
+        username: data.username || data.user_info?.username,
+        message: String(data.message || (loggedIn ? '已登录' : '未登录，请先登录小红书'))
+      }
+    }
   } catch (error) {
     return handleAxiosError(error, '检查登录状态失败')
   }

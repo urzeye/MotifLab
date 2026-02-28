@@ -47,7 +47,7 @@
         class="btn btn-secondary"
         @click="handleGenerate"
       >
-        重新生成
+        重新生成文字
       </button>
     </div>
 
@@ -144,7 +144,7 @@
             >
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            {{ copiedTitles ? "已复制" : "复制" }}
+            {{ copiedTitles ? "已复制全部" : "复制全部" }}
           </button>
         </div>
         <div class="titles-list">
@@ -231,7 +231,7 @@
             >
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            {{ copiedCopywriting ? "已复制" : "复制" }}
+            {{ copiedCopywriting ? "已复制全部" : "复制全部" }}
           </button>
         </div>
         <div class="copywriting-content">
@@ -299,7 +299,7 @@
             >
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            {{ copiedTags ? "已复制" : "复制" }}
+            {{ copiedTags ? "已复制全部" : "复制全部" }}
           </button>
         </div>
         <div class="tags-list">
@@ -333,7 +333,7 @@
               d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
             />
           </svg>
-          {{ loading ? "生成中..." : "重新生成" }}
+          {{ loading ? "生成中..." : "重新生成文字" }}
         </button>
       </div>
     </div>

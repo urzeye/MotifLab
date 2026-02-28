@@ -1,303 +1,283 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# MotifLab 工具安装脚本
-# 自动下载并安装 xiaohongshu-mcp 到 tools/ 目录
-
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-TOOL_DIR="$PROJECT_DIR/tools/xiaohongshu-mcp"
+TOOL_DIR="${XHS_MCP_TOOL_DIR:-$PROJECT_DIR/tools/xiaohongshu-mcp}"
 TEMP_DIR="${TMPDIR:-/tmp}"
 
-IS_WINDOWS=false
-ASSET_NAME=""
-PLATFORM=""
+REPO="${XHS_MCP_REPO:-xpzouying/xiaohongshu-mcp}"
 
-# 颜色定义
+IS_WINDOWS=false
+PLATFORM=""
+ASSET_PATTERN=""
+ASSET_NAME=""
+DOWNLOAD_URL=""
+TEMP_FILE=""
+EXTRACT_DIR=""
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${BLUE}📦 MotifLab 工具安装脚本${NC}"
-echo ""
+log_info() { echo -e "${BLUE}[INFO]${NC} $*"; }
+log_ok() { echo -e "${GREEN}[OK]${NC} $*"; }
+log_warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
+log_err() { echo -e "${RED}[ERROR]${NC} $*"; }
 
-# 创建工具目录
-mkdir -p "$TOOL_DIR"
+replace_file() {
+  local src="$1"
+  local dst="$2"
+  if [ -e "$dst" ]; then
+    rm -f "$dst" || {
+      log_err "Cannot overwrite $dst. Please stop running xiaohongshu-mcp related processes and retry."
+      exit 1
+    }
+  fi
+  mv -f "$src" "$dst"
+}
 
-# 检测系统和架构
+cleanup() {
+  [ -n "$TEMP_FILE" ] && [ -f "$TEMP_FILE" ] && rm -f "$TEMP_FILE" || true
+  [ -n "$EXTRACT_DIR" ] && [ -d "$EXTRACT_DIR" ] && rm -rf "$EXTRACT_DIR" || true
+}
+trap cleanup EXIT
+
 detect_platform() {
-    OS=$(uname -s)
-    ARCH=$(uname -m)
+  local os arch
+  os="$(uname -s)"
+  arch="$(uname -m)"
 
-    case "$OS" in
-        Darwin)
-            if [ "$ARCH" = "arm64" ]; then
-                ASSET_NAME="xiaohongshu-mcp-darwin-arm64.tar.gz"
-                PLATFORM="macOS (Apple Silicon)"
-            else
-                ASSET_NAME="xiaohongshu-mcp-darwin-amd64.tar.gz"
-                PLATFORM="macOS (Intel)"
-            fi
-            ;;
-        Linux)
-            if [ "$ARCH" = "aarch64" ]; then
-                ASSET_NAME="xiaohongshu-mcp-linux-arm64.tar.gz"
-                PLATFORM="Linux (ARM64)"
-            else
-                ASSET_NAME="xiaohongshu-mcp-linux-amd64.tar.gz"
-                PLATFORM="Linux (AMD64)"
-            fi
-            ;;
-        MINGW*|MSYS*|CYGWIN*)
-            IS_WINDOWS=true
-            if [ "$ARCH" = "x86_64" ] || [ "$ARCH" = "amd64" ]; then
-                ASSET_NAME="xiaohongshu-mcp-windows-amd64.zip"
-                PLATFORM="Windows (AMD64)"
-            else
-                echo -e "${RED}❌ Windows 暂不支持当前架构: $ARCH${NC}"
-                echo -e "${YELLOW}提示：目前官方仅提供 windows-amd64 版本${NC}"
-                exit 1
-            fi
-            ;;
-        *)
-            echo -e "${RED}❌ 不支持的操作系统: $OS${NC}"
-            exit 1
-            ;;
-    esac
+  case "$os" in
+    Darwin)
+      if [ "$arch" = "arm64" ]; then
+        ASSET_PATTERN="xiaohongshu-mcp-darwin-arm64"
+        PLATFORM="macOS (Apple Silicon)"
+      else
+        ASSET_PATTERN="xiaohongshu-mcp-darwin-amd64"
+        PLATFORM="macOS (Intel)"
+      fi
+      ;;
+    Linux)
+      if [ "$arch" = "aarch64" ] || [ "$arch" = "arm64" ]; then
+        ASSET_PATTERN="xiaohongshu-mcp-linux-arm64"
+        PLATFORM="Linux (ARM64)"
+      else
+        ASSET_PATTERN="xiaohongshu-mcp-linux-amd64"
+        PLATFORM="Linux (AMD64)"
+      fi
+      ;;
+    MINGW*|MSYS*|CYGWIN*)
+      IS_WINDOWS=true
+      if [ "$arch" = "x86_64" ] || [ "$arch" = "amd64" ]; then
+        ASSET_PATTERN="xiaohongshu-mcp-windows-amd64"
+        PLATFORM="Windows (AMD64)"
+      else
+        log_err "Windows unsupported architecture: $arch"
+        exit 1
+      fi
+      ;;
+    *)
+      log_err "Unsupported OS: $os"
+      exit 1
+      ;;
+  esac
 
-    echo -e "${GREEN}✓${NC} 检测到平台: $PLATFORM"
+  log_ok "Detected platform: $PLATFORM"
 }
 
-# 获取最新版本号
-get_latest_version() {
-    echo -e "${BLUE}→${NC} 获取最新版本..."
-
-    # 尝试从 GitHub API 获取最新版本
-    LATEST_VERSION=$(curl -s https://api.github.com/repos/xpzouying/xiaohongshu-mcp/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
-
-    if [ -z "$LATEST_VERSION" ]; then
-        echo -e "${YELLOW}⚠${NC} 无法获取最新版本，使用默认版本 v1.0.0"
-        LATEST_VERSION="v1.0.0"
-    else
-        echo -e "${GREEN}✓${NC} 最新版本: $LATEST_VERSION"
-    fi
-}
-
-# 解压下载包（支持 tar.gz / zip）
 extract_archive() {
-    TEMP_FILE="$1"
-    EXTRACT_DIR="$TOOL_DIR/.tmp_extract"
+  local archive_path="$1"
+  EXTRACT_DIR="$TOOL_DIR/.tmp_extract"
+  rm -rf "$EXTRACT_DIR"
+  mkdir -p "$EXTRACT_DIR"
 
-    rm -rf "$EXTRACT_DIR"
-    mkdir -p "$EXTRACT_DIR"
-
-    if [[ "$ASSET_NAME" == *.zip ]]; then
-        if command -v unzip >/dev/null 2>&1; then
-            unzip -qo "$TEMP_FILE" -d "$EXTRACT_DIR"
-        elif command -v python3 >/dev/null 2>&1; then
-            python3 - "$TEMP_FILE" "$EXTRACT_DIR" <<'PY'
+  if [[ "$ASSET_NAME" == *.zip ]]; then
+    if command -v unzip >/dev/null 2>&1; then
+      unzip -qo "$archive_path" -d "$EXTRACT_DIR"
+    elif command -v python3 >/dev/null 2>&1; then
+      python3 - "$archive_path" "$EXTRACT_DIR" <<'PY'
 import sys
 import zipfile
 
 zip_path = sys.argv[1]
-extract_dir = sys.argv[2]
+target_dir = sys.argv[2]
 with zipfile.ZipFile(zip_path, "r") as zf:
-    zf.extractall(extract_dir)
+    zf.extractall(target_dir)
 PY
-        elif tar -tf "$TEMP_FILE" >/dev/null 2>&1; then
-            tar -xf "$TEMP_FILE" -C "$EXTRACT_DIR"
-        else
-            echo -e "${RED}❌ 无法解压 zip：请安装 unzip 或 python3${NC}"
-            exit 1
-        fi
+    elif command -v python >/dev/null 2>&1; then
+      python - "$archive_path" "$EXTRACT_DIR" <<'PY'
+import sys
+import zipfile
+
+zip_path = sys.argv[1]
+target_dir = sys.argv[2]
+with zipfile.ZipFile(zip_path, "r") as zf:
+    zf.extractall(target_dir)
+PY
     else
-        tar -xzf "$TEMP_FILE" -C "$EXTRACT_DIR"
+      log_err "Cannot extract zip package. Please install unzip or python/python3."
+      exit 1
     fi
+  else
+    tar -xzf "$archive_path" -C "$EXTRACT_DIR"
+  fi
 }
 
-# 安装主程序与登录工具
 install_binaries() {
-    EXTRACT_DIR="$TOOL_DIR/.tmp_extract"
-    MCP_SRC=""
-    LOGIN_SRC=""
+  local mcp_src login_src
 
-    if [ "$IS_WINDOWS" = true ]; then
-        MCP_SRC=$(find "$EXTRACT_DIR" -type f -name "xiaohongshu-mcp*.exe" | head -1)
-        LOGIN_SRC=$(find "$EXTRACT_DIR" -type f -name "xiaohongshu-login*.exe" | head -1)
+  if [ "$IS_WINDOWS" = true ]; then
+    mcp_src="$(find "$EXTRACT_DIR" -type f -name "xiaohongshu-mcp*.exe" | head -1)"
+    login_src="$(find "$EXTRACT_DIR" -type f -name "xiaohongshu-login*.exe" | head -1)"
 
-        if [ -z "$MCP_SRC" ]; then
-            echo -e "${RED}❌ 解压后未找到 xiaohongshu-mcp*.exe${NC}"
-            ls -la "$EXTRACT_DIR"
-            exit 1
-        fi
-
-        mv -f "$MCP_SRC" "$TOOL_DIR/xiaohongshu-mcp.exe"
-        chmod +x "$TOOL_DIR/xiaohongshu-mcp.exe" >/dev/null 2>&1 || true
-
-        cat > "$TOOL_DIR/xiaohongshu-mcp" << 'EOF'
-#!/bin/bash
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec "$DIR/xiaohongshu-mcp.exe" "$@"
-EOF
-        chmod +x "$TOOL_DIR/xiaohongshu-mcp"
-
-        if [ -n "$LOGIN_SRC" ]; then
-            mv -f "$LOGIN_SRC" "$TOOL_DIR/xiaohongshu-login.exe"
-            chmod +x "$TOOL_DIR/xiaohongshu-login.exe" >/dev/null 2>&1 || true
-            cat > "$TOOL_DIR/xiaohongshu-login" << 'EOF'
-#!/bin/bash
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec "$DIR/xiaohongshu-login.exe" "$@"
-EOF
-            chmod +x "$TOOL_DIR/xiaohongshu-login"
-            echo -e "${GREEN}✓${NC} 登录工具已安装"
-        else
-            echo -e "${YELLOW}⚠${NC} 未找到登录工具 xiaohongshu-login*.exe（可忽略）"
-        fi
-    else
-        MCP_SRC=$(find "$EXTRACT_DIR" -type f -name "xiaohongshu-mcp*" ! -name "*.exe" | head -1)
-        LOGIN_SRC=$(find "$EXTRACT_DIR" -type f -name "xiaohongshu-login*" ! -name "*.exe" | head -1)
-
-        if [ -z "$MCP_SRC" ]; then
-            echo -e "${RED}❌ 解压后未找到 xiaohongshu-mcp 可执行文件${NC}"
-            ls -la "$EXTRACT_DIR"
-            exit 1
-        fi
-
-        mv -f "$MCP_SRC" "$TOOL_DIR/xiaohongshu-mcp"
-        chmod +x "$TOOL_DIR/xiaohongshu-mcp"
-
-        if [ -n "$LOGIN_SRC" ]; then
-            mv -f "$LOGIN_SRC" "$TOOL_DIR/xiaohongshu-login"
-            chmod +x "$TOOL_DIR/xiaohongshu-login"
-            echo -e "${GREEN}✓${NC} 登录工具已安装"
-        else
-            echo -e "${YELLOW}⚠${NC} 未找到登录工具 xiaohongshu-login（可忽略）"
-        fi
+    if [ -z "$mcp_src" ]; then
+      log_err "Could not find xiaohongshu-mcp*.exe in extracted files."
+      exit 1
     fi
+
+    replace_file "$mcp_src" "$TOOL_DIR/xiaohongshu-mcp.exe"
+    chmod +x "$TOOL_DIR/xiaohongshu-mcp.exe" >/dev/null 2>&1 || true
+
+    if [ -n "$login_src" ]; then
+      replace_file "$login_src" "$TOOL_DIR/xiaohongshu-login.exe"
+      chmod +x "$TOOL_DIR/xiaohongshu-login.exe" >/dev/null 2>&1 || true
+      log_ok "Installed xiaohongshu-login.exe"
+    else
+      log_warn "xiaohongshu-login*.exe not found in package (optional)."
+    fi
+  else
+    mcp_src="$(find "$EXTRACT_DIR" -type f -name "xiaohongshu-mcp*" ! -name "*.exe" | head -1)"
+    login_src="$(find "$EXTRACT_DIR" -type f -name "xiaohongshu-login*" ! -name "*.exe" | head -1)"
+
+    if [ -z "$mcp_src" ]; then
+      log_err "Could not find xiaohongshu-mcp binary in extracted files."
+      exit 1
+    fi
+
+    replace_file "$mcp_src" "$TOOL_DIR/xiaohongshu-mcp"
+    chmod +x "$TOOL_DIR/xiaohongshu-mcp"
+
+    if [ -n "$login_src" ]; then
+      replace_file "$login_src" "$TOOL_DIR/xiaohongshu-login"
+      chmod +x "$TOOL_DIR/xiaohongshu-login"
+      log_ok "Installed xiaohongshu-login"
+    else
+      log_warn "xiaohongshu-login not found in package (optional)."
+    fi
+  fi
 }
 
-# 下载并安装二进制文件
-download_binary() {
-    DOWNLOAD_URL="https://github.com/xpzouying/xiaohongshu-mcp/releases/download/${LATEST_VERSION}/${ASSET_NAME}"
-    TEMP_FILE="$TEMP_DIR/${ASSET_NAME}"
+download_and_install() {
+  local candidates=()
+  local candidate downloaded=false
 
-    echo -e "${BLUE}→${NC} 下载 $ASSET_NAME..."
+  if [ "$IS_WINDOWS" = true ]; then
+    candidates=("${ASSET_PATTERN}.zip" "${ASSET_PATTERN}.tar.gz")
+  else
+    candidates=("${ASSET_PATTERN}.tar.gz" "${ASSET_PATTERN}.zip")
+  fi
+
+  if [ -f "$TOOL_DIR/xiaohongshu-mcp" ] || [ -f "$TOOL_DIR/xiaohongshu-mcp.exe" ]; then
+    log_warn "Existing xiaohongshu-mcp detected. Overwrite? (y/N)"
+    read -r response
+    if [ "$response" != "y" ] && [ "$response" != "Y" ]; then
+      log_info "Skipped installation."
+      return
+    fi
+  fi
+
+  log_info "Downloading latest release asset..."
+  for candidate in "${candidates[@]}"; do
+    ASSET_NAME="$candidate"
+    DOWNLOAD_URL="https://github.com/${REPO}/releases/latest/download/${ASSET_NAME}"
+    TEMP_FILE="${TEMP_DIR%/}/${ASSET_NAME}"
+    log_info "Trying asset: $ASSET_NAME"
     echo "  URL: $DOWNLOAD_URL"
-
-    # 检查是否已存在
-    if [ -f "$TOOL_DIR/xiaohongshu-mcp" ] || [ -f "$TOOL_DIR/xiaohongshu-mcp.exe" ]; then
-        echo -e "${YELLOW}⚠${NC} 已存在 xiaohongshu-mcp，是否覆盖？(y/N)"
-        read -r response
-        if [ "$response" != "y" ] && [ "$response" != "Y" ]; then
-            echo -e "${BLUE}ℹ${NC} 跳过下载"
-            return
-        fi
+    if curl -L --fail --retry 3 --retry-delay 2 --retry-all-errors --progress-bar "$DOWNLOAD_URL" -o "$TEMP_FILE"; then
+      downloaded=true
+      log_ok "Downloaded asset: $ASSET_NAME"
+      break
     fi
+    rm -f "$TEMP_FILE" || true
+    TEMP_FILE=""
+  done
 
-    # 下载压缩包（带重试）
-    if curl -L --fail --retry 3 --retry-delay 2 --progress-bar "$DOWNLOAD_URL" -o "$TEMP_FILE"; then
-        echo -e "${GREEN}✓${NC} 下载成功！"
-        echo -e "${BLUE}→${NC} 解压文件..."
-        extract_archive "$TEMP_FILE"
-        install_binaries
-        echo -e "${GREEN}✓${NC} 解压并安装完成！"
+  if [ "$downloaded" = false ]; then
+    log_err "Download failed for all candidate assets."
+    echo "  Tried assets:"
+    for candidate in "${candidates[@]}"; do
+      echo "    - $candidate"
+    done
+    echo "  Release page: https://github.com/${REPO}/releases"
+    exit 1
+  fi
 
-        # 清理临时文件
-        rm -f "$TEMP_FILE"
-        rm -rf "$TOOL_DIR/.tmp_extract"
-    else
-        echo -e "${RED}❌ 下载失败${NC}"
-        echo ""
-        echo -e "${YELLOW}提示：您可以手动下载：${NC}"
-        echo "  1. 访问: https://github.com/xpzouying/xiaohongshu-mcp/releases"
-        echo "  2. 下载 $ASSET_NAME"
-        echo "  3. 解压并将 xiaohongshu-mcp 放到: $TOOL_DIR/"
-        echo "  4. Linux/macOS: chmod +x $TOOL_DIR/xiaohongshu-mcp"
-        exit 1
-    fi
+  log_info "Extracting package..."
+  extract_archive "$TEMP_FILE"
+  install_binaries
+  log_ok "Installed binaries to $TOOL_DIR"
 }
 
-# 验证安装
 verify_installation() {
-    echo -e "${BLUE}→${NC} 验证安装..."
-
-    if [ "$IS_WINDOWS" = true ]; then
-        if [ -f "$TOOL_DIR/xiaohongshu-mcp.exe" ]; then
-            if "$TOOL_DIR/xiaohongshu-mcp.exe" --help >/dev/null 2>&1; then
-                echo -e "${GREEN}✓${NC} 安装成功！"
-            else
-                echo -e "${GREEN}✓${NC} 安装成功！"
-            fi
-        else
-            echo -e "${RED}❌ 安装验证失败（未找到 xiaohongshu-mcp.exe）${NC}"
-            exit 1
-        fi
-    else
-        if [ -x "$TOOL_DIR/xiaohongshu-mcp" ]; then
-            if "$TOOL_DIR/xiaohongshu-mcp" --help >/dev/null 2>&1; then
-                echo -e "${GREEN}✓${NC} 安装成功！"
-            else
-                echo -e "${GREEN}✓${NC} 安装成功！"
-            fi
-        else
-            echo -e "${RED}❌ 安装验证失败（未找到可执行文件）${NC}"
-            exit 1
-        fi
+  log_info "Verifying installation..."
+  if [ "$IS_WINDOWS" = true ]; then
+    if [ ! -f "$TOOL_DIR/xiaohongshu-mcp.exe" ]; then
+      log_err "Verification failed: xiaohongshu-mcp.exe not found."
+      exit 1
     fi
+    "$TOOL_DIR/xiaohongshu-mcp.exe" --help >/dev/null 2>&1 || true
+  else
+    if [ ! -x "$TOOL_DIR/xiaohongshu-mcp" ]; then
+      log_err "Verification failed: xiaohongshu-mcp not executable."
+      exit 1
+    fi
+    "$TOOL_DIR/xiaohongshu-mcp" --help >/dev/null 2>&1 || true
+  fi
+  log_ok "Installation verified."
 }
 
-# 创建配置文件
 create_config() {
-    CONFIG_FILE="$TOOL_DIR/config.json"
-    DATA_DIR_PATH="$PROJECT_DIR/data/xiaohongshu"
+  local config_file data_dir_path
+  config_file="$TOOL_DIR/config.json"
+  data_dir_path="$PROJECT_DIR/data/xiaohongshu"
 
-    if [ "$IS_WINDOWS" = true ] && command -v cygpath >/dev/null 2>&1; then
-        DATA_DIR_PATH="$(cygpath -w "$DATA_DIR_PATH" | sed 's#\\#/#g')"
-    fi
+  if [ "$IS_WINDOWS" = true ] && command -v cygpath >/dev/null 2>&1; then
+    data_dir_path="$(cygpath -w "$data_dir_path" | sed 's#\\#/#g')"
+  fi
 
-    if [ ! -f "$CONFIG_FILE" ]; then
-        echo -e "${BLUE}→${NC} 创建默认配置..."
-        cat > "$CONFIG_FILE" << EOF
+  if [ -f "$config_file" ]; then
+    log_info "config.json already exists, keeping current config."
+    return
+  fi
+
+  cat > "$config_file" <<EOF
 {
   "port": 18060,
-  "data_dir": "${DATA_DIR_PATH}",
+  "data_dir": "${data_dir_path}",
   "headless": false,
   "timeout": 30000
 }
 EOF
-        echo -e "${GREEN}✓${NC} 配置文件已创建: $CONFIG_FILE"
-    else
-        echo -e "${BLUE}ℹ${NC} 已存在配置文件: $CONFIG_FILE（保持原配置不覆盖）"
-    fi
+  log_ok "Created config: $config_file"
 }
 
-# 主流程
 main() {
-    detect_platform
-    get_latest_version
-    download_binary
-    verify_installation
-    create_config
+  echo -e "${BLUE}MotifLab tool installer${NC}"
+  mkdir -p "$TOOL_DIR"
 
-    echo ""
-    echo -e "${GREEN}╔═══════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║   ✅ xiaohongshu-mcp 安装成功！              ║${NC}"
-    echo -e "${GREEN}╠═══════════════════════════════════════════════╣${NC}"
-    echo -e "${GREEN}║${NC}  二进制文件: $TOOL_DIR/xiaohongshu-mcp"
-    echo -e "${GREEN}║${NC}  配置文件: $TOOL_DIR/config.json"
-    echo -e "${GREEN}╠═══════════════════════════════════════════════╣${NC}"
-    echo -e "${GREEN}║${NC}  使用方式："
-    if [ "$IS_WINDOWS" = true ]; then
-        echo -e "${GREEN}║${NC}    在 Git Bash 中执行: ./scripts/install-tools.sh"
-        echo -e "${GREEN}║${NC}    或使用: scripts\\start-windows.bat"
-    else
-        echo -e "${GREEN}║${NC}    ./scripts/start-all.sh  # 一键启动所有服务"
-    fi
-    echo -e "${GREEN}╚═══════════════════════════════════════════════╝${NC}"
+  detect_platform
+  download_and_install
+  verify_installation
+  create_config
+
+  echo
+  log_ok "xiaohongshu-mcp installation completed."
+  echo "  Binary dir: $TOOL_DIR"
+  echo "  Config: $TOOL_DIR/config.json"
 }
 
-main
+main "$@"

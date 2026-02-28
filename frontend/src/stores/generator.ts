@@ -65,6 +65,9 @@ export interface GeneratorState {
   // 图片生成任务ID（用于轮询任务状态）
   taskId: string | null
 
+  // 异步图片作业ID（用于跨页面继续轮询）
+  imageJobId: string | null
+
   // 历史记录ID（用于保存和加载历史记录）
   recordId: string | null
 
@@ -120,6 +123,7 @@ function saveState(state: GeneratorState) {
       progress: state.progress,              // 生成进度
       images: state.images,                  // 生成的图片结果
       taskId: state.taskId,                  // 任务ID
+      imageJobId: state.imageJobId,          // 异步图片作业ID
       recordId: state.recordId,              // 历史记录ID
       imagePrompt: state.imagePrompt,        // 图片生成 Prompt 上下文
       content: state.content,                // 生成的内容（标题、文案、标签）
@@ -257,6 +261,9 @@ export const useGeneratorStore = defineStore('generator', {
       // 任务ID
       taskId: saved.taskId || null,
 
+      // 异步图片作业ID
+      imageJobId: saved.imageJobId || null,
+
       // 历史记录ID
       recordId: saved.recordId || null,
 
@@ -299,6 +306,7 @@ export const useGeneratorStore = defineStore('generator', {
       }
       this.images = []
       this.taskId = null
+      this.imageJobId = null
       this.recordId = null
       this.clearContent()
     },
@@ -511,6 +519,7 @@ export const useGeneratorStore = defineStore('generator', {
      */
     finishGeneration(taskId: string) {
       this.taskId = taskId
+      this.imageJobId = null
       this.stage = 'result'
       this.progress.status = 'done'
     },
@@ -582,6 +591,9 @@ export const useGeneratorStore = defineStore('generator', {
 
       // 清空任务ID
       this.taskId = null
+
+      // 清空异步图片作业ID
+      this.imageJobId = null
 
       // 清空历史记录ID
       this.recordId = null
@@ -752,6 +764,7 @@ export function setupAutoSave() {
       progress: store.progress,              // 生成进度
       images: store.images,                  // 生成的图片结果
       taskId: store.taskId,                  // 任务ID
+      imageJobId: store.imageJobId,          // 异步图片作业ID
       recordId: store.recordId,              // 历史记录ID
       imagePrompt: store.imagePrompt,        // 图片生成 Prompt 上下文
       content: store.content,                // 生成的内容

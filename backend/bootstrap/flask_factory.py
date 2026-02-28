@@ -21,14 +21,14 @@ from .tracing import register_tracing
 def _create_flask_app(settings: AppSettings, logger: logging.Logger) -> Flask:
     """根据运行环境创建 Flask 实例。"""
     if settings.serve_frontend:
-        logger.info("📦 检测到前端构建产物，启用静态文件托管模式")
+        logger.info("[BOOT] 检测到前端构建产物，启用静态文件托管模式")
         return Flask(
             __name__,
             static_folder=str(settings.frontend_dist),
             static_url_path="",
         )
 
-    logger.info("🔧 开发模式，前端请单独启动")
+    logger.info("[BOOT] 开发模式，前端请单独启动")
     return Flask(__name__)
 
 
@@ -37,7 +37,7 @@ def _configure_cors(app: Flask, settings: AppSettings, logger: logging.Logger) -
     try:
         from flask_cors import CORS
     except Exception:
-        logger.warning("⚠️ flask-cors 未安装，已跳过 CORS 配置")
+        logger.warning("[WARN] flask-cors 未安装，已跳过 CORS 配置")
         return
 
     CORS(
@@ -55,9 +55,9 @@ def _configure_cors(app: Flask, settings: AppSettings, logger: logging.Logger) -
 def _configure_auth_guard(app: Flask, logger: logging.Logger) -> None:
     """注册 API 鉴权前置拦截。"""
     if is_auth_enabled():
-        logger.warning("🔒 已启用 API 访问令牌认证（MOTIFLAB_AUTH_TOKEN）")
+        logger.warning("[AUTH] 已启用 API 访问令牌认证（MOTIFLAB_AUTH_TOKEN）")
     else:
-        logger.info("🔓 未启用 API 访问令牌认证（MOTIFLAB_AUTH_TOKEN 未设置）")
+        logger.info("[AUTH] 未启用 API 访问令牌认证（MOTIFLAB_AUTH_TOKEN 未设置）")
 
     @app.before_request
     def _api_auth_guard():
@@ -80,9 +80,9 @@ def _configure_rate_limiter(app: Flask, settings: AppSettings, logger: logging.L
             storage_uri=settings.rate_limit_storage_uri,
         )
         app.extensions["limiter"] = limiter
-        logger.info(f"🚦 已启用全局限流: {settings.rate_limit}")
+        logger.info(f"[RATE] 已启用全局限流: {settings.rate_limit}")
     except Exception as exc:
-        logger.warning(f"⚠️ 限流组件初始化失败，已跳过: {exc}")
+        logger.warning(f"[WARN] 限流组件初始化失败，已跳过: {exc}")
 
 
 def _register_output_route(app: Flask, output_dir: Path) -> None:
@@ -130,63 +130,63 @@ def _validate_config_on_startup(logger: logging.Logger) -> None:
     """启动时验证关键配置可用性。"""
     config_service = get_config_service()
 
-    logger.info("📋 检查配置存储...")
+    logger.info("[CONFIG] 检查配置存储...")
     try:
         storage_mode = config_service.get_config_storage_mode()
     except Exception:
         storage_mode = "yaml"
-    logger.info(f"📦 配置存储模式: {storage_mode}")
+    logger.info(f"[CONFIG] 配置存储模式: {storage_mode}")
 
     try:
         text_config = config_service.load_text_providers_config()
         active = text_config.get("active_provider", "未设置")
         providers = list((text_config.get("providers") or {}).keys())
-        logger.info(f"✅ 文本生成配置: 激活={active}, 可用服务商={providers}")
+        logger.info(f"[CONFIG] 文本生成配置: 激活={active}, 可用服务商={providers}")
         if active in (text_config.get("providers") or {}):
             provider = text_config["providers"][active]
             if not provider.get("api_key"):
-                logger.warning(f"⚠️  文本服务商 [{active}] 未配置 API Key")
+                logger.warning(f"[WARN] 文本服务商 [{active}] 未配置 API Key")
             else:
-                logger.info(f"✅ 文本服务商 [{active}] API Key 已配置")
+                logger.info(f"[CONFIG] 文本服务商 [{active}] API Key 已配置")
     except Exception as exc:
-        logger.error(f"❌ 读取文本配置失败: {exc}")
+        logger.error(f"[ERROR] 读取文本配置失败: {exc}")
 
     try:
         image_config = config_service.load_image_providers_config()
         active = image_config.get("active_provider", "未设置")
         providers = list((image_config.get("providers") or {}).keys())
-        logger.info(f"✅ 图片生成配置: 激活={active}, 可用服务商={providers}")
+        logger.info(f"[CONFIG] 图片生成配置: 激活={active}, 可用服务商={providers}")
         if active in (image_config.get("providers") or {}):
             provider = image_config["providers"][active]
             if not provider.get("api_key"):
-                logger.warning(f"⚠️  图片服务商 [{active}] 未配置 API Key")
+                logger.warning(f"[WARN] 图片服务商 [{active}] 未配置 API Key")
             else:
-                logger.info(f"✅ 图片服务商 [{active}] API Key 已配置")
+                logger.info(f"[CONFIG] 图片服务商 [{active}] API Key 已配置")
     except Exception as exc:
-        logger.error(f"❌ 读取图片配置失败: {exc}")
+        logger.error(f"[ERROR] 读取图片配置失败: {exc}")
 
-    logger.info("✅ 配置检查完成")
+    logger.info("[CONFIG] 配置检查完成")
 
 
 def _init_database_on_startup(logger: logging.Logger) -> None:
     """启动时执行数据库迁移（优先 Alembic）。"""
     try:
         upgrade_database_schema("head")
-        logger.info("✅ 数据库迁移完成（Alembic upgrade head）")
+        logger.info("[DB] 数据库迁移完成（Alembic upgrade head）")
     except Exception as exc:
-        logger.warning(f"⚠️ Alembic 迁移失败，回退 create_all 基线初始化: {exc}")
+        logger.warning(f"[WARN] Alembic 迁移失败，回退 create_all 基线初始化: {exc}")
         try:
             init_database_schema()
-            logger.info("✅ 数据库基线初始化完成（SQLAlchemy create_all）")
+            logger.info("[DB] 数据库基线初始化完成（SQLAlchemy create_all）")
         except Exception as fallback_exc:
-            logger.warning(f"⚠️ 数据库基线初始化失败，已跳过: {fallback_exc}")
+            logger.warning(f"[WARN] 数据库基线初始化失败，已跳过: {fallback_exc}")
 
 
 def create_app(settings: AppSettings | None = None) -> Flask:
     """创建并装配 Flask 应用。"""
     runtime_settings = settings or AppSettings.from_env()
     logger = configure_logging(runtime_settings)
-    logger.info("🚀 正在启动 MotifLab...")
+    logger.info("[BOOT] 正在启动 MotifLab...")
 
     app = _create_flask_app(runtime_settings, logger)
     app.extensions["backend_container"] = build_container()
