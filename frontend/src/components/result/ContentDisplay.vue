@@ -801,20 +801,20 @@ async function copyTag(tag: string, index: number) {
 .tag-item {
   padding: 8px 16px;
   font-size: 14px;
-  color: var(--primary);
-  background: var(--primary-light);
+  color: var(--color-info);
+  background: var(--color-info-bg);
   border-radius: 20px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .tag-item:hover {
-  background: var(--primary);
+  background: var(--color-info);
   color: white;
 }
 
 .tag-item.copied {
-  background: #13c2c2;
+  background: var(--color-success);
   color: white;
 }
 
