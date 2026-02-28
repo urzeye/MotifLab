@@ -182,11 +182,15 @@ download_and_install() {
   fi
 
   if [ -f "$TOOL_DIR/xiaohongshu-mcp" ] || [ -f "$TOOL_DIR/xiaohongshu-mcp.exe" ]; then
-    log_warn "Existing xiaohongshu-mcp detected. Overwrite? (y/N)"
-    read -r response
-    if [ "$response" != "y" ] && [ "$response" != "Y" ]; then
-      log_info "Skipped installation."
-      return
+    if [ "${XHS_MCP_INSTALL_FORCE:-0}" = "1" ]; then
+      log_info "Existing xiaohongshu-mcp detected. Force overwrite enabled."
+    else
+      log_warn "Existing xiaohongshu-mcp detected. Overwrite? (y/N)"
+      read -r response
+      if [ "$response" != "y" ] && [ "$response" != "Y" ]; then
+        log_info "Skipped installation."
+        return
+      fi
     fi
   fi
 

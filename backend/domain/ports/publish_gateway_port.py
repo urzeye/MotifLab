@@ -28,6 +28,10 @@ class PublishGatewayPort(Protocol):
         """获取网关运行状态。"""
         ...
 
+    def install_binary(self) -> Dict[str, Any]:
+        """安装发布网关依赖的本地二进制。"""
+        ...
+
     async def list_posts(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """获取帖子列表。"""
         ...

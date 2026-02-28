@@ -12,7 +12,9 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
 import subprocess
+import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -36,12 +38,32 @@ class MCPManager:
 
         self.data_dir = self.project_root / "data" / "xiaohongshu"
         self.logs_dir = self.project_root / "logs"
+        self.install_script = self.project_root / "scripts" / "install-tools.sh"
         configured_mcp_url = os.getenv("XHS_MCP_URL") or os.getenv("MCP_URL")
         self.mcp_url = (configured_mcp_url or "http://127.0.0.1:18060").rstrip("/")
         self.mcp_endpoint = os.getenv("XHS_MCP_ENDPOINT", "/mcp")
+        self.default_tool_timeout_seconds = self._read_timeout_env("XHS_MCP_TOOL_TIMEOUT", 60)
+        self.publish_tool_timeout_seconds = self._read_timeout_env("XHS_MCP_PUBLISH_TIMEOUT", 300)
+        if self.publish_tool_timeout_seconds < self.default_tool_timeout_seconds:
+            self.publish_tool_timeout_seconds = self.default_tool_timeout_seconds
 
         self._session_id: Optional[str] = None
         self.process: Optional[subprocess.Popen] = None
+        self._install_lock = threading.Lock()
+
+    @staticmethod
+    def _read_timeout_env(name: str, default: int) -> int:
+        raw = str(os.getenv(name, str(default))).strip()
+        try:
+            value = int(raw)
+            return max(5, value)
+        except Exception:
+            return max(5, int(default))
+
+    def _get_tool_timeout_seconds(self, tool: str) -> int:
+        if tool in {"publish_content", "publish_with_video"}:
+            return self.publish_tool_timeout_seconds
+        return self.default_tool_timeout_seconds
 
     def is_running(self) -> bool:
         try:
@@ -112,6 +134,118 @@ class MCPManager:
             self._session_id = None
             return self.start()
         return True
+
+    @staticmethod
+    def _tail_text(text: str, max_lines: int = 40) -> str:
+        lines = [line.rstrip() for line in (text or "").splitlines() if line.strip()]
+        return "\n".join(lines[-max_lines:])
+
+    def _resolve_bash_executable(self) -> Optional[str]:
+        candidates: list[str] = []
+        env_bash = os.getenv("BASH_EXECUTABLE")
+        if env_bash:
+            candidates.append(env_bash)
+
+        which_bash = shutil.which("bash")
+        if which_bash:
+            candidates.append(which_bash)
+
+        if os.name == "nt":
+            candidates.extend(
+                [
+                    "C:/Program Files/Git/bin/bash.exe",
+                    "C:/Program Files/Git/usr/bin/bash.exe",
+                ]
+            )
+
+        seen = set()
+        for candidate in candidates:
+            resolved = str(Path(candidate))
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            if Path(candidate).exists():
+                return str(Path(candidate))
+        return None
+
+    def install_binary(self, timeout: int = 300) -> Dict[str, Any]:
+        if not self._install_lock.acquire(blocking=False):
+            return {
+                "success": False,
+                "code": "install_in_progress",
+                "error": "已有安装任务在执行，请稍后重试。",
+            }
+
+        try:
+            if self.binary_path.exists():
+                return {
+                    "success": True,
+                    "message": "xiaohongshu-mcp 已安装。",
+                    "already_installed": True,
+                    "status": self.get_status(),
+                }
+
+            if not self.install_script.exists():
+                return {
+                    "success": False,
+                    "error": f"安装脚本不存在: {self.install_script}",
+                }
+
+            bash_executable = self._resolve_bash_executable()
+            if not bash_executable:
+                return {
+                    "success": False,
+                    "error": "未找到 bash 可执行文件。请安装 Git Bash 或设置 BASH_EXECUTABLE 环境变量。",
+                }
+
+            env = os.environ.copy()
+            env["XHS_MCP_INSTALL_FORCE"] = "1"
+
+            logger.info(f"Installing xiaohongshu-mcp via script: {self.install_script}")
+            completed = subprocess.run(
+                [bash_executable, str(self.install_script)],
+                cwd=str(self.project_root),
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                check=False,
+                env=env,
+            )
+            output = self._tail_text("\n".join(part for part in [completed.stdout, completed.stderr] if part))
+
+            if completed.returncode != 0:
+                logger.error(f"install-tools.sh failed with code {completed.returncode}")
+                return {
+                    "success": False,
+                    "error": f"安装失败（退出码 {completed.returncode}）",
+                    "output": output,
+                }
+
+            if not self.binary_path.exists():
+                return {
+                    "success": False,
+                    "error": "安装命令执行完成，但未找到 xiaohongshu-mcp 可执行文件。",
+                    "output": output,
+                }
+
+            return {
+                "success": True,
+                "message": "xiaohongshu-mcp 安装完成。",
+                "output": output,
+                "status": self.get_status(),
+            }
+        except subprocess.TimeoutExpired as exc:
+            output = self._tail_text("\n".join(part for part in [(exc.stdout or ""), (exc.stderr or "")] if part))
+            return {
+                "success": False,
+                "error": f"安装超时（>{timeout} 秒）",
+                "output": output,
+            }
+        except Exception as exc:
+            logger.error(f"Install xiaohongshu-mcp failed: {exc}")
+            return {"success": False, "error": str(exc)}
+        finally:
+            self._install_lock.release()
 
     async def _mcp_initialize(self, client: httpx.AsyncClient):
         payload = {
@@ -242,6 +376,11 @@ class MCPManager:
                 )
 
         resp.raise_for_status()
+        if not (resp.text or "").strip():
+            return {
+                "success": False,
+                "error": f"MCP tool {tool} 返回空响应（HTTP {resp.status_code}）",
+            }
         return self._normalize_mcp_tool_response(resp.json(), tool)
 
     async def _call_tool_via_legacy_http(self, client: httpx.AsyncClient, tool: str, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -262,8 +401,9 @@ class MCPManager:
         if not self.ensure_running():
             return {"success": False, "error": "MCP service is not running and failed to start"}
 
+        timeout_seconds = self._get_tool_timeout_seconds(tool)
         try:
-            async with httpx.AsyncClient(timeout=60) as client:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(timeout_seconds)) as client:
                 try:
                     return await self._call_tool_via_mcp(client, tool, params or {})
                 except httpx.HTTPStatusError as mcp_error:
@@ -274,7 +414,7 @@ class MCPManager:
                         return await self._call_tool_via_legacy_http(client, tool, params or {})
                     raise
         except httpx.TimeoutException:
-            return {"success": False, "error": "MCP call timeout"}
+            return {"success": False, "error": f"MCP call timeout ({tool}, >{timeout_seconds}s)"}
         except Exception as exc:
             logger.error(f"MCP call failed: {exc}")
             return {"success": False, "error": str(exc)}

@@ -44,6 +44,33 @@ def create_publish_blueprint():
                 "error": str(e)
             }, 500)
 
+    @publish_bp.route('/publish/install-tools', methods=['POST'])
+    def install_mcp_tools():
+        """
+        安装 xiaohongshu-mcp 工具链。
+
+        返回：
+        - success: 是否安装成功
+        - message/error: 结果消息
+        - status: 安装后 MCP 状态
+        - output: 安装日志（截断）
+        """
+        try:
+            result = publish_application_service.install_mcp_binary()
+            if result.get("success"):
+                status_code = 200
+            elif result.get("code") == "install_in_progress":
+                status_code = 409
+            else:
+                status_code = 500
+            return json_response(result, status_code)
+        except Exception as e:
+            logger.error(f"安装 MCP 工具失败: {e}")
+            return json_response({
+                "success": False,
+                "error": str(e)
+            }, 500)
+
     # ==================== 登录状态 ====================
 
     @publish_bp.route('/publish/login-check', methods=['GET'])
