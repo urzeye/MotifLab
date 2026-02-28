@@ -111,33 +111,28 @@
         >
           图片 ({{ store.images.length }} 张)
         </h3>
-        <div
-          style="
-            display: flex;
-            gap: 12px;
-            overflow-x: auto;
-            padding-bottom: 12px;
-          "
-        >
+        <n-image-group>
           <div
-            v-for="image in store.images"
-            :key="image.index"
             style="
-              flex-shrink: 0;
-              width: 120px;
-              height: 160px;
-              border-radius: 8px;
-              overflow: hidden;
-              border: 1px solid var(--border-color);
+              display: flex;
+              gap: 12px;
+              overflow-x: auto;
+              padding-bottom: 12px;
             "
           >
-            <img
-              :src="image.url"
-              :alt="`第 ${image.index + 1} 页`"
-              style="width: 100%; height: 100%; object-fit: cover"
-            />
+            <div
+              v-for="image in store.images"
+              :key="image.index"
+              class="preview-image-wrapper"
+            >
+              <n-image
+                :src="image.url"
+                :alt="`第 ${image.index + 1} 页`"
+                object-fit="cover"
+              />
+            </div>
           </div>
-        </div>
+        </n-image-group>
       </div>
 
       <!-- 标题 -->
@@ -145,24 +140,12 @@
         <h3 style="font-size: 14px; color: var(--text-sub); margin-bottom: 8px">
           标题
         </h3>
-        <select
-          v-model="selectedTitle"
-          style="
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 16px;
-          "
-        >
-          <option
-            v-for="(title, idx) in store.content.titles"
-            :key="idx"
-            :value="title"
-          >
-            {{ title }}
-          </option>
-        </select>
+        <n-select
+          v-model:value="selectedTitle"
+          :options="titleOptions"
+          size="large"
+          placeholder="请选择标题"
+        />
       </div>
 
       <!-- 正文 -->
@@ -170,18 +153,18 @@
         <h3 style="font-size: 14px; color: var(--text-sub); margin-bottom: 8px">
           正文
         </h3>
-        <textarea
-          v-model="copywriting"
-          rows="6"
-          style="
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 14px;
-            resize: vertical;
-          "
-        ></textarea>
+        <n-input
+          v-model:value="copywriting"
+          type="textarea"
+          :autosize="{
+            minRows: 10,
+            maxRows: 20,
+          }"
+          placeholder="请输入正文"
+          size="large"
+          maxlength="1000"
+          show-count
+        />
       </div>
 
       <!-- 标签 -->
@@ -193,12 +176,7 @@
           <span
             v-for="(tag, idx) in store.content.tags"
             :key="idx"
-            style="
-              padding: 6px 12px;
-              background: var(--bg-secondary);
-              border-radius: 16px;
-              font-size: 13px;
-            "
+            class="xhs-tag"
           >
             #{{ tag }}
           </span>
@@ -391,7 +369,7 @@ import {
   type LoginStatus,
   type PublishProgressEvent,
 } from "../api";
-import { useMessage } from "naive-ui";
+import { useMessage, NImage, NImageGroup, NSelect, NInput } from "naive-ui";
 
 const router = useRouter();
 const store = useGeneratorStore();
@@ -415,6 +393,14 @@ const publishResult = ref<{
 const selectedTitle = ref("");
 const copywriting = ref("");
 
+// 计算选项
+const titleOptions = computed(() => {
+  return store.content.titles.map((title) => ({
+    label: title,
+    value: title,
+  }));
+});
+
 // 计算属性
 const canPublish = computed(() => {
   return (
@@ -428,12 +414,16 @@ const canPublish = computed(() => {
 
 const canStartService = computed(() => {
   const status = vibeSurfStatus.value;
-  return Boolean(status && !status.running && status.binary_installed !== false);
+  return Boolean(
+    status && !status.running && status.binary_installed !== false,
+  );
 });
 
 const needInstallMcp = computed(() => {
   const status = vibeSurfStatus.value;
-  return Boolean(status && !status.running && status.binary_installed === false);
+  return Boolean(
+    status && !status.running && status.binary_installed === false,
+  );
 });
 
 const vibeSurfActionLabel = computed(() => {
@@ -654,5 +644,54 @@ onMounted(async () => {
   padding: 24px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
+}
+
+.xhs-tag {
+  padding: 6px 14px;
+  background-color: #eef3ff;
+  color: #1f64ff;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.xhs-tag:hover {
+  background-color: #e0ebff;
+  transform: translateY(-1px);
+}
+
+.preview-image-wrapper {
+  flex-shrink: 0;
+  width: 120px;
+  height: 160px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.preview-image-wrapper:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+  border-color: #1f64ff;
+}
+
+:deep(.n-image) {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+:deep(.n-image img) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover !important;
 }
 </style>
