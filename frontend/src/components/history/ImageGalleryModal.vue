@@ -135,70 +135,79 @@
       </div>
 
       <!-- 图片网格 -->
-      <div class="modal-gallery-grid">
-        <div
-          v-for="(img, idx) in record.images.generated"
-          :key="idx"
-          class="modal-img-item"
-        >
+      <n-image-group>
+        <div class="modal-gallery-grid">
           <div
-            class="modal-img-preview"
-            v-if="img"
-            :class="{ regenerating: regeneratingImages.has(idx) }"
+            v-for="(img, idx) in record.images.generated"
+            :key="idx"
+            class="modal-img-item"
           >
-            <img
-              :src="getImageUrl(img, record.images.task_id)"
-              @error="handleImageError(img)"
-              loading="lazy"
-              decoding="async"
-            />
-            <div class="modal-img-overlay">
-              <button
-                class="modal-overlay-btn"
-                @click="$emit('regenerate', idx)"
-                :disabled="regeneratingImages.has(idx)"
-              >
-                <svg
-                  class="regenerate-icon"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
+            <div
+              class="modal-img-preview"
+              v-if="img"
+              :class="{ regenerating: regeneratingImages.has(idx) }"
+            >
+              <n-image
+                :src="getImageUrl(img, record.images.task_id)"
+                lazy
+                :img-props="{
+                  loading: 'lazy',
+                  decoding: 'async',
+                  style: 'width: 100%; height: 100%; object-fit: cover;',
+                }"
+                @error="handleImageError(img)"
+                object-fit="cover"
+                style="width: 100%; height: 100%; display: block"
+              />
+              <div class="modal-img-overlay">
+                <button
+                  class="modal-overlay-btn"
+                  @click="$emit('regenerate', idx)"
+                  :disabled="regeneratingImages.has(idx)"
                 >
-                  <path d="M23 4v6h-6"></path>
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                </svg>
-                {{ regeneratingImages.has(idx) ? "重绘中..." : "重新生成" }}
-              </button>
+                  <svg
+                    class="regenerate-icon"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                  </svg>
+                  {{ regeneratingImages.has(idx) ? "重绘中..." : "重新生成" }}
+                </button>
+              </div>
+            </div>
+            <div
+              class="placeholder"
+              v-else
+            >
+              Waiting...
+            </div>
+
+            <div class="img-footer">
+              <span>Page {{ idx + 1 }}</span>
+              <span
+                v-if="img"
+                class="download-link"
+                @click="$emit('download', img, idx)"
+              >
+                下载
+              </span>
             </div>
           </div>
-          <div
-            class="placeholder"
-            v-else
-          >
-            Waiting...
-          </div>
-
-          <div class="img-footer">
-            <span>Page {{ idx + 1 }}</span>
-            <span
-              v-if="img"
-              class="download-link"
-              @click="$emit('download', img, idx)"
-            >
-              下载
-            </span>
-          </div>
         </div>
-      </div>
+      </n-image-group>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
+import { NImage, NImageGroup } from "naive-ui";
 import { appendUrlParams, getImageUrl as buildImageUrl } from "../../api";
 
 /**
@@ -497,30 +506,33 @@ const formattedDate = computed(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
-  background: white;
-  border-radius: 6px;
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
   cursor: pointer;
   font-size: 13px;
-  color: var(--text-main);
-  background: var(--bg-elevated);
-  transition:
-    background-color 0.2s,
-    color 0.2s,
-    transform 0.1s;
+  font-weight: 500;
+  color: white;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   will-change: transform;
 }
 
 .modal-overlay-btn:hover {
   background: var(--primary, #ff2442);
-  color: white;
-  transform: scale(1.05);
+  border-color: transparent;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 36, 66, 0.4);
 }
 
 .modal-overlay-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
+  background: rgba(0, 0, 0, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 /* 占位符 */
