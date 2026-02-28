@@ -29,7 +29,7 @@
           预览
         </button>
         <button
-          class="overlay-btn primary"
+          class="overlay-btn"
           @click.stop="$emit('edit', record.id)"
         >
           {{ record.recordType === "concept" ? "查看" : "编辑" }}
@@ -292,18 +292,6 @@ const displayTitle = computed(() => {
   border-color: white;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.overlay-btn.primary {
-  background: var(--primary, #ff2442);
-  border-color: transparent;
-}
-
-.overlay-btn.primary:hover {
-  background: var(--primary-hover, #e61e3a);
-  border-color: transparent;
-  color: white;
-  box-shadow: 0 4px 12px rgba(255, 36, 66, 0.4);
 }
 
 /* 类型标识 */
