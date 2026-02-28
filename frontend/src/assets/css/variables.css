@@ -15,13 +15,13 @@
   --bg-hover: rgba(255, 255, 255, 0.05);
   --bg-active: rgba(255, 255, 255, 0.1);
 
-  /* 强调色 - 荧光绿 (仅用于关键交互和品牌识别) */
-  --primary: #00ff88;
-  --primary-hover: #33ff9f;
-  --primary-active: #00cc6e;
-  --primary-light: rgba(0, 255, 136, 0.12);
-  --primary-fade: rgba(0, 255, 136, 0.06);
-  --primary-glow: 0 0 20px rgba(0, 255, 136, 0.3);
+  /* 强调色 - 小红书红 (仅用于关键交互和品牌识别) */
+  --primary: #ff2442;
+  --primary-hover: #ff4d63;
+  --primary-active: #e61731;
+  --primary-light: rgba(255, 36, 66, 0.12);
+  --primary-fade: rgba(255, 36, 66, 0.06);
+  --primary-glow: 0 0 20px rgba(255, 36, 66, 0.3);
 
   /* 状态色 - 成功 */
   --color-success: #10b981;
@@ -72,7 +72,7 @@
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 40px rgba(0, 255, 136, 0.15);
+  --shadow-glow: 0 0 40px rgba(255, 36, 66, 0.15);
 
   /* 布局 */
   --sidebar-width: 280px;
@@ -137,13 +137,13 @@
   --bg-hover: rgba(0, 0, 0, 0.04);
   --bg-active: rgba(0, 0, 0, 0.08);
 
-  /* 强调色 - 淡绿色 */
-  --primary: #10b981;
-  --primary-hover: #059669;
-  --primary-active: #047857;
-  --primary-light: rgba(16, 185, 129, 0.1);
-  --primary-fade: rgba(16, 185, 129, 0.05);
-  --primary-glow: 0 0 20px rgba(16, 185, 129, 0.2);
+  /* 强调色 - 小红书红 */
+  --primary: #ff2442;
+  --primary-hover: #ff4d63;
+  --primary-active: #e61731;
+  --primary-light: rgba(255, 36, 66, 0.1);
+  --primary-fade: rgba(255, 36, 66, 0.05);
+  --primary-glow: 0 0 20px rgba(255, 36, 66, 0.2);
 
   /* 状态色 - 成功 */
   --color-success: #059669;
@@ -187,5 +187,5 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
-  --shadow-glow: 0 0 30px rgba(16, 185, 129, 0.1);
+  --shadow-glow: 0 0 30px rgba(255, 36, 66, 0.1);
 }
