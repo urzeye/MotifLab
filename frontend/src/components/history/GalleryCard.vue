@@ -2,7 +2,10 @@
   <!-- 历史记录卡片 -->
   <div class="gallery-card">
     <!-- 封面区域 -->
-    <div class="card-cover" @click="$emit('preview', record.id)">
+    <div
+      class="card-cover"
+      @click="$emit('preview', record.id)"
+    >
       <img
         v-if="thumbnailUrl"
         :src="thumbnailUrl"
@@ -10,17 +13,26 @@
         loading="lazy"
         decoding="async"
       />
-      <div v-else class="cover-placeholder">
+      <div
+        v-else
+        class="cover-placeholder"
+      >
         <span>{{ record.title.charAt(0) }}</span>
       </div>
 
       <!-- 悬浮操作按钮 -->
       <div class="card-overlay">
-        <button class="overlay-btn" @click.stop="$emit('preview', record.id)">
+        <button
+          class="overlay-btn"
+          @click.stop="$emit('preview', record.id)"
+        >
           预览
         </button>
-        <button class="overlay-btn primary" @click.stop="$emit('edit', record.id)">
-          {{ record.recordType === 'concept' ? '查看' : '编辑' }}
+        <button
+          class="overlay-btn primary"
+          @click.stop="$emit('edit', record.id)"
+        >
+          {{ record.recordType === "concept" ? "查看" : "编辑" }}
         </button>
         <button
           v-if="record.recordType !== 'concept'"
@@ -32,19 +44,30 @@
       </div>
 
       <!-- 类型标识 -->
-      <div class="type-badge" :class="record.recordType">
+      <div
+        class="type-badge"
+        :class="record.recordType"
+      >
         {{ typeLabel }}
       </div>
 
       <!-- 状态标识 -->
-      <div class="status-badge" :class="record.status">
+      <div
+        class="status-badge"
+        :class="record.status"
+      >
         {{ statusText }}
       </div>
     </div>
 
     <!-- 底部信息 -->
     <div class="card-footer">
-      <div class="card-title" :title="displayTitle">{{ displayTitle }}</div>
+      <div
+        class="card-title"
+        :title="displayTitle"
+      >
+        {{ displayTitle }}
+      </div>
 
       <div class="card-meta">
         <div class="meta-left">
@@ -52,21 +75,32 @@
           <span class="meta-time">{{ formattedDateTime }}</span>
         </div>
 
-        <button class="more-btn" @click.stop="$emit('delete', record)">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button
+          class="more-btn"
+          @click.stop="$emit('delete', record)"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <path
+              d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+            ></path>
           </svg>
         </button>
       </div>
-
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { getImageUrl } from '../../api'
+import { computed } from "vue";
+import { getImageUrl } from "../../api";
 
 /**
  * 历史记录卡片组件
@@ -77,83 +111,83 @@ import { getImageUrl } from '../../api'
 
 // 定义记录类型
 interface Record {
-  id: string
-  title: string
-  status: 'draft' | 'completed' | 'generating' | 'error' | 'in_progress'
-  page_count: number
-  created_at: string
-  updated_at: string
-  thumbnail?: string
-  task_id?: string
-  recordType?: 'xiaohongshu' | 'concept'  // 记录来源类型
+  id: string;
+  title: string;
+  status: "draft" | "completed" | "generating" | "error" | "in_progress";
+  page_count: number;
+  created_at: string;
+  updated_at: string;
+  thumbnail?: string;
+  task_id?: string;
+  recordType?: "xiaohongshu" | "concept"; // 记录来源类型
 }
 
 // 定义 Props
 const props = defineProps<{
-  record: Record
-}>()
+  record: Record;
+}>();
 
 // 定义 Emits
 defineEmits<{
-  (e: 'preview', id: string): void
-  (e: 'edit', id: string): void
-  (e: 'result', id: string): void
-  (e: 'delete', record: Record): void
-}>()
+  (e: "preview", id: string): void;
+  (e: "edit", id: string): void;
+  (e: "result", id: string): void;
+  (e: "delete", record: Record): void;
+}>();
 
 /**
  * 获取状态文本
  */
 const statusText = computed(() => {
   const map: Record<string, string> = {
-    draft: '草稿',
-    completed: '已完成',
-    generating: '生成中',
-    error: '出错',
-    in_progress: '进行中'
-  }
-  return map[props.record.status] || props.record.status
-})
+    draft: "草稿",
+    completed: "已完成",
+    generating: "生成中",
+    error: "出错",
+    in_progress: "进行中",
+  };
+  return map[props.record.status] || props.record.status;
+});
 
 /**
  * 获取缩略图 URL
  * 根据记录类型返回不同的路径
  */
 const thumbnailUrl = computed(() => {
-  if (!props.record.thumbnail || !props.record.task_id) return ''
+  if (!props.record.thumbnail || !props.record.task_id) return "";
 
-  if (props.record.recordType === 'concept') {
+  if (props.record.recordType === "concept") {
     // 概念可视化图片路径
-    return `/output/concepts/${props.record.task_id}/${props.record.thumbnail}`
+    return `/output/concepts/${props.record.task_id}/${props.record.thumbnail}`;
   }
   // 小红书图文路径
-  return getImageUrl(props.record.task_id, props.record.thumbnail)
-})
+  return getImageUrl(props.record.task_id, props.record.thumbnail);
+});
 
 /**
  * 获取类型标签
  */
 const typeLabel = computed(() => {
-  return props.record.recordType === 'concept' ? '概念图' : '图文'
-})
+  return props.record.recordType === "concept" ? "概念图" : "图文";
+});
 
 /**
  * 格式化日期
  */
 function pad2(n: number): string {
-  return String(n).padStart(2, '0')
+  return String(n).padStart(2, "0");
 }
 
 const formattedDateTime = computed(() => {
-  const d = new Date(props.record.updated_at)
-  if (Number.isNaN(d.getTime())) return '--/-- --:--'
-  return `${pad2(d.getMonth() + 1)}/${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
-})
+  const d = new Date(props.record.updated_at);
+  if (Number.isNaN(d.getTime())) return "--/-- --:--";
+  return `${pad2(d.getMonth() + 1)}/${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+});
 
 const displayTitle = computed(() => {
-  const text = String(props.record.title || '').trim()
-  return text || '未命名图文'
-})
+  const text = String(props.record.title || "").trim();
+  return text || "未命名图文";
+});
 </script>
 
 <style scoped>
@@ -163,8 +197,9 @@ const displayTitle = computed(() => {
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.04);
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   will-change: transform;
   contain: layout style paint;
@@ -235,30 +270,40 @@ const displayTitle = computed(() => {
 /* 遮罩层按钮 */
 .overlay-btn {
   padding: 8px 24px;
-  border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: white;
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s, color 0.2s, transform 0.1s;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    transform 0.1s,
+    box-shadow 0.2s;
   will-change: transform;
 }
 
 .overlay-btn:hover {
-  background: white;
-  color: var(--text-main, #1a1a1a);
+  background: rgba(255, 255, 255, 0.2);
+  border-color: white;
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .overlay-btn.primary {
   background: var(--primary, #ff2442);
-  border-color: var(--primary, #ff2442);
+  border-color: transparent;
 }
 
 .overlay-btn.primary:hover {
   background: var(--primary-hover, #e61e3a);
+  border-color: transparent;
   color: white;
+  box-shadow: 0 4px 12px rgba(255, 36, 66, 0.4);
 }
 
 /* 类型标识 */
@@ -369,7 +414,9 @@ const displayTitle = computed(() => {
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
 }
 
 .more-btn:hover {
