@@ -32,7 +32,7 @@
               height: '12px',
               borderRadius: '50%',
               background: vibeSurfStatus?.running
-                ? 'var(--primary)'
+                ? 'var(--color-success)'
                 : 'var(--color-error)',
             }"
           ></div>
@@ -67,7 +67,7 @@
               height: '12px',
               borderRadius: '50%',
               background: loginStatus?.logged_in
-                ? 'var(--primary)'
+                ? 'var(--color-success)'
                 : 'var(--color-warning)',
             }"
           ></div>
