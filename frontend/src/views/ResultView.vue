@@ -121,6 +121,7 @@
             <div
               v-if="regeneratingIndex === image.index"
               class="result-image-overlay regenerating-overlay"
+              @click.stop
             >
               <div class="spinner"></div>
               <span class="overlay-text">重绘中...</span>
@@ -129,33 +130,74 @@
               v-else
               class="result-image-overlay hover-overlay"
             >
-              <button
-                class="overlay-regenerate-btn"
-                @click.stop="handleRegenerate(image)"
-                :disabled="regeneratingIndex === image.index || isGenerating"
-              >
+              <div class="glass-zoom-icon">
                 <svg
-                  width="14"
-                  height="14"
+                  width="24"
+                  height="24"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="2"
+                  stroke-width="2.5"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 >
-                  <path d="M23 4v6h-6"></path>
-                  <path d="M1 20v-6h6"></path>
-                  <path
-                    d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
-                  ></path>
+                  <circle
+                    cx="11"
+                    cy="11"
+                    r="8"
+                  ></circle>
+                  <line
+                    x1="21"
+                    y1="21"
+                    x2="16.65"
+                    y2="16.65"
+                  ></line>
+                  <line
+                    x1="11"
+                    y1="8"
+                    x2="11"
+                    y2="14"
+                  ></line>
+                  <line
+                    x1="8"
+                    y1="11"
+                    x2="14"
+                    y2="11"
+                  ></line>
                 </svg>
-                <span>{{
-                  regeneratingIndex === image.index ? "重绘中..." : "重绘此页"
-                }}</span>
-              </button>
-              <span class="overlay-tip">点击图片预览大图</span>
+              </div>
             </div>
+            <button
+              v-if="regeneratingIndex !== image.index"
+              class="overlay-regenerate-btn floating-regenerate-btn"
+              @click.stop="handleRegenerate(image)"
+              :disabled="regeneratingIndex === image.index || isGenerating"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M23 4v6h-6"></path>
+                <path d="M1 20v-6h6"></path>
+                <path
+                  d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
+                ></path>
+              </svg>
+              <span>{{
+                regeneratingIndex === image.index ? "重绘中..." : "重绘此页"
+              }}</span>
+            </button>
+            <span
+              v-if="regeneratingIndex !== image.index"
+              class="preview-tip-always"
+              >点击图片预览大图</span
+            >
           </div>
 
           <div
@@ -335,6 +377,7 @@
   color: var(--text-main);
   font-weight: 600;
   transition: opacity 0.2s;
+  pointer-events: none;
 }
 
 .regenerating-overlay {
@@ -342,13 +385,38 @@
   background: var(--bg-active);
   backdrop-filter: blur(2px);
   z-index: 10;
+  pointer-events: auto;
 }
 
 .hover-overlay {
-  background: var(--bg-hover);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.05) 0%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
   opacity: 0;
-  flex-direction: column;
-  gap: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-zoom-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  transform: scale(0.8) translateY(10px);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.image-card:hover .glass-zoom-icon {
+  transform: scale(1) translateY(0);
 }
 
 .overlay-text {
@@ -359,22 +427,38 @@
 }
 
 .overlay-regenerate-btn {
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: #fff;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 34px;
+  height: 32px;
   padding: 0 12px;
-  border-radius: 9px;
-  font-size: 12px;
-  transition: all 0.18s ease;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  pointer-events: auto;
+}
+
+.overlay-regenerate-btn svg {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .overlay-regenerate-btn:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.overlay-regenerate-btn:hover svg {
+  transform: rotate(180deg);
 }
 
 .overlay-regenerate-btn:disabled {
@@ -382,9 +466,11 @@
   cursor: not-allowed;
 }
 
-.overlay-tip {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.9);
+.floating-regenerate-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 12;
 }
 
 .result-image-footer {
@@ -422,12 +508,16 @@
 
 .download-btn {
   color: var(--primary);
-  border-color: color-mix(in srgb, var(--primary) 35%, var(--border-color));
-  background: color-mix(in srgb, var(--primary) 8%, var(--bg-elevated));
+  border: none;
+  background: var(--primary-light, rgba(255, 36, 66, 0.08));
+  font-weight: 500;
 }
 
-.image-card:hover .hover-overlay {
-  opacity: 1;
+.download-btn:hover {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(255, 36, 66, 0.25);
+  transform: translateY(-1px);
 }
 
 .image-card:hover img {
@@ -480,6 +570,16 @@
 
 .preview-close:hover {
   background: rgba(255, 255, 255, 0.28);
+}
+
+@media (max-width: 768px) {
+  .floating-regenerate-btn {
+    top: 8px;
+    right: 8px;
+    height: 30px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
 }
 
 @keyframes spin {
