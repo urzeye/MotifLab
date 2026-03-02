@@ -148,11 +148,6 @@
                 regeneratingIndex === image.index ? "重绘中..." : "重绘此页"
               }}</span>
             </button>
-            <span
-              v-if="regeneratingIndex !== image.index"
-              class="preview-tip-always"
-              >点击图片预览大图</span
-            >
           </div>
 
           <div v-else class="result-image-wrap placeholder-wrap">
