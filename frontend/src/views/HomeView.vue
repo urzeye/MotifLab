@@ -33,10 +33,7 @@
         </p>
       </div>
 
-      <div
-        v-if="appliedTemplate"
-        class="template-applied-banner"
-      >
+      <div v-if="appliedTemplate" class="template-applied-banner">
         <div class="banner-left">
           <div class="banner-icon">
             <svg
@@ -49,16 +46,8 @@
             >
               <path d="M20 7h-9"></path>
               <path d="M14 17H5"></path>
-              <circle
-                cx="17"
-                cy="17"
-                r="3"
-              ></circle>
-              <circle
-                cx="7"
-                cy="7"
-                r="3"
-              ></circle>
+              <circle cx="17" cy="17" r="3"></circle>
+              <circle cx="7" cy="7" r="3"></circle>
             </svg>
           </div>
           <div class="banner-text">
@@ -73,16 +62,10 @@
         </div>
 
         <div class="banner-actions">
-          <button
-            class="banner-btn"
-            @click="openTemplateMarket"
-          >
+          <button class="banner-btn" @click="openTemplateMarket">
             切换模板
           </button>
-          <button
-            class="banner-btn ghost"
-            @click="clearTemplate"
-          >
+          <button class="banner-btn ghost" @click="clearTemplate">
             取消使用
           </button>
         </div>
@@ -94,16 +77,19 @@
         v-model="topic"
         :loading="loading"
         :search-provider-enabled="searchProviderEnabled"
+        :search-provider="searchProvider"
+        :search-provider-options="searchProviderOptions"
         :page-count="pageCount"
         :enable-search="enableSearch"
         @update:pageCount="handlePageCountChange"
         @update:enableSearch="handleEnableSearchChange"
+        @update:searchProvider="handleSearchProviderChange"
         @generate="handleGenerate"
         @imagesChange="handleImagesChange"
         @urlContentChange="handleUrlContentChange"
       />
 
-      <div class="prompt-config-card">
+      <div class="prompt-config-card" v-if="false">
         <div class="prompt-config-title">高级图片 Prompt（可选）</div>
         <div class="prompt-config-desc">
           可为当前创作设置额外提示词，后续图片生成、重试、重绘都会复用。
@@ -145,10 +131,7 @@
     </div>
 
     <!-- 错误提示 -->
-    <div
-      v-if="error"
-      class="error-toast"
-    >
+    <div v-if="error" class="error-toast">
       <svg
         width="20"
         height="20"
@@ -157,23 +140,9 @@
         stroke="currentColor"
         stroke-width="2"
       >
-        <circle
-          cx="12"
-          cy="12"
-          r="10"
-        ></circle>
-        <line
-          x1="12"
-          y1="8"
-          x2="12"
-          y2="12"
-        ></line>
-        <line
-          x1="12"
-          y1="16"
-          x2="12.01"
-          y2="16"
-        ></line>
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
       </svg>
       {{ error }}
     </div>
@@ -188,7 +157,9 @@ import {
   generateOutlineStream,
   createHistory,
   getSearchStatus,
+  getConfig,
   getTemplateDetail,
+  type Config,
   type OutlineStreamFinishEvent,
   type Page,
   type ScrapeResult,
@@ -217,19 +188,100 @@ const composerRef = ref<ComposerInputRef | null>(null);
 const uploadedImageFiles = ref<File[]>([]);
 // 搜索服务可用状态
 const searchProviderEnabled = ref(false);
+const searchProvider = ref("auto");
+const searchProviderOptions = ref<Array<{ label: string; value: string }>>([
+  { label: "跟随默认", value: "auto" },
+]);
 const urlContent = ref<ScrapeResult | null>(null);
 const appliedTemplate = ref<TemplateItem | null>(null);
 const pageCount = ref(5);
-const enableSearch = ref(false);
+const enableSearch = ref(true);
 const userPrompt = ref("");
 const systemPrompt = ref("");
 
 let templateRequestSeq = 0;
 
+const SEARCH_PROVIDER_LABELS: Record<string, string> = {
+  bing: "Bing (Local)",
+  firecrawl: "Firecrawl",
+  exa: "Exa",
+  tavily: "Tavily",
+  perplexity: "Perplexity",
+};
+
+function formatSearchProviderLabel(name: string, provider: any): string {
+  const normalizedName = String(name || "").trim();
+  const type = String(provider?.type || normalizedName)
+    .trim()
+    .toLowerCase();
+  const typeLabel = SEARCH_PROVIDER_LABELS[type] || type || normalizedName;
+
+  if (!normalizedName || normalizedName === type) {
+    return typeLabel;
+  }
+  return `${normalizedName} (${typeLabel})`;
+}
+
+function isSearchProviderReady(name: string, provider: any): boolean {
+  if (!provider || !provider.enabled) {
+    return false;
+  }
+  const type = String(provider.type || name)
+    .trim()
+    .toLowerCase();
+  if (["exa", "tavily", "perplexity"].includes(type)) {
+    return !!(provider._has_api_key || provider.api_key_masked);
+  }
+  return true;
+}
+
+function updateSearchProviderOptions(
+  searchConfig: Config["search"] | undefined,
+) {
+  const providers = searchConfig?.providers || {};
+  const activeProvider = String(searchConfig?.active_provider || "").trim();
+
+  const available = Object.entries(providers)
+    .filter(([name, provider]) => isSearchProviderReady(name, provider))
+    .map(([name, provider]) => ({
+      value: name,
+      label: formatSearchProviderLabel(name, provider),
+    }));
+
+  const activeLabel = available.find(
+    (item) => item.value === activeProvider,
+  )?.label;
+  searchProviderOptions.value = [
+    {
+      value: "auto",
+      label: activeLabel ? `跟随默认（${activeLabel}）` : "跟随默认",
+    },
+    ...available,
+  ];
+
+  if (
+    searchProvider.value !== "auto" &&
+    !available.some((item) => item.value === searchProvider.value)
+  ) {
+    searchProvider.value = "auto";
+  }
+}
+
 async function checkSearchStatus() {
-  const result = await getSearchStatus();
+  const [result, configResult] = await Promise.all([
+    getSearchStatus(),
+    getConfig(),
+  ]);
   searchProviderEnabled.value =
     result.success && !!result.enabled && !!result.configured;
+
+  if (configResult.success && configResult.config?.search) {
+    updateSearchProviderOptions(configResult.config.search);
+    return;
+  }
+
+  searchProviderOptions.value = [{ label: "跟随默认", value: "auto" }];
+  searchProvider.value = "auto";
 }
 
 async function applyTemplateById(templateId: string) {
@@ -280,6 +332,10 @@ function handleEnableSearchChange(value: boolean) {
   enableSearch.value = !!value;
 }
 
+function handleSearchProviderChange(value: string) {
+  searchProvider.value = value || "auto";
+}
+
 function buildTopicWithPageCount(rawTopic: string, totalPages: number): string {
   const normalizedPages = Math.max(1, Math.min(15, Math.trunc(totalPages)));
   return (
@@ -292,7 +348,9 @@ function buildTopicWithPageCount(rawTopic: string, totalPages: number): string {
  * 兜底解析大纲文本，避免后端偶发缺失 pages 时阻断流程。
  */
 function parsePagesFromRawOutline(rawOutline: string): Page[] {
-  const raw = String(rawOutline || "").replace(/\r\n/g, "\n").trim();
+  const raw = String(rawOutline || "")
+    .replace(/\r\n/g, "\n")
+    .trim();
   if (!raw) return [];
 
   const chunks = raw
@@ -384,6 +442,10 @@ async function handleGenerate() {
             sourceContent,
             templateRef,
             enableSearch: enableSearch.value,
+            searchProvider:
+              enableSearch.value && searchProvider.value !== "auto"
+                ? searchProvider.value
+                : undefined,
           },
           () => {},
           (event) => resolve(event),
@@ -400,7 +462,10 @@ async function handleGenerate() {
         ? result.pages
         : parsePagesFromRawOutline(resolvedOutline);
 
-    if (result.success && (resolvedPages.length > 0 || !!resolvedOutline.trim())) {
+    if (
+      result.success &&
+      (resolvedPages.length > 0 || !!resolvedOutline.trim())
+    ) {
       // 新主题成功生成大纲后，先清空旧任务上下文，避免复用历史图片/任务ID。
       store.resetGenerationContext();
 
