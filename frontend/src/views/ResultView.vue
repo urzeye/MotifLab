@@ -16,21 +16,9 @@
           </span>
         </p>
       </div>
-      <div
-        class="header-actions"
-        style="display: flex; gap: 12px"
-      >
-        <button
-          class="btn"
-          @click="startOver"
-        >
-          再来一篇
-        </button>
-        <button
-          class="btn"
-          @click="downloadAll"
-          :disabled="isGenerating"
-        >
+      <div class="header-actions" style="display: flex; gap: 12px">
+        <button class="btn" @click="startOver">再来一篇</button>
+        <button class="btn" @click="downloadAll" :disabled="isGenerating">
           <svg
             width="16"
             height="16"
@@ -43,12 +31,7 @@
           >
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
-            <line
-              x1="12"
-              y1="15"
-              x2="12"
-              y2="3"
-            ></line>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
           一键下载
         </button>
@@ -90,18 +73,12 @@
           :style="{ width: `${progressPercent}%` }"
         ></div>
       </div>
-      <p
-        v-if="errorText"
-        class="error-text"
-      >
+      <p v-if="errorText" class="error-text">
         {{ errorText }}
       </p>
     </div>
 
-    <div
-      class="card"
-      style="padding: 32px"
-    >
+    <div class="card" style="padding: 32px">
       <div class="grid-cols-4">
         <div
           v-for="image in store.images"
@@ -126,10 +103,7 @@
               <div class="spinner"></div>
               <span class="overlay-text">重绘中...</span>
             </div>
-            <div
-              v-else
-              class="result-image-overlay hover-overlay"
-            >
+            <div v-else class="result-image-overlay hover-overlay">
               <div class="glass-zoom-icon">
                 <svg
                   width="24"
@@ -141,35 +115,16 @@
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 >
-                  <circle
-                    cx="11"
-                    cy="11"
-                    r="8"
-                  ></circle>
-                  <line
-                    x1="21"
-                    y1="21"
-                    x2="16.65"
-                    y2="16.65"
-                  ></line>
-                  <line
-                    x1="11"
-                    y1="8"
-                    x2="11"
-                    y2="14"
-                  ></line>
-                  <line
-                    x1="8"
-                    y1="11"
-                    x2="14"
-                    y2="11"
-                  ></line>
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  <line x1="11" y1="8" x2="11" y2="14"></line>
+                  <line x1="8" y1="11" x2="14" y2="11"></line>
                 </svg>
               </div>
             </div>
             <button
               v-if="regeneratingIndex !== image.index"
-              class="overlay-regenerate-btn floating-regenerate-btn"
+              class="overlay-regenerate-btn floating-regenerate-btn always-visible"
               @click.stop="handleRegenerate(image)"
               :disabled="regeneratingIndex === image.index || isGenerating"
             >
@@ -200,10 +155,7 @@
             >
           </div>
 
-          <div
-            v-else
-            class="result-image-wrap placeholder-wrap"
-          >
+          <div v-else class="result-image-wrap placeholder-wrap">
             <div
               v-if="
                 image.status === 'generating' || image.status === 'retrying'
@@ -221,20 +173,17 @@
             >
               <span>生成失败</span>
             </div>
-            <div
-              v-else
-              class="placeholder-state"
-            >
+            <div v-else class="placeholder-state">
               <span>等待中</span>
             </div>
           </div>
 
           <div class="result-image-footer">
-            <span style="font-size: 12px; color: var(--text-sub)"
-              >Page {{ image.index + 1 }}</span
-            >
+            <span class="footer-page-info">
+              <i>Page {{ image.index + 1 }}</i>
+            </span>
             <button
-              class="image-action-btn download-btn"
+              class="pill-download-btn"
               @click="downloadOne(image)"
               :disabled="!image.url"
             >
@@ -245,16 +194,8 @@
       </div>
     </div>
 
-    <div
-      v-if="previewVisible"
-      class="preview-modal"
-      @click="closePreview"
-    >
-      <button
-        class="preview-close"
-        type="button"
-        @click.stop="closePreview"
-      >
+    <div v-if="previewVisible" class="preview-modal" @click="closePreview">
+      <button class="preview-close" type="button" @click.stop="closePreview">
         x
       </button>
       <img
@@ -474,11 +415,57 @@
 }
 
 .result-image-footer {
-  padding: 12px;
+  padding: 14px 16px;
+  background: var(--bg-card);
   border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.footer-page-info {
+  font-size: 13px;
+  color: var(--text-sub);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.footer-page-info i {
+  font-style: normal;
+  opacity: 0.8;
+}
+
+.pill-download-btn {
+  border: none;
+  background: var(--primary-light, rgba(255, 36, 66, 0.08));
+  color: var(--primary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.pill-download-btn:hover {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(255, 36, 66, 0.3);
+  transform: translateY(-2px);
+}
+
+.pill-download-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .image-action-btn {
@@ -504,20 +491,6 @@
 .image-action-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.download-btn {
-  color: var(--primary);
-  border: none;
-  background: var(--primary-light, rgba(255, 36, 66, 0.08));
-  font-weight: 500;
-}
-
-.download-btn:hover {
-  background: var(--primary);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(255, 36, 66, 0.25);
-  transform: translateY(-1px);
 }
 
 .image-card:hover img {
