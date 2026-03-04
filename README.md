@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="images/logo.png" alt="MotifLab" width="120"/>
+<img src="frontend/public/logo-banner.png" alt="MotifLab" width="400"/>
 
 # MotifLab
 
@@ -152,7 +152,6 @@ cd MotifLab
 ## 致谢
 
 - [HisMax/RedInk](https://github.com/HisMax/RedInk) - 本项目衍生的原仓库。感谢原作者出色的底层设计与开源奉献。
-- [Google Gemini](https://ai.google.dev/) - 强大的 AI 能力底座。
 
 ---
 
