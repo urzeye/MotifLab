@@ -65,7 +65,18 @@ jobs:
 
             ---
 
-            *项目为无需预构建的全源码版本，可以直接下载下方的打包源码（Source code）按照 README 运行。*
+            ### 🐳 一键部署 | Docker Deployment
+
+            如果您不想进行繁琐的环境配置，我们极度推荐您使用 Docker 一键起服务：
+            ```bash
+            # 下载下方最新的源码包解压后进入目录运行
+            docker-compose up -d
+            ```
+            *部署完毕后，访问 `http://localhost:5173` 即可开始使用！*
+
+            ---
+
+            *如需深入开发或通过源码本地裸机运行服务器，请详参下方代码包内的 `README.md`。*
           draft: false
           prerelease: false
         env:
