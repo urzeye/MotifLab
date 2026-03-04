@@ -1,6 +1,6 @@
 [project]
 name = "motiflab"
-version = "0.2.2"
+version = "0.3.1"
 description = "MotifLab"
 requires-python = ">=3.9"
 dependencies = [
