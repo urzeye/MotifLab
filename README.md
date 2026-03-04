@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="frontend/public/logo-banner.png" alt="MotifLab" width="400"/>
+<img src="frontend/public/logo.png" alt="MotifLab" width="200"/>
 
 # MotifLab
 
