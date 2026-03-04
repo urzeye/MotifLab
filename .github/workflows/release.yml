@@ -1,0 +1,30 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          generate_release_notes: true
+          # GitHub 会自动随 Release 附带打包好的 Source Code (zip 和 tar.gz)
+          # 因为无需构建任何产物，所以不包含 'files:' 指定上传内容。
+
+      # 对于手动触发 (workflow_dispatch)，如果并非基于 tag 触发，则可以补充这里的逻辑
+      # 通常来说，建议在打完 tag 后利用推 tag 的动作来自动触发此 action。
