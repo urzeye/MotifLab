@@ -27,18 +27,39 @@ jobs:
             echo "VERSION=Manual-Trig" >> $GITHUB_OUTPUT
           fi
 
+      - name: Extract Commit History
+        id: get_commits
+        run: |
+          # 尝试获取上一个 Tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          echo "Changelog between $PREV_TAG and HEAD"
+          if [ -z "$PREV_TAG" ]; then
+            # 如果没有上一个tag，提取最近10条提交
+            git log -n 10 --pretty=format:"- %s" > changelog.txt
+          else
+            # 提取两个Tag之间的所有提交记录
+            git log ${PREV_TAG}..HEAD --pretty=format:"- %s" > changelog.txt
+          fi
+          # 将多行文本装入 Github Output
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          cat changelog.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           tag_name: ${{ steps.get_version.outputs.VERSION }}
           name: MotifLab ${{ steps.get_version.outputs.VERSION }}
-          generate_release_notes: true
+          generate_release_notes: false
           body: |
             ## 🚀 MotifLab Release ${{ steps.get_version.outputs.VERSION }}
 
-            MotifLab 图文大模型生成引擎版本更新！
-            The latest version of MotifLab has been released!
+            ### ✨ What's New | 本次更新内容
+
+            ${{ steps.get_commits.outputs.notes }}
+
+            ---
 
             *项目为无需预构建的全源码版本，可以直接下载下方的打包源码（Source code）按照 README 运行。*
           draft: false
