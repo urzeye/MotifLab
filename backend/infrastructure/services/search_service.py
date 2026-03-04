@@ -131,6 +131,22 @@ def _build_success(url: str, title: str, content: str) -> Dict[str, Any]:
     }
 
 
+def _resolve_timeout_seconds(config: Dict[str, Any], default: int = 20) -> int:
+    try:
+        parsed = int(config.get("timeout_seconds", default))
+    except (TypeError, ValueError):
+        parsed = default
+    return max(1, min(60, parsed))
+
+
+def _resolve_max_results(config: Dict[str, Any], default: int = 5) -> int:
+    try:
+        parsed = int(config.get("max_results", default))
+    except (TypeError, ValueError):
+        parsed = default
+    return max(1, min(20, parsed))
+
+
 class BaseSearchProvider(SearchProviderPort):
     """搜索抓取服务商基类。"""
 
@@ -161,6 +177,7 @@ class FirecrawlSearchProvider(BaseSearchProvider):
     def scrape(self, url: str, config: Dict[str, Any]) -> Dict[str, Any]:
         base_url = (config.get("base_url") or DEFAULT_FIRECRAWL_BASE_URL).rstrip("/")
         api_key = (config.get("api_key") or "").strip()
+        timeout_seconds = _resolve_timeout_seconds(config)
 
         headers = {"Content-Type": "application/json"}
         if api_key:
@@ -174,7 +191,7 @@ class FirecrawlSearchProvider(BaseSearchProvider):
 
         for index, api_url in enumerate(endpoints):
             try:
-                response = requests.post(api_url, headers=headers, json=payload, timeout=60)
+                response = requests.post(api_url, headers=headers, json=payload, timeout=timeout_seconds)
             except requests.exceptions.Timeout:
                 return {"success": False, "error": "抓取超时，请稍后重试"}
             except requests.exceptions.ConnectionError:
@@ -250,6 +267,7 @@ class ExaSearchProvider(BaseSearchProvider):
     def scrape(self, url: str, config: Dict[str, Any]) -> Dict[str, Any]:
         base_url = (config.get("base_url") or DEFAULT_EXA_BASE_URL).rstrip("/")
         api_key = (config.get("api_key") or "").strip()
+        timeout_seconds = _resolve_timeout_seconds(config)
 
         if not api_key:
             return {"success": False, "error": "Exa API Key 未配置"}
@@ -268,7 +286,7 @@ class ExaSearchProvider(BaseSearchProvider):
         logger.info(f"🌐 Exa 开始抓取: {url}")
 
         try:
-            response = requests.post(api_url, headers=headers, json=payload, timeout=60)
+            response = requests.post(api_url, headers=headers, json=payload, timeout=timeout_seconds)
         except requests.exceptions.Timeout:
             return {"success": False, "error": "抓取超时，请稍后重试"}
         except requests.exceptions.ConnectionError:
@@ -321,6 +339,7 @@ class TavilySearchProvider(BaseSearchProvider):
     def scrape(self, url: str, config: Dict[str, Any]) -> Dict[str, Any]:
         base_url = (config.get("base_url") or DEFAULT_TAVILY_BASE_URL).rstrip("/")
         api_key = (config.get("api_key") or "").strip()
+        timeout_seconds = _resolve_timeout_seconds(config)
         if not api_key:
             return {"success": False, "error": "Tavily API Key 未配置"}
 
@@ -337,7 +356,7 @@ class TavilySearchProvider(BaseSearchProvider):
         logger.info(f"🌐 Tavily 开始抓取: {url}")
 
         try:
-            response = requests.post(api_url, headers=headers, json=payload, timeout=60)
+            response = requests.post(api_url, headers=headers, json=payload, timeout=timeout_seconds)
         except requests.exceptions.Timeout:
             return {"success": False, "error": "抓取超时，请稍后重试"}
         except requests.exceptions.ConnectionError:
@@ -373,7 +392,7 @@ class TavilySearchProvider(BaseSearchProvider):
         if not content:
             # Tavily 结果为空时，回退到直接抓取 URL
             try:
-                direct_title, direct_content = _fetch_page_content(url)
+                direct_title, direct_content = _fetch_page_content(url, timeout=timeout_seconds)
             except Exception:
                 direct_title, direct_content = "", ""
             title = direct_title or title
@@ -395,6 +414,8 @@ class PerplexitySearchProvider(BaseSearchProvider):
         base_url = (config.get("base_url") or DEFAULT_PERPLEXITY_BASE_URL).rstrip("/")
         api_key = (config.get("api_key") or "").strip()
         model = (config.get("model") or "sonar").strip()
+        timeout_seconds = _resolve_timeout_seconds(config)
+        max_results = _resolve_max_results(config)
         if not api_key:
             return {"success": False, "error": "Perplexity API Key 未配置"}
 
@@ -405,14 +426,14 @@ class PerplexitySearchProvider(BaseSearchProvider):
         }
         payload = {
             "query": url,
-            "max_results": 5,
+            "max_results": max_results,
             "model": model,
         }
 
         logger.info(f"🌐 Perplexity 开始抓取: {url}")
 
         try:
-            response = requests.post(api_url, headers=headers, json=payload, timeout=60)
+            response = requests.post(api_url, headers=headers, json=payload, timeout=timeout_seconds)
         except requests.exceptions.Timeout:
             return {"success": False, "error": "抓取超时，请稍后重试"}
         except requests.exceptions.ConnectionError:
@@ -445,7 +466,7 @@ class PerplexitySearchProvider(BaseSearchProvider):
         # 优先抓取命中页面正文，snippet 作为兜底
         direct_title, direct_content = "", ""
         try:
-            direct_title, direct_content = _fetch_page_content(result_url)
+            direct_title, direct_content = _fetch_page_content(result_url, timeout=timeout_seconds)
         except Exception:
             pass
 
@@ -453,7 +474,7 @@ class PerplexitySearchProvider(BaseSearchProvider):
         content = direct_content or snippet
         if not content and result_url != url:
             try:
-                title2, content2 = _fetch_page_content(url)
+                title2, content2 = _fetch_page_content(url, timeout=timeout_seconds)
                 title = title or title2
                 content = content or content2
             except Exception:
@@ -478,12 +499,13 @@ class BingSearchProvider(BaseSearchProvider):
     def scrape(self, url: str, config: Dict[str, Any]) -> Dict[str, Any]:
         base_url = (config.get("base_url") or DEFAULT_BING_BASE_URL).rstrip("/")
         search_url = f"{base_url}/search"
+        timeout_seconds = _resolve_timeout_seconds(config)
 
         logger.info(f"🌐 Bing 开始抓取: {url}")
 
         # 0) 优先直接抓取目标 URL（可确保与输入地址一致）
         try:
-            direct_title, direct_content = _fetch_page_content(url)
+            direct_title, direct_content = _fetch_page_content(url, timeout=timeout_seconds)
             if direct_content:
                 logger.info(f"✅ Bing 直连抓取完成: title={direct_title[:60]}..., chars={len(direct_content)}")
                 return _build_success(url, direct_title or "未命名网页", direct_content)
@@ -499,7 +521,7 @@ class BingSearchProvider(BaseSearchProvider):
                 search_url,
                 params={"q": url, "format": "rss"},
                 headers=REQUEST_HEADERS,
-                timeout=20,
+                timeout=timeout_seconds,
             )
             if response.status_code == 200:
                 parsed = ET.fromstring(response.text)
@@ -517,12 +539,12 @@ class BingSearchProvider(BaseSearchProvider):
         # 2) 抓取目标网页正文
         direct_title, direct_content = "", ""
         try:
-            direct_title, direct_content = _fetch_page_content(target_url)
+            direct_title, direct_content = _fetch_page_content(target_url, timeout=timeout_seconds)
         except Exception:
             # 回退抓取用户原始 URL
             if target_url != url:
                 try:
-                    direct_title, direct_content = _fetch_page_content(url)
+                    direct_title, direct_content = _fetch_page_content(url, timeout=timeout_seconds)
                     target_url = url
                 except Exception:
                     pass

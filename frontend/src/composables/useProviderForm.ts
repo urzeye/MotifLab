@@ -21,6 +21,12 @@ export interface ProviderConfig {
   providers: Record<string, Provider>
 }
 
+export interface SearchProviderConfig extends ProviderConfig {
+  auto_test_on_startup: boolean
+  max_results: number
+  timeout_seconds: number
+}
+
 export interface ProviderForm {
   name: string
   type: string
@@ -48,6 +54,21 @@ type ProviderCategory = 'text' | 'image' | 'search'
 type MessageApi = ReturnType<typeof useMessage>
 
 const SEARCH_NO_KEY_REQUIRED_TYPES = new Set(['firecrawl', 'bing'])
+const DEFAULT_SEARCH_AUTO_TEST_ON_STARTUP = false
+const DEFAULT_SEARCH_MAX_RESULTS = 10
+const DEFAULT_SEARCH_TIMEOUT_SECONDS = 5
+const MIN_SEARCH_MAX_RESULTS = 1
+const MAX_SEARCH_MAX_RESULTS = 20
+const MIN_SEARCH_TIMEOUT_SECONDS = 1
+const MAX_SEARCH_TIMEOUT_SECONDS = 60
+
+function clampInt(value: unknown, fallback: number, min: number, max: number): number {
+  const parsed = Number(value)
+  const target = Number.isFinite(parsed) ? Math.round(parsed) : fallback
+  if (target < min) return min
+  if (target > max) return max
+  return target
+}
 
 // 文本生成服务商预设配置
 export const textProviderPresets: Record<string, ProviderPreset> = {
@@ -155,7 +176,7 @@ export const imageTypeOptions = Object.entries(imageProviderPresets).map(([value
 // 搜索服务商预设配置
 export const searchProviderPresets: Record<string, ProviderPreset> = {
   bing: {
-    label: 'Bing（默认，无需 Key）',
+    label: 'Bing (Local)',
     base_url: 'https://www.bing.com',
     model: '',
     enabled: true
@@ -207,12 +228,12 @@ function createEmptyForm(category: ProviderCategory): ProviderForm {
     short_prompt: false,
     use_size_tag: isImage ? true : undefined,
     _has_api_key: false,
-    enabled: isSearch ? false : undefined
+    enabled: isSearch ? true : undefined
   }
 }
 
 function createProviderHandler(
-  config: Ref<ProviderConfig>,
+  config: Ref<{ active_provider: string; providers: Record<string, Provider> }>,
   form: Ref<ProviderForm>,
   showModal: Ref<boolean>,
   editing: Ref<string | null>,
@@ -282,22 +303,27 @@ function createProviderHandler(
 
     const existing = config.value.providers[name] || {}
     const data: any = { type: form.value.type }
-
-    const model = form.value.model.trim()
-    if (!isSearch || model || form.value.type === 'perplexity') {
-      data.model = model
-    }
+    const providerType = (form.value.type || name).trim().toLowerCase()
 
     if (apiKey) data.api_key = apiKey
     else if (existing.api_key) data.api_key = existing.api_key
 
-    const baseUrl = form.value.base_url.trim()
-    if (isSearch || baseUrl) {
-      data.base_url = baseUrl
-    }
-
     if (isSearch) {
-      data.enabled = !!form.value.enabled
+      if (providerType === 'perplexity') {
+        const persistedModel = String(existing.model || '').trim()
+        data.model = persistedModel || searchProviderPresets.perplexity.model
+      }
+
+      const baseUrl = form.value.base_url.trim()
+      data.base_url = providerType === 'firecrawl' ? baseUrl : ''
+      data.enabled = editing.value ? !!existing.enabled : !!form.value.enabled
+    } else {
+      const model = form.value.model.trim()
+      data.model = model
+      const baseUrl = form.value.base_url.trim()
+      if (baseUrl) {
+        data.base_url = baseUrl
+      }
     }
 
     if (isImage) {
@@ -344,11 +370,14 @@ function createProviderHandler(
       const result = await testConnection(payload)
       if (result.success) {
         message.success(result.message || '连接成功')
+        return true
       } else {
         message.error('连接失败：' + (result.error || result.message || '未知错误'))
+        return false
       }
     } catch (e: any) {
       message.error('连接失败：' + (e.response?.data?.error || e.message))
+      return false
     } finally {
       testing.value = false
     }
@@ -371,11 +400,14 @@ function createProviderHandler(
       const result = await testConnection(payload)
       if (result.success) {
         message.success(result.message || '连接成功')
+        return true
       } else {
         message.error('连接失败：' + (result.error || result.message || '未知错误'))
+        return false
       }
     } catch (e: any) {
       message.error('连接失败：' + (e.response?.data?.error || e.message))
+      return false
     }
   }
 
@@ -392,6 +424,30 @@ function normalizeProviderConfig(data: any, fallbackActive = ''): ProviderConfig
   }
 }
 
+function normalizeSearchConfig(data: any): SearchProviderConfig {
+  const base = normalizeProviderConfig(data, 'bing')
+  return {
+    ...base,
+    auto_test_on_startup: Boolean(
+      data && typeof data === 'object'
+        ? data.auto_test_on_startup ?? DEFAULT_SEARCH_AUTO_TEST_ON_STARTUP
+        : DEFAULT_SEARCH_AUTO_TEST_ON_STARTUP
+    ),
+    max_results: clampInt(
+      data && typeof data === 'object' ? data.max_results : undefined,
+      DEFAULT_SEARCH_MAX_RESULTS,
+      MIN_SEARCH_MAX_RESULTS,
+      MAX_SEARCH_MAX_RESULTS
+    ),
+    timeout_seconds: clampInt(
+      data && typeof data === 'object' ? data.timeout_seconds : undefined,
+      DEFAULT_SEARCH_TIMEOUT_SECONDS,
+      MIN_SEARCH_TIMEOUT_SECONDS,
+      MAX_SEARCH_TIMEOUT_SECONDS
+    )
+  }
+}
+
 export function useProviderForm() {
   const message = useMessage()
   const loading = ref(true)
@@ -402,7 +458,13 @@ export function useProviderForm() {
 
   const textConfig = ref<ProviderConfig>({ active_provider: '', providers: {} })
   const imageConfig = ref<ProviderConfig>({ active_provider: '', providers: {} })
-  const searchConfig = ref<ProviderConfig>({ active_provider: 'bing', providers: {} })
+  const searchConfig = ref<SearchProviderConfig>({
+    active_provider: 'bing',
+    providers: {},
+    auto_test_on_startup: DEFAULT_SEARCH_AUTO_TEST_ON_STARTUP,
+    max_results: DEFAULT_SEARCH_MAX_RESULTS,
+    timeout_seconds: DEFAULT_SEARCH_TIMEOUT_SECONDS
+  })
 
   const showTextModal = ref(false)
   const editingTextProvider = ref<string | null>(null)
@@ -416,21 +478,26 @@ export function useProviderForm() {
   const editingSearchProvider = ref<string | null>(null)
   const searchForm = ref<ProviderForm>(createEmptyForm('search'))
 
-  async function loadConfig() {
-    loading.value = true
+  async function loadConfig(options?: { silent?: boolean }) {
+    const silent = !!options?.silent
+    if (!silent) {
+      loading.value = true
+    }
     try {
       const result = await getConfig()
       if (result.success && result.config) {
         textConfig.value = normalizeProviderConfig(result.config.text_generation)
         imageConfig.value = normalizeProviderConfig(result.config.image_generation)
-        searchConfig.value = normalizeProviderConfig(result.config.search, 'bing')
+        searchConfig.value = normalizeSearchConfig(result.config.search)
       } else {
         message.error('加载配置失败: ' + (result.error || '未知错误'))
       }
     } catch (e) {
       message.error('加载配置失败: ' + String(e))
     } finally {
-      loading.value = false
+      if (!silent) {
+        loading.value = false
+      }
     }
   }
 
@@ -445,10 +512,14 @@ export function useProviderForm() {
         search: searchConfig.value
       }
       const result = await updateConfig(config)
-      if (result.success) await loadConfig()
+      if (result.success) await loadConfig({ silent: true })
     } catch (e) {
       console.error('自动保存失败:', e)
     }
+  }
+
+  async function saveSearchConfig() {
+    await autoSaveConfig()
   }
 
   const textHandler = createProviderHandler(
@@ -534,6 +605,7 @@ export function useProviderForm() {
     deleteSearchProvider: searchHandler.remove,
     testSearchConnection: searchHandler.test,
     testSearchProviderInList: searchHandler.testInList,
+    saveSearchConfig,
     updateSearchForm: (data: ProviderForm) => {
       searchForm.value = data
     }

@@ -3,7 +3,7 @@
   <div v-if="visible" class="modal-overlay" @click="$emit('close')">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
-        <h3>{{ isEditing ? '编辑服务商' : '添加服务商' }}</h3>
+        <h3>{{ modalTitle }}</h3>
         <button class="close-btn" @click="$emit('close')">×</button>
       </div>
 
@@ -22,7 +22,10 @@
         </div>
 
         <!-- 类型选择 -->
-        <div class="form-group">
+        <div
+          class="form-group"
+          v-if="showTypeSelect"
+        >
           <label>类型</label>
           <select
             class="form-select"
@@ -40,25 +43,17 @@
 
         <div
           class="form-group"
-          v-if="providerCategory === 'search'"
+          v-if="showTypeReadonly"
         >
-          <label class="checkbox-label">
-            <input
-              type="checkbox"
-              :checked="!!formData.enabled"
-              @change="
-                updateField(
-                  'enabled',
-                  ($event.target as HTMLInputElement).checked,
-                )
-              "
-            />
-            启用该搜索服务
-          </label>
+          <label>类型</label>
+          <div class="form-input readonly">{{ currentPreset?.label || formData.type }}</div>
         </div>
 
         <!-- API Key -->
-        <div class="form-group">
+        <div
+          class="form-group"
+          v-if="showApiKeyInput"
+        >
           <label>API Key</label>
           <input
             type="text"
@@ -77,8 +72,16 @@
               ['bing', 'firecrawl'].includes(formData.type)
             "
           >
-            Bing 和 Firecrawl 支持无 API Key 测试与运行。
+            Bing（本地抓取）和 Firecrawl 支持无 API Key 运行。
           </span>
+        </div>
+
+        <div
+          class="form-group"
+          v-else-if="showNoApiKeyRequiredHint"
+        >
+          <label>API Key</label>
+          <div class="form-input readonly">Bing（Local）无需 API Key</div>
         </div>
 
         <!-- Base URL -->
@@ -211,6 +214,20 @@ const currentPreset = computed(() => {
   return presetMap.value[props.formData.type]
 })
 
+const isSearchEditing = computed(() => props.providerCategory === 'search' && props.isEditing)
+
+const modalTitle = computed(() => {
+  if (isSearchEditing.value) return '编辑服务'
+  return props.isEditing ? '编辑服务商' : '添加服务商'
+})
+
+const showTypeSelect = computed(() => !isSearchEditing.value)
+const showTypeReadonly = computed(() => isSearchEditing.value)
+const showNoApiKeyRequiredHint = computed(() => {
+  return props.providerCategory === 'search' && props.formData.type === 'bing'
+})
+const showApiKeyInput = computed(() => !showNoApiKeyRequiredHint.value)
+
 // 更新表单字段
 function updateField(field: keyof FormData, value: string | boolean) {
   emit('update:formData', {
@@ -231,13 +248,18 @@ function handleTypeChange(newType: string) {
 
   // 添加模式：自动填充预设配置
   if (preset) {
+    const nextBaseUrl = props.providerCategory === 'search'
+      ? (newType === 'firecrawl' ? (preset.base_url || '') : '')
+      : (preset.base_url || props.formData.base_url)
+
     emit('update:formData', {
       ...props.formData,
       type: newType,
-      base_url: preset.base_url || props.formData.base_url,
+      base_url: nextBaseUrl,
       model: preset.model || props.formData.model,
       endpoint_type: preset.endpoint || props.formData.endpoint_type,
-      enabled: props.providerCategory === 'search' ? !!preset.enabled : props.formData.enabled
+      // 搜索服务新增时默认保持启用，避免“已添加但在使用页不可选”。
+      enabled: props.providerCategory === 'search' ? (props.formData.enabled ?? true) : props.formData.enabled
     })
   } else {
     updateField('type', newType)
@@ -246,7 +268,7 @@ function handleTypeChange(newType: string) {
 
 // 是否显示 Base URL（所有类型都显示，方便自定义）
 const showBaseUrl = computed(() => {
-  if (props.providerCategory === 'search') return true
+  if (props.providerCategory === 'search') return props.formData.type === 'firecrawl'
   // google_gemini 使用原生 SDK，不需要 base_url
   return props.formData.type !== 'google_gemini'
 })
@@ -258,8 +280,7 @@ const showEndpointType = computed(() => {
 })
 
 const showModel = computed(() => {
-  if (props.providerCategory !== 'search') return true
-  return props.formData.type === 'perplexity'
+  return props.providerCategory !== 'search'
 })
 
 const allowEmptyApiKey = computed(() => {
@@ -272,7 +293,7 @@ const baseUrlPlaceholder = computed(() => {
   if (preset?.base_url) {
     return preset.base_url
   }
-  if (props.providerCategory === 'search') return '例如: https://www.bing.com'
+  if (props.providerCategory === 'search') return '例如: https://api.firecrawl.dev'
   return '例如: https://api.openai.com'
 })
 
@@ -407,6 +428,12 @@ const previewUrl = computed(() => {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-fade);
+  background: var(--bg-elevated);
+}
+
+.form-input.readonly {
+  cursor: default;
+  color: var(--text-sub);
   background: var(--bg-elevated);
 }
 

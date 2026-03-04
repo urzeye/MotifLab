@@ -47,14 +47,22 @@ def create_outline_blueprint():
 
         try:
             # 解析请求数据
-            topic, images, source_content, template_ref, enable_search = _parse_outline_request()
+            (
+                topic,
+                images,
+                source_content,
+                template_ref,
+                enable_search,
+                search_provider,
+            ) = _parse_outline_request()
 
             log_request('/outline', {
                 'topic': topic,
                 'images': images,
                 'has_source_content': bool(source_content),
                 'has_template_ref': bool(template_ref),
-                'enable_search': enable_search
+                'enable_search': enable_search,
+                'search_provider': search_provider
             })
 
             # 验证必填参数
@@ -72,7 +80,8 @@ def create_outline_blueprint():
                 images if images else None,
                 source_content=source_content,
                 template_ref=template_ref,
-                enable_search=enable_search
+                enable_search=enable_search,
+                search_provider=search_provider,
             )
 
             # 记录结果
@@ -98,18 +107,27 @@ def create_outline_blueprint():
         流式生成大纲（SSE）
 
         请求参数与 /outline 保持一致，额外支持：
-        - enable_search: bool，是否开启模型联网搜索能力（默认 false）
+        - enable_search: bool，是否开启联网搜索增强（主题检索 + 可选模型联网能力，默认 false）
+        - search_provider: str，可选，指定本次联网增强使用的搜索服务商
         """
         start_time = time.time()
         try:
-            topic, images, source_content, template_ref, enable_search = _parse_outline_request()
+            (
+                topic,
+                images,
+                source_content,
+                template_ref,
+                enable_search,
+                search_provider,
+            ) = _parse_outline_request()
 
             log_request('/outline/stream', {
                 'topic': topic,
                 'images': images,
                 'has_source_content': bool(source_content),
                 'has_template_ref': bool(template_ref),
-                'enable_search': enable_search
+                'enable_search': enable_search,
+                'search_provider': search_provider
             })
 
             if not topic:
@@ -131,7 +149,8 @@ def create_outline_blueprint():
                         images if images else None,
                         source_content=source_content,
                         template_ref=template_ref,
-                        enable_search=enable_search
+                        enable_search=enable_search,
+                        search_provider=search_provider,
                     )
 
                     elapsed = time.time() - start_time
@@ -322,18 +341,20 @@ def _parse_outline_request():
     2. application/json - 用于 base64 图片
 
     返回：
-        tuple: (topic, images, source_content, template_ref, enable_search)
+        tuple: (topic, images, source_content, template_ref, enable_search, search_provider)
         - topic: 主题
         - images: 图片二进制数组
         - source_content: 网页抓取正文
         - template_ref: 模板参考
-        - enable_search: 是否启用模型联网搜索
+        - enable_search: 是否启用联网搜索增强
+        - search_provider: 本次请求指定的搜索服务商（可选）
     """
     # 检查是否是 multipart/form-data（带图片文件）
     if request.content_type and 'multipart/form-data' in request.content_type:
         topic = request.form.get('topic')
         source_content = request.form.get('source_content')
         enable_search = _parse_bool(request.form.get('enable_search'), False)
+        search_provider = (request.form.get('search_provider') or '').strip() or None
         template_ref_raw = request.form.get('template_ref')
         template_ref = None
         images = []
@@ -353,7 +374,7 @@ def _parse_outline_request():
                     image_data = file.read()
                     images.append(image_data)
 
-        return topic, images, source_content, template_ref, enable_search
+        return topic, images, source_content, template_ref, enable_search, search_provider
 
     # JSON 请求（无图片或 base64 图片）
     data = request.get_json(silent=True)
@@ -362,6 +383,7 @@ def _parse_outline_request():
     topic = data.get('topic')
     source_content = data.get('source_content')
     enable_search = _parse_bool(data.get('enable_search'), False)
+    search_provider = str(data.get('search_provider') or '').strip() or None
     template_ref = data.get('template_ref')
     if not isinstance(template_ref, dict):
         template_ref = None
@@ -384,7 +406,7 @@ def _parse_outline_request():
                 logger.warning("忽略无效的 base64 图片输入")
                 continue
 
-    return topic, images, source_content, template_ref, enable_search
+    return topic, images, source_content, template_ref, enable_search, search_provider
 
 
 def _parse_bool(value, default: bool = False) -> bool:

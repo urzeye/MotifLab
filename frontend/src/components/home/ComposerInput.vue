@@ -78,38 +78,11 @@
 
     <!-- 网页引用 -->
     <div
-      v-if="searchProviderEnabled && showUrlInput"
+      v-if="searchProviderEnabled && enableSearch"
       class="url-input-section"
     >
       <div class="url-input-header">
-        <div class="url-input-title">网页引用</div>
-        <button
-          class="url-close-btn"
-          @click="closeUrlInput"
-          title="关闭网页引用"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <line
-              x1="18"
-              y1="6"
-              x2="6"
-              y2="18"
-            ></line>
-            <line
-              x1="6"
-              y1="6"
-              x2="18"
-              y2="18"
-            ></line>
-          </svg>
-        </button>
+        <div class="url-input-title">网页引用（可选）</div>
       </div>
 
       <div class="url-input-wrapper">
@@ -134,6 +107,10 @@
           v-if="scrapeStatus === 'loading'"
           class="spinner-xs"
         ></span>
+      </div>
+
+      <div class="url-input-hint">
+        可选：填写链接会先抓取正文并注入大纲；留空时会按主题自动联网检索增强。
       </div>
 
       <div
@@ -190,7 +167,26 @@
             <span class="setting-label">联网搜索</span>
           </label>
         </template>
-        开启后，模型会在生成大纲时联网检索（取决于当前文本模型是否支持）
+        开启后会按主题检索并抓取外部资料增强大纲，可选再填写网页引用链接；未配置搜索服务时自动回退 Bing
+      </n-tooltip>
+
+      <n-tooltip
+        v-if="searchProviderEnabled && enableSearch"
+        trigger="hover"
+      >
+        <template #trigger>
+          <div class="setting-item search-provider-setting">
+            <span class="setting-label">搜索服务</span>
+            <n-select
+              v-model:value="searchProviderModel"
+              :options="searchProviderOptions"
+              :disabled="loading"
+              size="small"
+              class="search-provider-select"
+            />
+          </div>
+        </template>
+        本次生成的搜索服务来源；选择“跟随默认”会使用系统设置里的默认服务
       </n-tooltip>
     </div>
 
@@ -243,48 +239,6 @@
           </template>
           上传参考图
         </n-tooltip>
-        <n-tooltip
-          v-if="searchProviderEnabled"
-          trigger="hover"
-        >
-          <template #trigger>
-            <button
-              class="tool-btn"
-              :class="{ active: showUrlInput || scrapeStatus === 'success' }"
-              @click="toggleUrlInput"
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10"
-                ></circle>
-                <line
-                  x1="2"
-                  y1="12"
-                  x2="22"
-                  y2="12"
-                ></line>
-                <path
-                  d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
-                ></path>
-              </svg>
-              <span
-                v-if="scrapeStatus === 'success'"
-                class="badge-check"
-                >✓</span
-              >
-            </button>
-          </template>
-          添加网页引用
-        </n-tooltip>
       </div>
       <div class="toolbar-right">
         <button
@@ -309,7 +263,7 @@ export default defineComponent({ name: "ComposerInput" });
 </script>
 
 <script setup lang="ts">
-import { ref, onUnmounted, computed } from "vue";
+import { ref, onUnmounted, computed, watch } from "vue";
 import { useMessage, NSelect, NTooltip } from "naive-ui";
 import { scrapeUrl, type ScrapeResult } from "../../api";
 
@@ -333,6 +287,8 @@ const props = defineProps<{
   modelValue: string;
   loading: boolean;
   searchProviderEnabled: boolean;
+  searchProvider: string;
+  searchProviderOptions: Array<{ label: string; value: string }>;
   pageCount: number;
   enableSearch: boolean;
 }>();
@@ -342,6 +298,7 @@ const emit = defineEmits<{
   (e: "update:modelValue", value: string): void;
   (e: "update:pageCount", value: number): void;
   (e: "update:enableSearch", value: boolean): void;
+  (e: "update:searchProvider", value: string): void;
   (e: "generate"): void;
   (e: "imagesChange", images: File[]): void;
   (e: "urlContentChange", content: ScrapeResult | null): void;
@@ -352,7 +309,6 @@ const textareaRef = ref<HTMLTextAreaElement | null>(null);
 
 // 已上传的图片
 const uploadedImages = ref<UploadedImage[]>([]);
-const showUrlInput = ref(false);
 const urlInput = ref("");
 const scrapeStatus = ref<"idle" | "loading" | "success" | "error">("idle");
 const scrapeResult = ref<ScrapeResult | null>(null);
@@ -370,6 +326,10 @@ const pageCountSelectOptions = Array.from(
 const pageCountModel = computed({
   get: () => props.pageCount,
   set: (val) => emit("update:pageCount", val),
+});
+const searchProviderModel = computed({
+  get: () => props.searchProvider || "auto",
+  set: (val: string) => emit("update:searchProvider", val || "auto"),
 });
 
 const message = useMessage();
@@ -463,14 +423,6 @@ function clearPreviews() {
   uploadedImages.value = [];
 }
 
-function toggleUrlInput() {
-  showUrlInput.value = !showUrlInput.value;
-}
-
-function closeUrlInput() {
-  showUrlInput.value = false;
-}
-
 function handleUrlInput() {
   if (scrapeDebounceTimer !== null) {
     clearTimeout(scrapeDebounceTimer);
@@ -508,7 +460,10 @@ async function doScrape() {
   scrapeError.value = "";
   scrapeResult.value = null;
 
-  const result = await scrapeUrl(url);
+  const selectedProvider = props.searchProvider && props.searchProvider !== "auto"
+    ? props.searchProvider
+    : undefined;
+  const result = await scrapeUrl(url, selectedProvider);
   if (result.success && result.data) {
     scrapeStatus.value = "success";
     scrapeResult.value = result;
@@ -535,7 +490,6 @@ function clearUrl() {
 
 function clearUrlState() {
   clearUrl();
-  showUrlInput.value = false;
 }
 
 function clampPageCount(value: number): number {
@@ -545,7 +499,11 @@ function clampPageCount(value: number): number {
 
 function handleEnableSearchChange(event: Event) {
   const target = event.target as HTMLInputElement;
-  emit("update:enableSearch", !!target.checked);
+  const enabled = !!target.checked;
+  emit("update:enableSearch", enabled);
+  if (!enabled) {
+    clearUrl();
+  }
 }
 
 // 组件卸载时清理
@@ -555,6 +513,16 @@ onUnmounted(() => {
     clearTimeout(scrapeDebounceTimer);
   }
 });
+
+watch(
+  () => props.searchProvider,
+  (next, prev) => {
+    if (next === prev) return;
+    if (!props.enableSearch) return;
+    if (!urlInput.value.trim()) return;
+    void doScrape();
+  },
+);
 
 // 暴露方法给父组件
 defineExpose({
@@ -710,6 +678,14 @@ defineExpose({
   user-select: none;
 }
 
+.search-provider-setting {
+  margin-left: auto;
+}
+
+.search-provider-select {
+  width: 210px;
+}
+
 .switch-input {
   display: none;
 }
@@ -848,21 +824,10 @@ defineExpose({
   font-weight: 600;
 }
 
-.url-close-btn {
-  border: none;
-  background: transparent;
+.url-input-hint {
+  margin-top: 8px;
+  font-size: var(--caption-size);
   color: var(--text-sub);
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-xs);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.url-close-btn:hover {
-  background: var(--bg-card);
 }
 
 .url-input-wrapper {
@@ -1023,6 +988,16 @@ defineExpose({
   .generation-settings {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .search-provider-setting {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .search-provider-select {
+    width: 180px;
   }
 
   .composer-toolbar {

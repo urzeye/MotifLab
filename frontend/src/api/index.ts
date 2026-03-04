@@ -286,6 +286,7 @@ export interface OutlineStreamParams {
   sourceContent?: string
   templateRef?: TemplateReferencePayload
   enableSearch?: boolean
+  searchProvider?: string
 }
 
 export interface OutlineEditStreamParams {
@@ -590,7 +591,8 @@ export async function generateOutline(
   topic: string,
   images?: File[],
   sourceContent?: string,
-  templateRef?: TemplateReferencePayload
+  templateRef?: TemplateReferencePayload,
+  searchProvider?: string
 ): Promise<OutlineResponse> {
   if (images && images.length > 0) {
     const formData = new FormData()
@@ -601,6 +603,9 @@ export async function generateOutline(
     if (templateRef) {
       formData.append('template_ref', JSON.stringify(templateRef))
     }
+    if (searchProvider) {
+      formData.append('search_provider', searchProvider)
+    }
     images.forEach(file => formData.append('images', file))
     const response = await axios.post<OutlineResponse>(`${API_BASE_URL}/outline`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
@@ -610,7 +615,8 @@ export async function generateOutline(
   const response = await axios.post<OutlineResponse>(`${API_BASE_URL}/outline`, {
     topic,
     source_content: sourceContent || undefined,
-    template_ref: templateRef || undefined
+    template_ref: templateRef || undefined,
+    search_provider: searchProvider || undefined
   })
   return response.data
 }
@@ -622,7 +628,7 @@ export async function generateOutlineStream(
   onError: (event: { success: boolean; error?: string }) => void,
   onStreamError: (error: Error) => void
 ) {
-  const { topic, images, sourceContent, templateRef, enableSearch } = params
+  const { topic, images, sourceContent, templateRef, enableSearch, searchProvider } = params
   let body: FormData | Record<string, any>
 
   if (images && images.length > 0) {
@@ -635,6 +641,9 @@ export async function generateOutlineStream(
     if (templateRef) {
       formData.append('template_ref', JSON.stringify(templateRef))
     }
+    if (searchProvider) {
+      formData.append('search_provider', searchProvider)
+    }
     images.forEach(file => formData.append('images', file))
     body = formData
   } else {
@@ -642,7 +651,8 @@ export async function generateOutlineStream(
       topic,
       enable_search: !!enableSearch,
       source_content: sourceContent || undefined,
-      template_ref: templateRef || undefined
+      template_ref: templateRef || undefined,
+      search_provider: searchProvider || undefined
     }
   }
 
@@ -930,6 +940,9 @@ export interface Config {
   image_generation: { active_provider: string; providers: Record<string, any> }
   search: {
     active_provider: string
+    auto_test_on_startup?: boolean
+    max_results?: number
+    timeout_seconds?: number
     providers: Record<string, {
       type: string
       enabled?: boolean

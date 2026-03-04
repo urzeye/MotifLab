@@ -2,8 +2,16 @@ import logging
 import os
 import re
 import json
+from xml.etree import ElementTree as ET
 from typing import Dict, List, Any, Optional
+import requests
 from backend.config import get_config_service
+from backend.infrastructure.services.search_service import (
+    DEFAULT_BING_BASE_URL,
+    REQUEST_HEADERS,
+    get_search_provider,
+    is_valid_http_url,
+)
 from backend.utils.text_client import get_text_chat_client
 
 logger = logging.getLogger(__name__)
@@ -262,6 +270,302 @@ class OutlineService:
             "并在大纲中自然融合：\n\n"
             f"{content}"
         )
+
+    @staticmethod
+    def _normalize_reference_text(value: Any) -> str:
+        """将抓取结果归一化为单行文本，便于注入提示词。"""
+        if value is None:
+            return ""
+        if isinstance(value, list):
+            text = " ".join(str(item) for item in value if str(item).strip())
+        else:
+            text = str(value)
+        text = text.replace("\r\n", "\n")
+        text = re.sub(r"\s+", " ", text)
+        return text.strip()
+
+    @staticmethod
+    def _truncate_reference_text(value: str, max_chars: int) -> str:
+        """按字符截断参考文本。"""
+        text = (value or "").strip()
+        if len(text) <= max_chars:
+            return text
+        return text[:max_chars].rstrip() + "..."
+
+    def _extract_search_query_from_topic(self, topic: str) -> str:
+        """
+        从主题中提取检索关键词。
+
+        兼容前端拼接的“页数要求”后缀，避免把指令文本带入搜索。
+        """
+        raw = str(topic or "").replace("\r\n", "\n").strip()
+        if not raw:
+            return ""
+
+        # 移除前端追加的页数约束段落（若存在）
+        raw = re.sub(r"(?is)\n*【页数要求】[\s\S]*$", "", raw).strip()
+        if not raw:
+            return ""
+
+        lines = []
+        for line in raw.split("\n"):
+            normalized = re.sub(r"\s+", " ", line).strip(" -*•\t")
+            if normalized:
+                lines.append(normalized)
+
+        if not lines:
+            return ""
+
+        query = lines[0]
+        if len(query) < 8 and len(lines) > 1:
+            query = f"{query} {lines[1]}".strip()
+
+        return self._truncate_reference_text(query, 120)
+
+    def _search_topic_candidates(
+        self,
+        query: str,
+        max_results: int,
+        timeout_seconds: int,
+    ) -> List[Dict[str, str]]:
+        """使用 Bing RSS 根据主题检索候选网页链接。"""
+        normalized_query = (query or "").strip()
+        if not normalized_query:
+            return []
+
+        if is_valid_http_url(normalized_query):
+            return [{"title": "用户提供链接", "url": normalized_query, "snippet": ""}]
+
+        try:
+            bing_config = self.config_service.get_search_provider_config("bing", require_enabled=True)
+            bing_base_url = (bing_config.get("base_url") or DEFAULT_BING_BASE_URL).rstrip("/")
+        except Exception:
+            bing_base_url = DEFAULT_BING_BASE_URL
+
+        search_url = f"{bing_base_url}/search"
+
+        try:
+            response = requests.get(
+                search_url,
+                params={"q": normalized_query, "format": "rss"},
+                headers=REQUEST_HEADERS,
+                timeout=timeout_seconds,
+            )
+            if response.status_code != 200:
+                logger.warning(f"主题检索请求失败: query={normalized_query}, status={response.status_code}")
+                return []
+            parsed = ET.fromstring(response.text)
+        except Exception as exc:
+            logger.warning(f"主题检索失败: query={normalized_query}, error={exc}")
+            return []
+
+        results: List[Dict[str, str]] = []
+        seen_urls: set[str] = set()
+
+        for item in parsed.findall("./channel/item"):
+            link = self._normalize_reference_text(item.findtext("link"))
+            if not link or not is_valid_http_url(link) or link in seen_urls:
+                continue
+
+            title = self._normalize_reference_text(item.findtext("title")) or "未命名网页"
+            snippet = self._normalize_reference_text(item.findtext("description"))
+
+            results.append({"title": title, "url": link, "snippet": snippet})
+            seen_urls.add(link)
+
+            if len(results) >= max_results:
+                break
+
+        return results
+
+    def _build_topic_search_reference(
+        self,
+        query: str,
+        references: List[Dict[str, str]],
+    ) -> str:
+        """构造主题联网检索参考片段。"""
+        if not references:
+            return ""
+
+        lines = [
+            "\n\n【主题联网检索参考】",
+            (
+                f"已按主题检索并抓取到 {len(references)} 条外部资料。"
+                "请优先吸收其中的关键信息、数据与案例，避免编造来源。"
+            ),
+            f"检索词：{query}",
+        ]
+
+        for idx, item in enumerate(references, start=1):
+            title = self._truncate_reference_text(
+                self._normalize_reference_text(item.get("title")),
+                90,
+            ) or "未命名网页"
+            url = self._normalize_reference_text(item.get("url"))
+            content = self._truncate_reference_text(
+                self._normalize_reference_text(item.get("content")),
+                900,
+            )
+
+            lines.append(f"\n[{idx}] 标题：{title}")
+            if url:
+                lines.append(f"来源：{url}")
+            if content:
+                lines.append(f"摘要：{content}")
+
+        block = "\n".join(lines)
+        max_chars = 7000
+        if len(block) > max_chars:
+            block = block[:max_chars] + "\n...(主题联网参考过长，已截断)"
+        return block
+
+    def _fetch_topic_search_reference(
+        self,
+        topic: str,
+        provider_name: Optional[str] = None,
+    ) -> str:
+        """
+        基于主题执行联网检索增强。
+
+        说明：
+        - 优先使用“已配置并启用”的搜索服务抓取网页正文。
+        - 抓取失败时自动回退 Bing，保证可用性。
+        - 任意异常均不阻断大纲生成主流程。
+        """
+        query = self._extract_search_query_from_topic(topic)
+        if not query:
+            return ""
+
+        try:
+            provider_config = self.config_service.get_search_provider_config(
+                provider_name=provider_name,
+                require_enabled=True,
+            )
+        except ValueError as exc:
+            if provider_name:
+                logger.info(
+                    f"指定搜索服务 [{provider_name}] 不可用，回退默认搜索服务: {exc}"
+                )
+                try:
+                    provider_config = self.config_service.get_search_provider_config(
+                        require_enabled=True,
+                    )
+                except ValueError as fallback_exc:
+                    logger.info(f"主题联网检索已跳过：{fallback_exc}")
+                    return ""
+            else:
+                logger.info(f"主题联网检索已跳过：{exc}")
+                return ""
+
+        provider_type = str(provider_config.get("type") or "").strip().lower()
+        if not provider_type:
+            return ""
+
+        try:
+            max_results = int(provider_config.get("max_results", 10))
+        except (TypeError, ValueError):
+            max_results = 10
+        max_results = max(1, min(20, max_results))
+
+        try:
+            timeout_seconds = int(provider_config.get("timeout_seconds", 5))
+        except (TypeError, ValueError):
+            timeout_seconds = 5
+        timeout_seconds = max(1, min(60, timeout_seconds))
+
+        candidate_limit = max(1, min(max_results, 8))
+        scrape_limit = max(1, min(max_results, 3))
+
+        candidates = self._search_topic_candidates(
+            query=query,
+            max_results=candidate_limit,
+            timeout_seconds=timeout_seconds,
+        )
+        if not candidates:
+            logger.info(f"主题联网检索无候选结果: query={query}")
+            return ""
+
+        try:
+            primary_provider = get_search_provider(provider_type)
+        except Exception as exc:
+            logger.warning(f"主题联网检索服务初始化失败: provider={provider_type}, error={exc}")
+            return ""
+
+        fallback_bing_config: Optional[Dict[str, Any]] = None
+        fallback_bing_provider = None
+        if provider_type != "bing":
+            try:
+                fallback_bing_config = self.config_service.get_search_provider_config("bing", require_enabled=True)
+                fallback_bing_provider = get_search_provider("bing")
+            except Exception:
+                fallback_bing_config = None
+                fallback_bing_provider = None
+
+        references: List[Dict[str, str]] = []
+
+        for candidate in candidates:
+            if len(references) >= scrape_limit:
+                break
+
+            candidate_url = self._normalize_reference_text(candidate.get("url"))
+            if not candidate_url:
+                continue
+
+            candidate_title = self._normalize_reference_text(candidate.get("title")) or "未命名网页"
+            candidate_snippet = self._normalize_reference_text(candidate.get("snippet"))
+            selected = {
+                "title": candidate_title,
+                "url": candidate_url,
+                "content": "",
+            }
+
+            scrape_result: Dict[str, Any] = {}
+            try:
+                scrape_result = primary_provider.scrape(candidate_url, provider_config)
+            except Exception as exc:
+                logger.warning(
+                    f"主题联网抓取失败: provider={provider_type}, url={candidate_url}, error={exc}"
+                )
+
+            if (
+                (not scrape_result.get("success"))
+                and fallback_bing_provider is not None
+                and fallback_bing_config is not None
+            ):
+                try:
+                    scrape_result = fallback_bing_provider.scrape(candidate_url, fallback_bing_config)
+                except Exception as exc:
+                    logger.warning(
+                        f"主题联网抓取回退 Bing 失败: url={candidate_url}, error={exc}"
+                    )
+
+            if scrape_result.get("success"):
+                data = scrape_result.get("data") if isinstance(scrape_result, dict) else None
+                if isinstance(data, dict):
+                    selected["title"] = (
+                        self._normalize_reference_text(data.get("title")) or selected["title"]
+                    )
+                    selected["url"] = (
+                        self._normalize_reference_text(data.get("url")) or selected["url"]
+                    )
+                    selected["content"] = self._normalize_reference_text(data.get("content"))
+
+            if not selected["content"] and candidate_snippet:
+                selected["content"] = candidate_snippet
+
+            if not selected["content"]:
+                continue
+
+            references.append(selected)
+
+        if not references:
+            return ""
+
+        logger.info(
+            "主题联网检索增强完成: "
+            f"query={query}, provider={provider_type}, provider_name={provider_name}, references={len(references)}"
+        )
+        return self._build_topic_search_reference(query, references)
 
     def _build_template_reference(self, template_ref: Optional[Dict[str, Any]]) -> str:
         """构造模板参考片段：只参考布局和风格，不覆盖用户主题。"""
@@ -554,21 +858,31 @@ class OutlineService:
         source_content: Optional[str] = None,
         template_ref: Optional[Dict[str, Any]] = None,
         enable_search: bool = False,
+        search_provider: Optional[str] = None,
     ) -> Dict[str, Any]:
         try:
+            normalized_search_provider = (search_provider or "").strip() or None
             logger.info(
                 "开始生成大纲: "
                 f"topic={topic[:50]}..., "
                 f"images={len(images) if images else 0}, "
                 f"has_source={bool(source_content)}, "
                 f"has_template_ref={bool(template_ref)}, "
-                f"enable_search={enable_search}"
+                f"enable_search={enable_search}, "
+                f"search_provider={normalized_search_provider}"
             )
             needs_image_support = bool(images and len(images) > 0)
             client, selected_provider_name, provider_config = self._get_client(
                 needs_image_support=needs_image_support
             )
             prompt = self.prompt_template.format(topic=topic)
+
+            if enable_search:
+                prompt += self._fetch_topic_search_reference(
+                    topic=topic,
+                    provider_name=normalized_search_provider,
+                )
+
             prompt += self._build_source_reference(source_content)
             prompt += self._build_template_reference(template_ref)
 

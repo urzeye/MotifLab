@@ -37,16 +37,29 @@ class SearchApplicationService:
         resolved_provider_name = provider_name or self._config_service.get_active_search_provider()
         search_config = self._config_service.load_search_providers_config()
         providers = search_config.get("providers") or {}
-        provider_config = providers.get(resolved_provider_name) or {}
 
-        has_api_key = bool((provider_config.get("api_key") or "").strip())
-        has_base_url = bool((provider_config.get("base_url") or "").strip())
-        return {
-            "active_provider": search_config.get("active_provider"),
-            "provider": resolved_provider_name,
-            "enabled": bool(provider_config.get("enabled", False)),
-            "configured": has_api_key or has_base_url,
-        }
+        try:
+            effective_config = self.get_search_provider_config(provider_name, require_enabled=True)
+            provider_type = str(effective_config.get("type") or resolved_provider_name).strip().lower()
+            has_api_key = bool((effective_config.get("api_key") or "").strip())
+            requires_api_key = provider_type in {"exa", "tavily", "perplexity"}
+            configured = has_api_key if requires_api_key else True
+            return {
+                "active_provider": search_config.get("active_provider"),
+                "provider": provider_type,
+                "enabled": True,
+                "configured": configured,
+            }
+        except ValueError:
+            provider_config = providers.get(resolved_provider_name) or {}
+            has_api_key = bool((provider_config.get("api_key") or "").strip())
+            has_base_url = bool((provider_config.get("base_url") or "").strip())
+            return {
+                "active_provider": search_config.get("active_provider"),
+                "provider": resolved_provider_name,
+                "enabled": bool(provider_config.get("enabled", False)),
+                "configured": has_api_key or has_base_url,
+            }
 
     @staticmethod
     def create_provider(provider_type: str, registry: Any = None):

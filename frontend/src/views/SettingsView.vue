@@ -199,12 +199,13 @@
             <p class="section-desc">用于抓取网页内容并注入到大纲生成上下文</p>
           </div>
           <button
-            class="btn btn-small"
+            class="search-add-btn"
             @click="openAddSearchModal"
+            title="添加搜索服务"
           >
             <svg
-              width="14"
-              height="14"
+              width="18"
+              height="18"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -223,18 +224,175 @@
                 y2="12"
               ></line>
             </svg>
-            添加
           </button>
         </div>
 
         <ProviderTable
           :providers="searchConfig.providers"
           :activeProvider="searchConfig.active_provider"
-          @activate="activateSearchProvider"
+          providerCategory="search"
+          :searchStatuses="searchStatuses"
+          @activate="activateSearchProviderWithStatus"
           @edit="openEditSearchModal"
-          @delete="deleteSearchProvider"
-          @test="testSearchProviderInList"
+          @delete="deleteSearchProviderWithStatus"
+          @test="testSearchProviderInListWithStatus"
         />
+
+        <div class="search-runtime-card">
+          <div class="search-runtime-row">
+            <div class="runtime-label">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="9"
+                />
+                <polyline points="12 7 12 12 15 15" />
+              </svg>
+              <span>默认搜索服务</span>
+            </div>
+            <n-select
+              :value="searchConfig.active_provider"
+              :options="searchDefaultProviderOptions"
+              size="small"
+              style="width: 210px"
+              :disabled="searchRuntimeSaving"
+              @update:value="handleSearchDefaultProviderChange"
+            />
+          </div>
+
+          <div class="search-runtime-row">
+            <div class="runtime-label">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M12 21s-6.7-4.6-8.8-8.1A5.6 5.6 0 0 1 12 5a5.6 5.6 0 0 1 8.8 7.9C18.7 16.4 12 21 12 21Z"
+                />
+                <path d="M3 12h4l2-3 3 6 2-3h7" />
+              </svg>
+              <span>启动时自动测试连接</span>
+            </div>
+            <button
+              class="runtime-switch"
+              :class="{ active: searchConfig.auto_test_on_startup }"
+              :disabled="searchRuntimeSaving"
+              @click="toggleSearchAutoTest"
+            >
+              <span class="runtime-switch-dot" />
+            </button>
+          </div>
+
+          <div class="search-runtime-row">
+            <div class="runtime-label">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line
+                  x1="8"
+                  y1="6"
+                  x2="21"
+                  y2="6"
+                />
+                <line
+                  x1="8"
+                  y1="12"
+                  x2="21"
+                  y2="12"
+                />
+                <line
+                  x1="8"
+                  y1="18"
+                  x2="21"
+                  y2="18"
+                />
+                <line
+                  x1="3"
+                  y1="6"
+                  x2="3.01"
+                  y2="6"
+                />
+                <line
+                  x1="3"
+                  y1="12"
+                  x2="3.01"
+                  y2="12"
+                />
+                <line
+                  x1="3"
+                  y1="18"
+                  x2="3.01"
+                  y2="18"
+                />
+              </svg>
+              <span>最大结果数</span>
+            </div>
+            <div class="runtime-stepper">
+              <button
+                class="stepper-btn"
+                :disabled="searchRuntimeSaving || searchConfig.max_results <= 1"
+                @click="changeSearchMaxResults(-1)"
+              >
+                -
+              </button>
+              <span>{{ searchConfig.max_results }}</span>
+              <button
+                class="stepper-btn"
+                :disabled="searchRuntimeSaving || searchConfig.max_results >= 20"
+                @click="changeSearchMaxResults(1)"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <div class="search-runtime-row">
+            <div class="runtime-label">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="9"
+                />
+                <polyline points="12 7 12 12 15 15" />
+              </svg>
+              <span>超时时间（秒）</span>
+            </div>
+            <div class="runtime-stepper">
+              <button
+                class="stepper-btn"
+                :disabled="searchRuntimeSaving || searchConfig.timeout_seconds <= 1"
+                @click="changeSearchTimeoutSeconds(-1)"
+              >
+                -
+              </button>
+              <span>{{ searchConfig.timeout_seconds }}</span>
+              <button
+                class="stepper-btn"
+                :disabled="searchRuntimeSaving || searchConfig.timeout_seconds >= 60"
+                @click="changeSearchTimeoutSeconds(1)"
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -274,15 +432,16 @@
       :typeOptions="searchTypeOptions"
       providerCategory="search"
       @close="closeSearchModal"
-      @save="saveSearchProvider"
-      @test="testSearchConnection"
+      @save="saveSearchProviderWithStatus"
+      @test="testSearchConnectionWithStatus"
       @update:formData="updateSearchForm"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { NSelect } from "naive-ui";
 import {
   getHealth,
   getAccessToken,
@@ -440,8 +599,158 @@ const {
   deleteSearchProvider,
   testSearchConnection,
   testSearchProviderInList,
+  saveSearchConfig,
   updateSearchForm,
 } = useProviderForm();
+
+type SearchConnectionState = "idle" | "testing" | "success" | "failed";
+
+const searchStatuses = ref<Record<string, SearchConnectionState>>({});
+const searchRuntimeSaving = ref(false);
+const SEARCH_PROVIDER_LABELS: Record<string, string> = {
+  bing: "Bing (Local)",
+  firecrawl: "Firecrawl",
+  exa: "Exa",
+  tavily: "Tavily",
+  perplexity: "Perplexity",
+};
+
+function getSearchProviderLabel(name: string, provider: any): string {
+  const normalizedName = String(name || "").trim();
+  const type = String(provider?.type || normalizedName).trim().toLowerCase();
+  const typeLabel = SEARCH_PROVIDER_LABELS[type] || type || normalizedName;
+  if (!normalizedName || normalizedName === type) return typeLabel;
+  return `${normalizedName} (${typeLabel})`;
+}
+
+const searchDefaultProviderOptions = computed(() => {
+  const providers = searchConfig.value.providers || {};
+  return Object.entries(providers).map(([name, provider]) => ({
+    value: name,
+    label: getSearchProviderLabel(name, provider),
+  }));
+});
+
+function syncSearchStatuses() {
+  const providers = searchConfig.value.providers || {};
+  const next: Record<string, SearchConnectionState> = {};
+
+  for (const name of Object.keys(providers)) {
+    const current = searchStatuses.value[name];
+    if (current) {
+      next[name] = current;
+      continue;
+    }
+    next[name] = searchConfig.value.active_provider === name ? "success" : "idle";
+  }
+
+  searchStatuses.value = next;
+}
+
+watch(
+  () => ({
+    active: searchConfig.value.active_provider,
+    providers: searchConfig.value.providers,
+  }),
+  () => {
+    syncSearchStatuses();
+  },
+  { deep: true, immediate: true }
+);
+
+async function activateSearchProviderWithStatus(name: string) {
+  await activateSearchProvider(name);
+  searchStatuses.value[name] = "success";
+}
+
+async function handleSearchDefaultProviderChange(name: string) {
+  const target = String(name || "").trim();
+  if (!target || target === searchConfig.value.active_provider) {
+    return;
+  }
+  await activateSearchProviderWithStatus(target);
+}
+
+async function deleteSearchProviderWithStatus(name: string) {
+  await deleteSearchProvider(name);
+  if (!searchConfig.value.providers[name]) {
+    const next = { ...searchStatuses.value };
+    delete next[name];
+    searchStatuses.value = next;
+  }
+}
+
+async function enableSearchProviderAfterTest(name: string) {
+  const provider = searchConfig.value.providers[name];
+  if (!provider || provider.enabled !== false) return;
+  provider.enabled = true;
+  await saveSearchConfig();
+}
+
+async function testSearchProviderInListWithStatus(name: string, provider: any) {
+  searchStatuses.value[name] = "testing";
+  const ok = await testSearchProviderInList(name, provider);
+  searchStatuses.value[name] = ok ? "success" : "failed";
+  if (ok) {
+    await enableSearchProviderAfterTest(name);
+  }
+}
+
+async function testSearchConnectionWithStatus() {
+  const target = editingSearchProvider.value || searchForm.value.name;
+  if (target) {
+    searchStatuses.value[target] = "testing";
+  }
+  const ok = await testSearchConnection();
+  if (target) {
+    searchStatuses.value[target] = ok ? "success" : "failed";
+    if (ok) {
+      await enableSearchProviderAfterTest(target);
+    }
+  }
+}
+
+async function saveSearchProviderWithStatus() {
+  const target = editingSearchProvider.value || searchForm.value.name;
+  await saveSearchProvider();
+  if (target && searchConfig.value.providers[target]) {
+    if (!searchStatuses.value[target]) {
+      searchStatuses.value[target] = "idle";
+    }
+    if (searchConfig.value.active_provider === target) {
+      searchStatuses.value[target] = "success";
+    }
+  }
+}
+
+async function persistSearchRuntimeSettings() {
+  if (searchRuntimeSaving.value) return;
+  searchRuntimeSaving.value = true;
+  try {
+    await saveSearchConfig();
+  } finally {
+    searchRuntimeSaving.value = false;
+  }
+}
+
+async function toggleSearchAutoTest() {
+  searchConfig.value.auto_test_on_startup = !searchConfig.value.auto_test_on_startup;
+  await persistSearchRuntimeSettings();
+}
+
+async function changeSearchMaxResults(delta: number) {
+  const next = Math.min(20, Math.max(1, searchConfig.value.max_results + delta));
+  if (next === searchConfig.value.max_results) return;
+  searchConfig.value.max_results = next;
+  await persistSearchRuntimeSettings();
+}
+
+async function changeSearchTimeoutSeconds(delta: number) {
+  const next = Math.min(60, Math.max(1, searchConfig.value.timeout_seconds + delta));
+  if (next === searchConfig.value.timeout_seconds) return;
+  searchConfig.value.timeout_seconds = next;
+  await persistSearchRuntimeSettings();
+}
 
 onMounted(async () => {
   await Promise.all([loadConfig(), refreshAuthStatus()]);
@@ -559,6 +868,146 @@ onMounted(async () => {
 
 .btn-small svg {
   stroke-width: 2.5;
+}
+
+.search-add-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-sub);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.search-add-btn:hover {
+  border-color: var(--border-color);
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+.search-runtime-card {
+  margin-top: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--bg-elevated);
+}
+
+.search-runtime-row {
+  min-height: 56px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.search-runtime-row + .search-runtime-row {
+  border-top: 1px solid var(--border-color);
+}
+
+.runtime-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  color: var(--text-main);
+}
+
+.runtime-label svg {
+  width: 18px;
+  height: 18px;
+  color: var(--text-sub);
+  flex-shrink: 0;
+}
+
+.runtime-switch {
+  width: 46px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #e5e7eb;
+  padding: 2px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.runtime-switch.active {
+  border-color: #10b981;
+  background: #10b981;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.15);
+}
+
+.runtime-switch:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.runtime-switch-dot {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: transform var(--transition-fast);
+}
+
+.runtime-switch.active .runtime-switch-dot {
+  transform: translateX(18px);
+}
+
+.runtime-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stepper-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.stepper-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+.stepper-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.runtime-stepper span {
+  min-width: 26px;
+  text-align: center;
+  color: var(--text-main);
+}
+
+@media (max-width: 768px) {
+  .search-runtime-row {
+    min-height: 52px;
+    padding: 0 10px;
+  }
+
+  .runtime-label {
+    font-size: 14px;
+  }
 }
 
 /* 加载状态 */

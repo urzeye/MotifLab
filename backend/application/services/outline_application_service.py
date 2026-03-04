@@ -22,6 +22,7 @@ class OutlineApplicationService:
         source_content: Optional[str] = None,
         template_ref: Optional[Dict[str, Any]] = None,
         enable_search: bool = False,
+        search_provider: Optional[str] = None,
     ) -> Dict[str, Any]:
         """生成大纲。"""
         return self._outline_service.generate_outline(
@@ -30,6 +31,7 @@ class OutlineApplicationService:
             source_content=source_content,
             template_ref=template_ref,
             enable_search=enable_search,
+            search_provider=search_provider,
         )
 
     def edit_outline_with_suggestions(

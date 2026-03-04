@@ -75,6 +75,9 @@ def create_config_blueprint():
             search_providers = search_config.get("providers", {})
             search_response = {
                 "active_provider": search_config.get("active_provider", "bing"),
+                "auto_test_on_startup": bool(search_config.get("auto_test_on_startup", False)),
+                "max_results": search_config.get("max_results", 10),
+                "timeout_seconds": search_config.get("timeout_seconds", 5),
                 "providers": _prepare_search_providers_for_response(search_providers),
             }
 
@@ -337,6 +340,10 @@ def _update_search_config(new_data: dict):
     existing_providers = existing_config.get("providers", {})
 
     if "providers" in new_data and isinstance(new_data["providers"], dict):
+        # 以传入 providers 为准重建列表，支持删除自定义服务商；
+        # 仅对仍保留的同名服务商，继承旧的 api_key（当本次未显式传入时）。
+        rebuilt_providers = {}
+
         for name, incoming in new_data["providers"].items():
             if not name or not isinstance(incoming, dict):
                 continue
@@ -361,10 +368,21 @@ def _update_search_config(new_data: dict):
             merged.pop("api_key_env", None)
             merged.pop("_has_api_key", None)
 
-            existing_providers[name] = merged
+            rebuilt_providers[name] = merged
+
+        existing_providers = rebuilt_providers
 
     if "active_provider" in new_data:
         existing_config["active_provider"] = str(new_data.get("active_provider") or "").strip()
+
+    if "auto_test_on_startup" in new_data:
+        existing_config["auto_test_on_startup"] = bool(new_data.get("auto_test_on_startup"))
+
+    if "max_results" in new_data:
+        existing_config["max_results"] = new_data.get("max_results")
+
+    if "timeout_seconds" in new_data:
+        existing_config["timeout_seconds"] = new_data.get("timeout_seconds")
 
     existing_config["providers"] = existing_providers
     config_service.save_search_providers_config(existing_config)

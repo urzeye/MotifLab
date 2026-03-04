@@ -1,8 +1,14 @@
-# 搜索抓取配置（可选）
+# 搜索抓取配置（用于联网搜索增强与网页引用抓取）
 # 复制为 search_providers.yaml 后修改
 
 # 当前激活的搜索服务商
 active_provider: bing
+# 启动应用时是否自动测试当前激活搜索服务
+auto_test_on_startup: false
+# 搜索结果上限（建议 1-20）
+max_results: 10
+# 网络超时时间（秒，建议 1-60）
+timeout_seconds: 5
 
 providers:
   # 无需 API Key，默认启用
@@ -10,7 +16,7 @@ providers:
     type: bing
     enabled: true
     api_key: ""
-    # 留空默认使用 https://www.bing.com
+    # 其余平台固定使用内置地址，Bing 留空默认使用 https://www.bing.com
     base_url: ""
 
   firecrawl:
@@ -18,28 +24,29 @@ providers:
     enabled: false
     # 云服务通常需要；本地部署可按实际情况留空
     api_key: ""
-    # 留空默认使用 https://api.firecrawl.dev
-    # 本地部署示例: http://localhost:3002
+    # 仅 Firecrawl 支持自定义 base_url
+    # 留空默认使用 https://api.firecrawl.dev；本地部署示例: http://localhost:3002
     base_url: ""
 
   exa:
     type: exa
     enabled: false
     api_key: ""
-    # 留空默认使用 https://api.exa.ai
+    # 该字段通常无需设置，留空使用内置默认地址
     base_url: ""
 
   tavily:
     type: tavily
     enabled: false
     api_key: ""
-    # 留空默认使用 https://api.tavily.com
+    # 该字段通常无需设置，留空使用内置默认地址
     base_url: ""
 
   perplexity:
     type: perplexity
     enabled: false
     api_key: ""
-    # 留空默认使用 https://api.perplexity.ai
+    # 该字段通常无需设置，留空使用内置默认地址
     base_url: ""
+    # 固定默认 sonar，前端设置页不提供模型编辑
     model: sonar

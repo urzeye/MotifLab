@@ -32,6 +32,13 @@ DEFAULT_EXA_BASE_URL = "https://api.exa.ai"
 DEFAULT_TAVILY_BASE_URL = "https://api.tavily.com"
 DEFAULT_PERPLEXITY_BASE_URL = "https://api.perplexity.ai"
 DEFAULT_BING_BASE_URL = "https://www.bing.com"
+DEFAULT_SEARCH_AUTO_TEST_ON_STARTUP = False
+DEFAULT_SEARCH_MAX_RESULTS = 10
+DEFAULT_SEARCH_TIMEOUT_SECONDS = 5
+MIN_SEARCH_MAX_RESULTS = 1
+MAX_SEARCH_MAX_RESULTS = 20
+MIN_SEARCH_TIMEOUT_SECONDS = 1
+MAX_SEARCH_TIMEOUT_SECONDS = 60
 
 
 def _get_project_root() -> Path:
@@ -355,6 +362,9 @@ class Config:
     def _default_search_providers_config(cls) -> Dict[str, Any]:
         return {
             "active_provider": SEARCH_PROVIDER_BING,
+            "auto_test_on_startup": DEFAULT_SEARCH_AUTO_TEST_ON_STARTUP,
+            "max_results": DEFAULT_SEARCH_MAX_RESULTS,
+            "timeout_seconds": DEFAULT_SEARCH_TIMEOUT_SECONDS,
             "providers": {
                 SEARCH_PROVIDER_FIRECRAWL: {
                     "type": SEARCH_PROVIDER_FIRECRAWL,
@@ -397,10 +407,20 @@ class Config:
         normalized["type"] = provider_type
         normalized["enabled"] = bool(normalized.get("enabled", False))
         normalized["api_key"] = (normalized.get("api_key") or "").strip()
+        if provider_type == SEARCH_PROVIDER_BING:
+            normalized["api_key"] = ""
         normalized["base_url"] = (normalized.get("base_url") or "").strip()
         if normalized.get("model") is not None:
             normalized["model"] = str(normalized.get("model") or "").strip()
         return normalized
+
+    @staticmethod
+    def _normalize_bounded_int(value: Any, default: int, minimum: int, maximum: int) -> int:
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            parsed = default
+        return max(minimum, min(maximum, parsed))
 
     @classmethod
     def _normalize_search_providers_config(cls, config: Dict[str, Any]) -> Dict[str, Any]:
@@ -429,8 +449,25 @@ class Config:
                 SEARCH_PROVIDER_BING,
             )
 
+        auto_test_on_startup = bool(config.get("auto_test_on_startup", DEFAULT_SEARCH_AUTO_TEST_ON_STARTUP))
+        max_results = cls._normalize_bounded_int(
+            config.get("max_results"),
+            DEFAULT_SEARCH_MAX_RESULTS,
+            MIN_SEARCH_MAX_RESULTS,
+            MAX_SEARCH_MAX_RESULTS,
+        )
+        timeout_seconds = cls._normalize_bounded_int(
+            config.get("timeout_seconds"),
+            DEFAULT_SEARCH_TIMEOUT_SECONDS,
+            MIN_SEARCH_TIMEOUT_SECONDS,
+            MAX_SEARCH_TIMEOUT_SECONDS,
+        )
+
         return {
             "active_provider": active_provider,
+            "auto_test_on_startup": auto_test_on_startup,
+            "max_results": max_results,
+            "timeout_seconds": timeout_seconds,
             "providers": providers,
         }
 
@@ -499,7 +536,18 @@ class Config:
             SEARCH_PROVIDER_PERPLEXITY,
         }
         if provider_type in requires_api_key and not (provider_config.get("api_key") or "").strip():
-            raise ValueError(f"搜索服务商 [{provider_name}] 未配置 API Key")
+            # 未显式指定 provider 且当前激活服务未配置 Key 时，自动回退到默认 bing
+            if requested_provider_name is None and provider_name != SEARCH_PROVIDER_BING:
+                fallback = providers.get(SEARCH_PROVIDER_BING) or {}
+                if bool(fallback.get("enabled", False)):
+                    provider_name = SEARCH_PROVIDER_BING
+                    provider_config = fallback.copy()
+                    provider_type = (provider_config.get("type") or provider_name).strip().lower()
+                    provider_config["type"] = provider_type
+                else:
+                    raise ValueError(f"搜索服务商 [{provider_name}] 未配置 API Key")
+            else:
+                raise ValueError(f"搜索服务商 [{provider_name}] 未配置 API Key")
 
         default_base_urls = {
             SEARCH_PROVIDER_FIRECRAWL: DEFAULT_FIRECRAWL_BASE_URL,
@@ -510,6 +558,22 @@ class Config:
         }
         if not (provider_config.get("base_url") or "").strip():
             provider_config["base_url"] = default_base_urls.get(provider_type, "")
+
+        provider_config["auto_test_on_startup"] = bool(
+            search_config.get("auto_test_on_startup", DEFAULT_SEARCH_AUTO_TEST_ON_STARTUP)
+        )
+        provider_config["max_results"] = cls._normalize_bounded_int(
+            search_config.get("max_results"),
+            DEFAULT_SEARCH_MAX_RESULTS,
+            MIN_SEARCH_MAX_RESULTS,
+            MAX_SEARCH_MAX_RESULTS,
+        )
+        provider_config["timeout_seconds"] = cls._normalize_bounded_int(
+            search_config.get("timeout_seconds"),
+            DEFAULT_SEARCH_TIMEOUT_SECONDS,
+            MIN_SEARCH_TIMEOUT_SECONDS,
+            MAX_SEARCH_TIMEOUT_SECONDS,
+        )
 
         return provider_config
 
