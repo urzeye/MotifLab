@@ -40,10 +40,14 @@ jobs:
             # 提取两个Tag之间的所有提交记录
             git log ${PREV_TAG}..HEAD --pretty=format:"- %s" > changelog.txt
           fi
-          # 将多行文本装入 Github Output
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          cat changelog.txt >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # 将多行文本安全地装入 Github Output
+          {
+            echo 'notes<<EOF'
+            echo ""
+            cat changelog.txt
+            echo ""
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
