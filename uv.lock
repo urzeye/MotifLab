@@ -1597,7 +1597,7 @@ wheels = [
 
 [[package]]
 name = "motiflab"
-version = "0.3.2"
+version = "0.3.4"
 source = { editable = "." }
 dependencies = [
     { name = "alembic", version = "1.16.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
