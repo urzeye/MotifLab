@@ -123,7 +123,9 @@ docker-compose up -d
 **前置要求**:
 
 - Python 3.9+
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - Node.js 18+
+- pnpm 9+
 
 #### 1. 克隆项目与配置
 
@@ -143,10 +145,10 @@ cd MotifLab
 **终端 A：启动后端框架**
 
 ```bash
-# 安装后端依赖库
-pip install -r requirements.txt
-# 设置环境变量并启动服务进程
-PYTHONPATH="$(pwd):$PYTHONPATH" python backend/app.py
+# 安装后端依赖（首次运行或依赖变更后执行）
+uv sync
+# 启动后端服务
+uv run python backend/app.py
 ```
 
 *(后端默认监听 `http://localhost:12398`)*
@@ -156,15 +158,17 @@ PYTHONPATH="$(pwd):$PYTHONPATH" python backend/app.py
 ```bash
 cd frontend
 # 安装前端所有的构建模块
-npm install
+pnpm install
 # 本地热更新启动
-npm run dev
+pnpm dev
 ```
 
 *(前端默认监听 `http://localhost:5173`)*
 
-> ✅ **一键启动脚本 (可选)**
-> 如果您觉得分屏打开太过于繁琐，在确保依赖都已全部安装配置好的前提下，您也可以像以前一样直接在根目录执行 `./start.sh` 来一键帮你拉起前后两端。
+> ✅ **一键启动脚本（可选）**
+> 如果您不想手动开两个终端，可使用仓库内脚本：
+> - Windows: `scripts/start-windows.bat`
+> - macOS / Linux / Git Bash: `bash scripts/start-all.sh`
 
 *注：您可以在 Web 界面的**设置页面**直接配置您的外部模型 API 提供商及搜索功能。*
 
