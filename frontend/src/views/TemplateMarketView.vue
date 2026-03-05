@@ -126,6 +126,7 @@
             :alt="item.title"
             class="cover-image"
             loading="lazy"
+            referrerpolicy="no-referrer"
           />
           <div class="card-badges">
             <span

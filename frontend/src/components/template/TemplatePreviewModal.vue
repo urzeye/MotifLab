@@ -44,6 +44,7 @@
             :src="template.fullImage || template.coverImage"
             :alt="template.title"
             loading="lazy"
+            referrerpolicy="no-referrer"
           />
           <div class="image-mask"></div>
         </div>
