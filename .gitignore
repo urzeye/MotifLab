@@ -59,6 +59,7 @@ history/*
 # yaml 配置文件现在使用环境变量引用，可以安全提交
 image_providers.yaml
 text_providers.yaml
+search_providers.yaml
 
 # Logs
 *.log
