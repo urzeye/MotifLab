@@ -1,6 +1,6 @@
 services:
   motiflab:
-    image: docker.io/urzeye/motiflab:latest
+    image: ghcr.io/urzeye/motiflab:0.3.4
     container_name: motiflab
     ports:
       - "12398:12398"
