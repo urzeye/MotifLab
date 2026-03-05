@@ -1,6 +1,6 @@
 services:
   motiflab:
-    image: histonemax/redink:latest
+    image: docker.io/urzeye/motiflab:latest
     container_name: motiflab
     ports:
       - "12398:12398"
