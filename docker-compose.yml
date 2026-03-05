@@ -10,6 +10,7 @@ services:
       - ./output:/app/output
       # 可选：挂载自定义配置文件
       # - ./.env:/app/.env
+      # - ./search_providers.yaml:/app/search_providers.yaml
       # - ./text_providers.yaml:/app/text_providers.yaml
       # - ./image_providers.yaml:/app/image_providers.yaml
     restart: unless-stopped
